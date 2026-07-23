@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   isFacebookConfigured,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/telegram";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 export async function POST(request: NextRequest) {
   let update: TelegramUpdate;
@@ -42,8 +43,8 @@ export async function POST(request: NextRequest) {
           "",
           `Ton user id Telegram : ${userId}`,
           "",
-          "Envoie une créative (photo) avec une légende / titre.",
-          "Je publie l'article sur le site + post Facebook (si configuré).",
+          "Envoie juste ta créative Canva (PNG/JPG).",
+          "Je lis le titre sur l'image, je rédige l'article, je publie sur le site + Facebook.",
         ].join("\n"),
       );
       return NextResponse.json({ ok: true });
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (text === "/help") {
       await telegramSendMessage(
         chatId,
-        "Envoie une image Canva (créative) avec une légende = titre / brief.",
+        "Envoie uniquement l'image Canva (titre déjà écrit dessus). Légende Telegram optionnelle.",
       );
       return NextResponse.json({ ok: true });
     }
@@ -75,36 +76,38 @@ export async function POST(request: NextRequest) {
       fileId = message.document.file_id;
     }
 
-    const caption = (message.caption || message.text || "").trim();
-
-    if (!fileId && !caption) {
-      await telegramSendMessage(
-        chatId,
-        "Envoie une créative (image) avec une légende, ou /help.",
-      );
-      return NextResponse.json({ ok: true });
-    }
+    const manualCaption = (message.caption || "").trim();
 
     if (!fileId) {
       await telegramSendMessage(
         chatId,
-        "Pour l'instant j'ai besoin de la créative en image + légende.",
+        "Envoie une créative en image (PNG/JPG). Le titre peut être écrit directement sur l'image.",
       );
       return NextResponse.json({ ok: true });
     }
 
-    await telegramSendMessage(
-      chatId,
-      "Créative reçue. Rédaction, illustration et publication en cours…",
-    );
+    await telegramSendMessage(chatId, "Créative reçue. Lecture du titre sur l'image…");
 
     const image = await telegramDownloadFile(fileId);
+
+    let caption = manualCaption;
+    if (!caption) {
+      caption = await extractHeadlineFromCreative(image);
+      await telegramSendMessage(chatId, `Titre détecté : ${caption}\nRédaction en cours…`);
+    } else {
+      await telegramSendMessage(
+        chatId,
+        "Légende reçue. Rédaction, illustration et publication…",
+      );
+    }
+
     const article = await publishArticleFromCreative({
-      caption: caption || "Actualité",
+      caption,
       image,
     });
 
-    let facebookLine = "Facebook : non configuré (ajoute FACEBOOK_PAGE_ID + TOKEN).";
+    let facebookLine =
+      "Facebook : non configuré (ajoute FACEBOOK_PAGE_ID + TOKEN).";
 
     if (isFacebookConfigured() && article.creative) {
       try {
