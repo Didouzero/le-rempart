@@ -7,6 +7,7 @@ type ArticleCardProps = {
   excerpt: string;
   publishedAt: Date | string | null;
   hasCover?: boolean;
+  coverUrl?: string | null;
 };
 
 function formatDate(value: Date | string | null): string {
@@ -26,14 +27,17 @@ export function ArticleCard({
   excerpt,
   publishedAt,
   hasCover,
+  coverUrl,
 }: ArticleCardProps) {
+  const src = coverUrl || (hasCover && id ? `/api/media/${id}` : null);
+
   return (
     <article className="animate-fade-up border-b border-rule py-8 first:pt-0">
-      {hasCover && id ? (
+      {src ? (
         <Link href={`/articles/${slug}`} className="mb-4 block no-underline hover:no-underline">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/media/${id}`}
+            src={src}
             alt=""
             className="aspect-[16/9] w-full object-cover"
           />

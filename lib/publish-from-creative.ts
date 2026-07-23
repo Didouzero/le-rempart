@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { generateArticleFromSource } from "@/lib/kimi";
 import { slugify } from "@/lib/slug";
+import { findUnsplashCoverUrl } from "@/lib/unsplash";
 
 async function makeUniqueSlug(title: string) {
   const base = slugify(title);
@@ -17,7 +18,7 @@ async function makeUniqueSlug(title: string) {
   }
 }
 
-function siteUrl(): string {
+export function siteUrl(): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
   }
@@ -34,7 +35,14 @@ function siteUrl(): string {
 export async function publishArticleFromCreative(input: {
   caption?: string;
   image?: { buffer: Buffer; mime: string };
-}): Promise<{ id: string; slug: string; title: string; url: string }> {
+}): Promise<{
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  url: string;
+  creative?: { buffer: Buffer; mime: string };
+}> {
   const caption = input.caption?.trim() || "Actualité du jour";
 
   const generated = await generateArticleFromSource({
@@ -47,6 +55,9 @@ export async function publishArticleFromCreative(input: {
   });
 
   const slug = await makeUniqueSlug(generated.title);
+  const unsplashUrl = await findUnsplashCoverUrl(
+    `${generated.title} ${caption}`.slice(0, 80),
+  );
 
   const article = await prisma.article.create({
     data: {
@@ -57,6 +68,9 @@ export async function publishArticleFromCreative(input: {
       slug,
       status: "published",
       publishedAt: new Date(),
+      // Site : Unsplash si dispo ; sinon créative
+      coverImageUrl: unsplashUrl,
+      // Créative Canva (Facebook + fallback site)
       coverImageMime: input.image?.mime || null,
       coverImageData: input.image ? new Uint8Array(input.image.buffer) : null,
     },
@@ -66,6 +80,8 @@ export async function publishArticleFromCreative(input: {
     id: article.id,
     slug: article.slug,
     title: article.title,
+    excerpt: article.excerpt,
     url: `${siteUrl()}/articles/${article.slug}`,
+    creative: input.image,
   };
 }

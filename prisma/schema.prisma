@@ -20,6 +20,7 @@ model Article {
   excerpt        String
   sourceText     String?
   sourceUrl      String?
+  coverImageUrl  String?
   coverImageMime String?
   coverImageData Bytes?
   status         ArticleStatus @default(draft)

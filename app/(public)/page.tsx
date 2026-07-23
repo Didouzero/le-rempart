@@ -11,6 +11,7 @@ export default async function HomePage() {
     title: string;
     excerpt: string;
     publishedAt: Date | null;
+    coverImageUrl: string | null;
     coverImageMime: string | null;
   }> = [];
 
@@ -25,6 +26,7 @@ export default async function HomePage() {
           title: true,
           excerpt: true,
           publishedAt: true,
+          coverImageUrl: true,
           coverImageMime: true,
         },
       }),
@@ -56,7 +58,8 @@ export default async function HomePage() {
               title={article.title}
               excerpt={article.excerpt}
               publishedAt={article.publishedAt}
-              hasCover={Boolean(article.coverImageMime)}
+              hasCover={Boolean(article.coverImageUrl || article.coverImageMime)}
+              coverUrl={article.coverImageUrl}
             />
           ))}
         </div>

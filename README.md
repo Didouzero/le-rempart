@@ -61,13 +61,35 @@ npx prisma migrate deploy
 1. Crée un bot avec [@BotFather](https://t.me/BotFather), récupère `TELEGRAM_BOT_TOKEN`.
 2. Ajoute les variables sur Vercel : `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`, `NEXT_PUBLIC_SITE_URL`.
 3. Envoie `/start` au bot → il te donne ton user id → mets-le dans `TELEGRAM_ALLOWED_USER_IDS` → Redeploy.
-4. Enregistre le webhook :
+4. Enregistre le webhook (**www**, pas apex) :
 
 ```bash
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://le-rempart.org/api/telegram/webhook"
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://www.le-rempart.org/api/telegram/webhook"
 ```
 
-5. Envoie une créative (image + légende) → article publié + lien renvoyé.
+5. Envoie une créative (image + légende) → article publié + lien renvoyé (+ Facebook si configuré).
+
+## Unsplash (illustration site)
+
+1. Crée une appli sur [unsplash.com/oauth/applications](https://unsplash.com/oauth/applications) (gratuit).
+2. Copie l’**Access Key** → Vercel `UNSPLASH_ACCESS_KEY`.
+3. Sans cette clé, le site réutilise la créative Canva comme image.
+
+## Facebook Page (post auto)
+
+1. Va sur [developers.facebook.com](https://developers.facebook.com) → crée une **App** (type Business).
+2. Ajoute le produit **Facebook Login** / Graph API.
+3. Outils → **Graph API Explorer** :
+   - User ou Page token avec permissions : `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`, `pages_manage_engagement`
+   - Sélectionne ta Page **Le Rempart**
+   - Génère un **Page Access Token** (idéalement long-lived)
+4. Récupère le **Page ID** (Réglages de la Page → À propos, ou via Graph `me/accounts`).
+5. Sur Vercel, ajoute :
+   - `FACEBOOK_PAGE_ID`
+   - `FACEBOOK_PAGE_ACCESS_TOKEN`
+6. Redeploy.
+
+Le bot publiera alors : créative + texte « ‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — » + lien, puis un **commentaire épinglé** avec le lien article.
 
 ## AdSense
 
