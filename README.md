@@ -69,11 +69,14 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://www.le-rempart.
 
 5. Envoie une créative (image + légende) → article publié + lien renvoyé (+ Facebook si configuré).
 
-## Unsplash (illustration site)
+## Illustrations (site)
 
-1. Crée une appli sur [unsplash.com/oauth/applications](https://unsplash.com/oauth/applications) (gratuit).
-2. Copie l’**Access Key** → Vercel `UNSPLASH_ACCESS_KEY`.
-3. Sans cette clé, le site réutilise la créative Canva comme image.
+Ordre de recherche :
+1. **Wikimedia Commons** (Macron, Attal, ministres, etc. — images libres) — aucune clé
+2. **Unsplash** (thèmes génériques) si `UNSPLASH_ACCESS_KEY` est défini
+3. Sinon la **créative Canva** envoyée sur Telegram
+
+Facebook utilise toujours la **créative Canva**.
 
 ## Facebook Page (post auto)
 
