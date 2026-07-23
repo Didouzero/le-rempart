@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   isFacebookConfigured,
   postCreativeToFacebookPage,
 } from "@/lib/facebook";
+import { prisma } from "@/lib/prisma";
 import { publishArticleFromCreative } from "@/lib/publish-from-creative";
 import {
   isTelegramUserAllowed,
@@ -17,18 +18,22 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 90;
 
-export async function POST(request: NextRequest) {
-  let update: TelegramUpdate;
+/** Claim update_id — si déjà vu, ignore (coupe les retries Telegram). */
+async function claimUpdate(updateId: number): Promise<boolean> {
   try {
-    update = (await request.json()) as TelegramUpdate;
+    await prisma.telegramUpdateLog.create({
+      data: { updateId: BigInt(updateId) },
+    });
+    return true;
   } catch {
-    return NextResponse.json({ ok: true });
+    return false;
   }
+}
 
+async function processUpdate(update: TelegramUpdate): Promise<void> {
   const message = update.message;
-  if (!message?.from || !message.chat) {
-    return NextResponse.json({ ok: true });
-  }
+  if (!message?.from || !message.chat) return;
+  if ((message.from as { is_bot?: boolean }).is_bot) return;
 
   const chatId = message.chat.id;
   const userId = message.from.id;
@@ -44,26 +49,27 @@ export async function POST(request: NextRequest) {
           `Ton user id Telegram : ${userId}`,
           "",
           "Envoie juste ta créative Canva (PNG/JPG).",
-          "Je lis le titre sur l'image, je rédige l'article, je publie sur le site + Facebook.",
+          "Je lis le titre sur l'image, je trouve une photo web pour le site,",
+          "je publie l'article + Facebook (créative).",
         ].join("\n"),
       );
-      return NextResponse.json({ ok: true });
+      return;
     }
 
     if (text === "/help") {
       await telegramSendMessage(
         chatId,
-        "Envoie uniquement l'image Canva (titre déjà écrit dessus). Légende Telegram optionnelle.",
+        "Envoie uniquement l'image Canva. Légende Telegram optionnelle.",
       );
-      return NextResponse.json({ ok: true });
+      return;
     }
 
     if (!isTelegramUserAllowed(userId)) {
       await telegramSendMessage(
         chatId,
-        `Accès non autorisé.\nTon id : ${userId}\nAjoute-le dans TELEGRAM_ALLOWED_USER_IDS puis redeploy.`,
+        `Accès non autorisé.\nTon id : ${userId}`,
       );
-      return NextResponse.json({ ok: true });
+      return;
     }
 
     let fileId: string | null = null;
@@ -81,23 +87,24 @@ export async function POST(request: NextRequest) {
     if (!fileId) {
       await telegramSendMessage(
         chatId,
-        "Envoie une créative en image (PNG/JPG). Le titre peut être écrit directement sur l'image.",
+        "Envoie une créative en image (PNG/JPG).",
       );
-      return NextResponse.json({ ok: true });
+      return;
     }
 
-    await telegramSendMessage(chatId, "Créative reçue. Lecture du titre sur l'image…");
+    await telegramSendMessage(
+      chatId,
+      "Créative reçue. Lecture du titre + recherche d'illustration…",
+    );
 
     const image = await telegramDownloadFile(fileId);
 
     let caption = manualCaption;
     if (!caption) {
       caption = await extractHeadlineFromCreative(image);
-      await telegramSendMessage(chatId, `Titre détecté : ${caption}\nRédaction en cours…`);
-    } else {
       await telegramSendMessage(
         chatId,
-        "Légende reçue. Rédaction, illustration et publication…",
+        `Titre détecté : ${caption}\nRédaction en cours…`,
       );
     }
 
@@ -107,7 +114,7 @@ export async function POST(request: NextRequest) {
     });
 
     let facebookLine =
-      "Facebook : non configuré (ajoute FACEBOOK_PAGE_ID + TOKEN).";
+      "Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).";
 
     if (isFacebookConfigured() && article.creative) {
       try {
@@ -121,21 +128,31 @@ export async function POST(request: NextRequest) {
           caption: flash,
           commentLink: article.url,
         });
-        facebookLine = `Facebook : publié (post ${fb.postId}, com épinglé).`;
+        facebookLine = `Facebook : publié (post ${fb.postId}).`;
       } catch (err) {
         console.error(err);
         facebookLine = `Facebook : échec — ${err instanceof Error ? err.message : "erreur"}`;
       }
     }
 
+    const coverLine = article.coverImageUrl
+      ? "Illustration site : photo web trouvée."
+      : "Illustration site : aucune photo web trouvée (pas de créative sur le site).";
+
     await telegramSendMessage(
       chatId,
-      ["Article publié.", "", article.title, article.url, "", facebookLine].join(
-        "\n",
-      ),
+      [
+        "Article publié.",
+        "",
+        article.title,
+        article.url,
+        "",
+        coverLine,
+        facebookLine,
+      ].join("\n"),
     );
   } catch (err) {
-    console.error("telegram webhook error", err);
+    console.error("telegram process error", err);
     try {
       await telegramSendMessage(
         chatId,
@@ -144,6 +161,21 @@ export async function POST(request: NextRequest) {
     } catch {
       // ignore
     }
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let update: TelegramUpdate;
+  try {
+    update = (await request.json()) as TelegramUpdate;
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
+
+  // Répondre tout de suite à Telegram (évite les retries / boucles)
+  const claimed = await claimUpdate(update.update_id);
+  if (claimed) {
+    after(() => processUpdate(update));
   }
 
   return NextResponse.json({ ok: true });

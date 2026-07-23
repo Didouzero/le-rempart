@@ -30,3 +30,8 @@ model Article {
 
   @@index([status, publishedAt])
 }
+
+model TelegramUpdateLog {
+  updateId  BigInt   @id
+  createdAt DateTime @default(now())
+}

@@ -75,8 +75,18 @@ export type TelegramUpdate = {
     text?: string;
     caption?: string;
     chat: { id: number; type: string };
-    from?: { id: number; username?: string; first_name?: string };
-    photo?: Array<{ file_id: string; width: number; height: number; file_size?: number }>;
+    from?: {
+      id: number;
+      username?: string;
+      first_name?: string;
+      is_bot?: boolean;
+    };
+    photo?: Array<{
+      file_id: string;
+      width: number;
+      height: number;
+      file_size?: number;
+    }>;
     document?: {
       file_id: string;
       mime_type?: string;

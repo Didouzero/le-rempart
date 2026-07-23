@@ -58,7 +58,7 @@ export default async function HomePage() {
               title={article.title}
               excerpt={article.excerpt}
               publishedAt={article.publishedAt}
-              hasCover={Boolean(article.coverImageUrl || article.coverImageMime)}
+              hasCover={Boolean(article.coverImageUrl)}
               coverUrl={article.coverImageUrl}
             />
           ))}

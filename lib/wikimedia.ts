@@ -1,19 +1,74 @@
 /**
- * Illustration via Wikimedia Commons (politiques, personnalités, actu).
- * Licence libre (souvent CC) — bien plus adapté que Unsplash pour Macron, Attal, etc.
- * Doc : https://www.mediawiki.org/wiki/API:Main_page
+ * Illustration web pour le site (JAMAIS la créative Canva).
+ * 1) Wikipedia FR (miniatures politiques)
+ * 2) Wikimedia Commons
+ * 3) Unsplash (optionnel)
  */
 
-export type WikiCover = {
+export type WebCover = {
   url: string;
-  title: string;
-  artist?: string;
-  license?: string;
+  source: "wikipedia" | "wikimedia" | "unsplash";
+  title?: string;
 };
 
-function pickLargestThumb(
-  info: { url?: string; thumburl?: string; responsiveUrls?: Record<string, string> },
-): string | null {
+export function buildImageSearchQuery(title: string, caption?: string): string {
+  const raw = `${title} ${caption || ""}`.trim();
+  return raw
+    .replace(/‼️|🇫🇷|flash|info|actualité/gi, " ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 100);
+}
+
+/** Extrait un possible nom propre (2–4 mots capitalisés). */
+function candidatePersonQueries(query: string): string[] {
+  const words = query.split(/\s+/).filter(Boolean);
+  const out: string[] = [query];
+  if (words.length >= 2) out.push(words.slice(0, 2).join(" "));
+  if (words.length >= 3) out.push(words.slice(0, 3).join(" "));
+  // Uniques
+  return [...new Set(out.filter((q) => q.length >= 3))];
+}
+
+export async function findWikipediaCover(
+  query: string,
+): Promise<WebCover | null> {
+  const candidates = candidatePersonQueries(query);
+  for (const q of candidates) {
+    const url = `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q.replace(/ /g, "_"))}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news)",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) continue;
+      const data = (await res.json()) as {
+        title?: string;
+        originalimage?: { source?: string };
+        thumbnail?: { source?: string };
+        type?: string;
+      };
+      if (data.type === "disambiguation") continue;
+      const img = data.originalimage?.source || data.thumbnail?.source;
+      if (img) {
+        return { url: img, source: "wikipedia", title: data.title };
+      }
+    } catch (err) {
+      console.error("wikipedia cover failed", q, err);
+    }
+  }
+  return null;
+}
+
+function pickLargestThumb(info: {
+  url?: string;
+  thumburl?: string;
+  responsiveUrls?: Record<string, string>;
+}): string | null {
   if (info.responsiveUrls) {
     const entries = Object.entries(info.responsiveUrls)
       .map(([w, u]) => ({ w: Number(w), u }))
@@ -26,7 +81,7 @@ function pickLargestThumb(
 
 export async function findWikimediaCover(
   query: string,
-): Promise<WikiCover | null> {
+): Promise<WebCover | null> {
   const q = query.trim().slice(0, 120);
   if (!q) return null;
 
@@ -36,7 +91,7 @@ export async function findWikimediaCover(
   searchUrl.searchParams.set("origin", "*");
   searchUrl.searchParams.set("generator", "search");
   searchUrl.searchParams.set("gsrsearch", q);
-  searchUrl.searchParams.set("gsrnamespace", "6"); // File:
+  searchUrl.searchParams.set("gsrnamespace", "6");
   searchUrl.searchParams.set("gsrlimit", "8");
   searchUrl.searchParams.set("prop", "imageinfo");
   searchUrl.searchParams.set(
@@ -53,10 +108,7 @@ export async function findWikimediaCover(
     signal: AbortSignal.timeout(12000),
   });
 
-  if (!res.ok) {
-    console.error("Wikimedia search failed", res.status);
-    return null;
-  }
+  if (!res.ok) return null;
 
   const data = (await res.json()) as {
     query?: {
@@ -69,7 +121,6 @@ export async function findWikimediaCover(
             thumburl?: string;
             mime?: string;
             responsiveUrls?: Record<string, string>;
-            extmetadata?: Record<string, { value?: string }>;
           }>;
         }
       >;
@@ -80,31 +131,35 @@ export async function findWikimediaCover(
   for (const page of pages) {
     const info = page.imageinfo?.[0];
     if (!info?.mime?.startsWith("image/")) continue;
-    // Évite PDF / SVG trop lourds ou inutiles en cover
     if (info.mime === "image/svg+xml") continue;
-
     const url = pickLargestThumb(info);
     if (!url) continue;
-
-    return {
-      url,
-      title: page.title || q,
-      artist: info.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, "").trim(),
-      license: info.extmetadata?.LicenseShortName?.value,
-    };
+    return { url, source: "wikimedia", title: page.title };
   }
-
   return null;
 }
 
-/** Construit une requête image à partir du titre / brief. */
-export function buildImageSearchQuery(title: string, caption?: string): string {
-  const raw = `${title} ${caption || ""}`.trim();
-  // Garde les noms propres / mots utiles, retire le bruit
-  return raw
-    .replace(/‼️|🇫🇷|flash|info|actualité/gi, " ")
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 100);
+export async function resolveWebCoverUrl(
+  title: string,
+  caption: string,
+): Promise<string | null> {
+  const query = buildImageSearchQuery(title, caption);
+  const tries = candidatePersonQueries(query);
+
+  for (const q of tries) {
+    const wiki = await findWikipediaCover(q);
+    if (wiki?.url) return wiki.url;
+  }
+
+  for (const q of tries) {
+    const commons = await findWikimediaCover(q);
+    if (commons?.url) return commons.url;
+  }
+
+  try {
+    const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
+    return await findUnsplashCoverUrl(query);
+  } catch {
+    return null;
+  }
 }

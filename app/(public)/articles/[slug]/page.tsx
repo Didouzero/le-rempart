@@ -52,7 +52,6 @@ export default async function ArticlePage({ params }: Props) {
           content: true,
           publishedAt: true,
           coverImageUrl: true,
-          coverImageData: true,
         },
       }),
     );
@@ -77,12 +76,10 @@ export default async function ArticlePage({ params }: Props) {
         <p className="mt-4 max-w-2xl text-lg text-ink/80">{article.excerpt}</p>
       </header>
 
-      {article.coverImageUrl || article.coverImageData ? (
+      {article.coverImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={
-            article.coverImageUrl || `/api/media/${article.id}`
-          }
+          src={article.coverImageUrl}
           alt=""
           className="mb-8 w-full max-h-[28rem] object-cover"
         />
