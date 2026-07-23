@@ -56,6 +56,19 @@ npx prisma migrate deploy
 3. **Générer avec Kimi** : article Markdown + chapô.
 4. Relire / éditer, puis **Enregistrer brouillon** ou **Publier**.
 
+## Bot Telegram
+
+1. Crée un bot avec [@BotFather](https://t.me/BotFather), récupère `TELEGRAM_BOT_TOKEN`.
+2. Ajoute les variables sur Vercel : `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`, `NEXT_PUBLIC_SITE_URL`.
+3. Envoie `/start` au bot → il te donne ton user id → mets-le dans `TELEGRAM_ALLOWED_USER_IDS` → Redeploy.
+4. Enregistre le webhook :
+
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://le-rempart.org/api/telegram/webhook"
+```
+
+5. Envoie une créative (image + légende) → article publié + lien renvoyé.
+
 ## AdSense
 
 Le composant `AdSlot` n'affiche rien tant que `NEXT_PUBLIC_ADSENSE_CLIENT` n'est pas défini. Emplacements prévus : sous le header de l'accueil (`home-below-header`) et en bas d'article (`article-bottom`).
