@@ -2,12 +2,13 @@ import OpenAI from "openai";
 
 /** Modèles dispo sur le compte Moonshot ; surcharge possible via env. */
 export function getKimiTextModel(): string {
-  return process.env.KIMI_MODEL || "kimi-k3";
+  return process.env.KIMI_MODEL || "kimi-k2.6";
 }
 
 export function getKimiVisionModels(): string[] {
-  const primary = process.env.KIMI_VISION_MODEL || process.env.KIMI_MODEL || "kimi-k3";
-  return [...new Set([primary, "kimi-k3", "kimi-k2.6"])];
+  const primary =
+    process.env.KIMI_VISION_MODEL || process.env.KIMI_MODEL || "kimi-k2.6";
+  return [...new Set([primary, "kimi-k2.6", "kimi-k3"])];
 }
 
 export type GeneratedArticle = {

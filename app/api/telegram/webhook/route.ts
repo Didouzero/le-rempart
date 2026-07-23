@@ -113,6 +113,24 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       image,
     });
 
+    const coverLine = article.coverImageUrl
+      ? "Illustration site : photo web trouvée."
+      : "Illustration site : aucune photo web trouvée.";
+
+    // Répondre tout de suite après publication site (ne pas bloquer sur Facebook)
+    await telegramSendMessage(
+      chatId,
+      [
+        "Article publié.",
+        "",
+        article.title,
+        article.url,
+        "",
+        coverLine,
+        "Facebook : envoi en cours…",
+      ].join("\n"),
+    );
+
     let facebookLine =
       "Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).";
 
@@ -123,42 +141,39 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           excerpt: article.excerpt,
           articleUrl: article.url,
         });
-        // URL publique de la créative (stockée en base) — pas de multipart déprécié
         const { siteUrl } = await import("@/lib/publish-from-creative");
-        // Forcer www : Facebook suit mal les 308 apex→www
-        const base = siteUrl().replace("://le-rempart.org", "://www.le-rempart.org");
+        const base = siteUrl().replace(
+          "://le-rempart.org",
+          "://www.le-rempart.org",
+        );
         const imageUrl = `${base}/api/media/${article.id}`;
-        const fb = await postCreativeToFacebookPage({
-          imageUrl,
-          caption: flash,
-          commentLink: article.url.replace(
-            "://le-rempart.org",
-            "://www.le-rempart.org",
+
+        const fb = await Promise.race([
+          postCreativeToFacebookPage({
+            imageUrl,
+            caption: flash,
+            commentLink: article.url.replace(
+              "://le-rempart.org",
+              "://www.le-rempart.org",
+            ),
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Timeout Facebook (25s)")),
+              25000,
+            ),
           ),
-        });
+        ]);
         facebookLine = `Facebook : publié (post ${fb.postId}).`;
       } catch (err) {
         console.error(err);
         facebookLine = `Facebook : échec — ${err instanceof Error ? err.message : "erreur"}`;
       }
+
+      await telegramSendMessage(chatId, facebookLine);
+    } else {
+      await telegramSendMessage(chatId, facebookLine);
     }
-
-    const coverLine = article.coverImageUrl
-      ? "Illustration site : photo web trouvée."
-      : "Illustration site : aucune photo web trouvée (pas de créative sur le site).";
-
-    await telegramSendMessage(
-      chatId,
-      [
-        "Article publié.",
-        "",
-        article.title,
-        article.url,
-        "",
-        coverLine,
-        facebookLine,
-      ].join("\n"),
-    );
   } catch (err) {
     console.error("telegram process error", err);
     try {
