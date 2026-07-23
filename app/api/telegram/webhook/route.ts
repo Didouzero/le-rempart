@@ -156,6 +156,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               "://le-rempart.org",
               "://www.le-rempart.org",
             ),
+            image: article.creative,
           }),
           new Promise<never>((_, reject) =>
             setTimeout(

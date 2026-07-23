@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { generateArticleFromSource } from "@/lib/kimi";
+import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { slugify } from "@/lib/slug";
-import { resolveWebCoverUrl } from "@/lib/wikimedia";
 
 async function makeUniqueSlug(title: string) {
   const base = slugify(title);
@@ -32,6 +32,28 @@ export function siteUrl(): string {
   return "https://le-rempart.org";
 }
 
+function detectImageMime(buffer: Buffer, declared?: string): string {
+  if (declared && declared.startsWith("image/") && declared !== "application/octet-stream") {
+    return declared;
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (buffer.length >= 4 && buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+    return "image/webp";
+  }
+  return "image/jpeg";
+}
+
 export async function publishArticleFromCreative(input: {
   caption?: string;
   image?: { buffer: Buffer; mime: string };
@@ -46,7 +68,6 @@ export async function publishArticleFromCreative(input: {
 }> {
   const caption = input.caption?.trim() || "Actualité du jour";
 
-  // Anti-doublon : même brief déjà publié récemment
   const recent = await prisma.article.findFirst({
     where: {
       sourceText: caption,
@@ -62,7 +83,12 @@ export async function publishArticleFromCreative(input: {
       excerpt: recent.excerpt,
       url: `${siteUrl()}/articles/${recent.slug}`,
       coverImageUrl: recent.coverImageUrl,
-      creative: input.image,
+      creative: input.image
+        ? {
+            buffer: input.image.buffer,
+            mime: detectImageMime(input.image.buffer, input.image.mime),
+          }
+        : undefined,
     };
   }
 
@@ -76,7 +102,14 @@ export async function publishArticleFromCreative(input: {
   });
 
   const slug = await makeUniqueSlug(generated.title);
-  const coverImageUrl = await resolveWebCoverUrl(generated.title, caption);
+  const coverImageUrl = await resolveRelevantCoverUrl({
+    title: generated.title,
+    excerpt: generated.excerpt,
+  });
+
+  const creativeMime = input.image
+    ? detectImageMime(input.image.buffer, input.image.mime)
+    : null;
 
   const article = await prisma.article.create({
     data: {
@@ -87,10 +120,8 @@ export async function publishArticleFromCreative(input: {
       slug,
       status: "published",
       publishedAt: new Date(),
-      // Site : uniquement image web (Wikipedia / Commons / Unsplash)
       coverImageUrl,
-      // Créative Canva : Facebook uniquement
-      coverImageMime: input.image?.mime || null,
+      coverImageMime: creativeMime,
       coverImageData: input.image ? new Uint8Array(input.image.buffer) : null,
     },
   });
@@ -102,6 +133,8 @@ export async function publishArticleFromCreative(input: {
     excerpt: article.excerpt,
     url: `${siteUrl()}/articles/${article.slug}`,
     coverImageUrl: article.coverImageUrl,
-    creative: input.image,
+    creative: input.image
+      ? { buffer: input.image.buffer, mime: creativeMime || "image/jpeg" }
+      : undefined,
   };
 }
