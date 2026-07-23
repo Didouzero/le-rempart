@@ -125,11 +125,16 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         });
         // URL publique de la créative (stockée en base) — pas de multipart déprécié
         const { siteUrl } = await import("@/lib/publish-from-creative");
-        const imageUrl = `${siteUrl()}/api/media/${article.id}`;
+        // Forcer www : Facebook suit mal les 308 apex→www
+        const base = siteUrl().replace("://le-rempart.org", "://www.le-rempart.org");
+        const imageUrl = `${base}/api/media/${article.id}`;
         const fb = await postCreativeToFacebookPage({
           imageUrl,
           caption: flash,
-          commentLink: article.url,
+          commentLink: article.url.replace(
+            "://le-rempart.org",
+            "://www.le-rempart.org",
+          ),
         });
         facebookLine = `Facebook : publié (post ${fb.postId}).`;
       } catch (err) {
