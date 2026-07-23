@@ -14,10 +14,11 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-/** Empêche les requêtes DB de bloquer indéfiniment (ex. Postgres injoignable). */
+/** Empêche les requêtes DB de bloquer indéfiniment (ex. Postgres injoignable).
+ *  Neon cold start peut dépasser 5s → on laisse une marge confortable. */
 export async function withDbTimeout<T>(
   promise: Promise<T>,
-  ms = 5000,
+  ms = 20000,
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
