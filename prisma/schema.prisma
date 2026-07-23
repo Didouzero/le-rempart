@@ -13,17 +13,19 @@ enum ArticleStatus {
 }
 
 model Article {
-  id          String        @id @default(cuid())
-  slug        String        @unique
-  title       String
-  content     String
-  excerpt     String
-  sourceText  String?
-  sourceUrl   String?
-  status      ArticleStatus @default(draft)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  publishedAt DateTime?
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  title          String
+  content        String
+  excerpt        String
+  sourceText     String?
+  sourceUrl      String?
+  coverImageMime String?
+  coverImageData Bytes?
+  status         ArticleStatus @default(draft)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  publishedAt    DateTime?
 
   @@index([status, publishedAt])
 }

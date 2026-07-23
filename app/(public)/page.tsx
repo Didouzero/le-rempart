@@ -5,13 +5,28 @@ import { prisma, withDbTimeout } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
+  let articles: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    excerpt: string;
+    publishedAt: Date | null;
+    coverImageMime: string | null;
+  }> = [];
 
   try {
     articles = await withDbTimeout(
       prisma.article.findMany({
         where: { status: "published" },
         orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          excerpt: true,
+          publishedAt: true,
+          coverImageMime: true,
+        },
       }),
     );
   } catch {
@@ -36,10 +51,12 @@ export default async function HomePage() {
           {articles.map((article) => (
             <ArticleCard
               key={article.id}
+              id={article.id}
               slug={article.slug}
               title={article.title}
               excerpt={article.excerpt}
               publishedAt={article.publishedAt}
+              hasCover={Boolean(article.coverImageMime)}
             />
           ))}
         </div>

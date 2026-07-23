@@ -45,6 +45,14 @@ export default async function ArticlePage({ params }: Props) {
     article = await withDbTimeout(
       prisma.article.findFirst({
         where: { slug, status: "published" },
+        select: {
+          id: true,
+          title: true,
+          excerpt: true,
+          content: true,
+          publishedAt: true,
+          coverImageData: true,
+        },
       }),
     );
   } catch {
@@ -67,6 +75,15 @@ export default async function ArticlePage({ params }: Props) {
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-ink/80">{article.excerpt}</p>
       </header>
+
+      {article.coverImageData ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/media/${article.id}`}
+          alt=""
+          className="mb-8 w-full max-h-[28rem] object-cover"
+        />
+      ) : null}
 
       <ArticleBody content={article.content} />
 
