@@ -1,5 +1,15 @@
 import OpenAI from "openai";
 
+/** Modèles dispo sur le compte Moonshot ; surcharge possible via env. */
+export function getKimiTextModel(): string {
+  return process.env.KIMI_MODEL || "kimi-k3";
+}
+
+export function getKimiVisionModels(): string[] {
+  const primary = process.env.KIMI_VISION_MODEL || process.env.KIMI_MODEL || "kimi-k3";
+  return [...new Set([primary, "kimi-k3", "kimi-k2.6"])];
+}
+
 export type GeneratedArticle = {
   title: string;
   excerpt: string;
@@ -41,7 +51,7 @@ export async function generateArticleFromSource(input: {
     .join("\n\n");
 
   const completion = await client.chat.completions.create({
-    model: "kimi-k2.7",
+    model: getKimiTextModel(),
     max_tokens: 4096,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },

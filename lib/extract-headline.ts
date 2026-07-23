@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getKimiVisionModels } from "@/lib/kimi";
 
 /**
  * Lit le titre / accroche écrite sur la créative Canva (vision Kimi).
@@ -21,11 +22,7 @@ export async function extractHeadlineFromCreative(input: {
   const b64 = input.buffer.toString("base64");
   const dataUrl = `data:${mime};base64,${b64}`;
 
-  const models = [
-    process.env.KIMI_VISION_MODEL,
-    "kimi-k2.7",
-    "kimi-k3",
-  ].filter(Boolean) as string[];
+  const models = getKimiVisionModels();
 
   let lastError: unknown;
   for (const model of models) {
