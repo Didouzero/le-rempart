@@ -123,8 +123,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           excerpt: article.excerpt,
           articleUrl: article.url,
         });
+        // URL publique de la créative (stockée en base) — pas de multipart déprécié
+        const { siteUrl } = await import("@/lib/publish-from-creative");
+        const imageUrl = `${siteUrl()}/api/media/${article.id}`;
         const fb = await postCreativeToFacebookPage({
-          image: article.creative,
+          imageUrl,
           caption: flash,
           commentLink: article.url,
         });

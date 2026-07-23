@@ -12,56 +12,95 @@ export function isFacebookConfigured(): boolean {
 }
 
 type GraphError = {
-  error?: { message?: string; code?: number; type?: string };
+  error?: { message?: string; code?: number; type?: string; error_subcode?: number };
 };
 
-async function graphJson<T>(
-  url: string,
-  init?: RequestInit,
-): Promise<T> {
+async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   const data = (await res.json()) as T & GraphError;
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Facebook Graph error ${res.status}`);
+    throw new Error(
+      data.error?.message || `Facebook Graph error ${res.status}`,
+    );
   }
   return data;
 }
 
 /**
- * Publie la créative sur la Page, avec caption FLASH INFO,
- * puis un commentaire épinglé contenant le lien article.
+ * Vérifie que le token est bien un Page token (pas un token profil perso).
+ */
+export async function assertFacebookPageToken(): Promise<{ id: string; name: string }> {
+  const config = getPageConfig();
+  if (!config) throw new Error("Facebook non configuré");
+
+  const me = await graphJson<{ id: string; name: string }>(
+    `${GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(config.token)}`,
+  );
+
+  if (me.id !== config.pageId) {
+    throw new Error(
+      `Le token ne correspond pas à FACEBOOK_PAGE_ID (token→${me.id}, env→${config.pageId}). Régénère un « token d'accès de Page ».`,
+    );
+  }
+
+  return me;
+}
+
+/**
+ * Publie la créative sur la Page via URL publique (API Pages moderne).
+ * Évite multipart / publish_actions déprécié.
+ *
+ * 1) upload photo unpublished via url
+ * 2) post feed avec attached_media + caption FLASH INFO
+ * 3) commentaire épinglé avec le lien article
  */
 export async function postCreativeToFacebookPage(input: {
-  image: { buffer: Buffer; mime: string };
+  /** URL publique HTTPS de la créative (ex. https://www.le-rempart.org/api/media/{id}) */
+  imageUrl: string;
   caption: string;
   commentLink: string;
 }): Promise<{ postId: string; commentId: string }> {
   const config = getPageConfig();
   if (!config) {
-    throw new Error("Facebook non configuré (FACEBOOK_PAGE_ID / FACEBOOK_PAGE_ACCESS_TOKEN)");
+    throw new Error(
+      "Facebook non configuré (FACEBOOK_PAGE_ID / FACEBOOK_PAGE_ACCESS_TOKEN)",
+    );
   }
 
-  const form = new FormData();
-  const ext = input.image.mime.includes("png") ? "png" : "jpg";
-  form.append(
-    "source",
-    new Blob([new Uint8Array(input.image.buffer)], { type: input.image.mime }),
-    `creative.${ext}`,
-  );
-  form.append("caption", input.caption);
-  form.append("access_token", config.token);
-  form.append("published", "true");
+  await assertFacebookPageToken();
 
-  const photo = await graphJson<{ id: string; post_id?: string }>(
+  // 1) Upload photo (non publiée seule) depuis URL
+  const photoParams = new URLSearchParams({
+    url: input.imageUrl,
+    published: "false",
+    access_token: config.token,
+  });
+  const photo = await graphJson<{ id: string }>(
     `${GRAPH}/${config.pageId}/photos`,
-    { method: "POST", body: form },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: photoParams,
+    },
   );
 
-  const photoId = photo.id;
-  const postId = photo.post_id || photo.id;
+  // 2) Créer le post Page avec la photo attachée
+  const feedParams = new URLSearchParams();
+  feedParams.set("message", input.caption);
+  feedParams.set("attached_media[0]", JSON.stringify({ media_fbid: photo.id }));
+  feedParams.set("access_token", config.token);
 
+  const feed = await graphJson<{ id: string }>(`${GRAPH}/${config.pageId}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: feedParams,
+  });
+
+  const postId = feed.id;
+
+  // 3) Commentaire avec le lien
   const comment = await graphJson<{ id: string }>(
-    `${GRAPH}/${photoId}/comments`,
+    `${GRAPH}/${postId}/comments`,
     {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -72,6 +111,7 @@ export async function postCreativeToFacebookPage(input: {
     },
   );
 
+  // 4) Épingler (best-effort)
   try {
     await graphJson(`${GRAPH}/${comment.id}`, {
       method: "POST",
@@ -82,7 +122,6 @@ export async function postCreativeToFacebookPage(input: {
       }),
     });
   } catch (err) {
-    // Pin peut échouer selon permissions ; le commentaire reste publié
     console.error("Facebook pin comment failed", err);
   }
 
