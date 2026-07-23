@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getKimiTextModel } from "@/lib/kimi";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 
@@ -18,7 +19,7 @@ export async function buildFlashInfoText(input: {
         baseURL: "https://api.moonshot.ai/v1",
       });
       const completion = await client.chat.completions.create({
-        model: "kimi-k2.7",
+        model: getKimiTextModel(),
         max_tokens: 400,
         messages: [
           {
