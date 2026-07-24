@@ -110,12 +110,8 @@ export async function publishArticleFromCreative(input: {
   // Rédaction + illustration EN PARALLÈLE (ne plus empiler les délais)
   const [generated, coverImageUrl] = await Promise.all([
     generateArticleFromSource({
-      title: caption.slice(0, 160),
-      sourceText: [
-        "Contexte : créative visuelle fournie par la rédaction (image Canva avec titre en overlay).",
-        `Légende / brief Telegram : ${caption}`,
-        "Rédige un article d'actualité français factuel, cohérent avec ce brief et ce titre.",
-      ].join("\n\n"),
+      title: caption.slice(0, 200),
+      // Pas de consignes internes ici : elles polluaient le fallback / le modèle
     }),
     withTimeout(
       resolveRelevantCoverUrl({ title: caption, excerpt: caption }),
