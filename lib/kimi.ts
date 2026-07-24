@@ -2,7 +2,8 @@ import { moonshotChat } from "@/lib/moonshot";
 
 /** Modèles dispo sur le compte Moonshot ; surcharge possible via env. */
 export function getKimiTextModel(): string {
-  return process.env.KIMI_MODEL || "kimi-k2.6";
+  // k3 + reasoning low : rédaction fiable ~15–25s (k2.6 timeout souvent sur articles longs)
+  return process.env.KIMI_MODEL || "kimi-k3";
 }
 
 export function getKimiVisionModels(): string[] {
@@ -117,6 +118,7 @@ export async function generateArticleFromSource(input: {
         model: getKimiTextModel(),
         maxTokens: attempt.maxTokens,
         timeoutMs: attempt.timeoutMs,
+        reasoningEffort: "low",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
@@ -127,6 +129,23 @@ export async function generateArticleFromSource(input: {
       lastErr = err;
       console.error("Kimi generate attempt failed", err);
     }
+  }
+
+  // Dernier essai : k2.6 sans thinking (parfois plus réactif)
+  try {
+    const raw = await moonshotChat({
+      model: "kimi-k2.6",
+      maxTokens: 1000,
+      timeoutMs: 30_000,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userContent },
+      ],
+    });
+    return parseArticleJson(raw);
+  } catch (err) {
+    lastErr = err;
+    console.error("Kimi k2.6 fallback failed", err);
   }
 
   console.error("Kimi unavailable after retries, using improved fallback", lastErr);

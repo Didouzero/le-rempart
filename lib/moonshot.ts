@@ -1,7 +1,6 @@
 /**
  * Client Moonshot / Kimi en fetch brut.
- * Le SDK OpenAI peut ne pas propager correctement `thinking: disabled`
- * et son timeout n'abort pas toujours → hangs Vercel.
+ * Le SDK OpenAI peut ne pas propager correctement `thinking` / `reasoning_effort`.
  */
 
 export type MoonshotMessage =
@@ -19,24 +18,36 @@ export async function moonshotChat(input: {
   messages: MoonshotMessage[];
   maxTokens?: number;
   timeoutMs?: number;
+  /** Pour kimi-k3 : low | high | max */
+  reasoningEffort?: "low" | "high" | "max";
 }): Promise<string> {
   const apiKey = process.env.MOONSHOT_API_KEY;
   if (!apiKey) throw new Error("MOONSHOT_API_KEY is not set");
 
   const timeoutMs = input.timeoutMs ?? 20_000;
+  const model = input.model;
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: input.maxTokens ?? 1200,
+    messages: input.messages,
+  };
+
+  // k2.6 : thinking ON par défaut → hangs. k3 : reasoning_effort.
+  if (model.includes("k2.6") || model.includes("k2.5")) {
+    body.thinking = { type: "disabled" };
+  } else if (model.includes("k3")) {
+    body.reasoning_effort = input.reasoningEffort || "low";
+  } else {
+    body.thinking = { type: "disabled" };
+  }
+
   const res = await fetch("https://api.moonshot.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: input.model,
-      max_tokens: input.maxTokens ?? 1200,
-      messages: input.messages,
-      // Critique : sans ça, kimi-k2.6 peut tourner >1–2 min
-      thinking: { type: "disabled" },
-    }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
