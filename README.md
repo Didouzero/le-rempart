@@ -80,19 +80,39 @@ Facebook utilise toujours la **créative Canva**.
 
 ## Facebook Page (post auto)
 
-1. Va sur [developers.facebook.com](https://developers.facebook.com) → crée une **App** (type Business).
-2. Ajoute le produit **Facebook Login** / Graph API.
-3. Outils → **Graph API Explorer** :
-   - User ou Page token avec permissions : `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`, `pages_manage_engagement`
-   - Sélectionne ta Page **Le Rempart**
-   - Génère un **Page Access Token** (idéalement long-lived)
-4. Récupère le **Page ID** (Réglages de la Page → À propos, ou via Graph `me/accounts`).
-5. Sur Vercel, ajoute :
-   - `FACEBOOK_PAGE_ID`
-   - `FACEBOOK_PAGE_ACCESS_TOKEN`
-6. Redeploy.
+Le token collé depuis **Graph API Explorer** expire en **1–2 heures**. Sans token **Page longue durée**, le blog publie mais Facebook échoue silencieusement (ou avec un message Telegram « token expired »).
 
-Le bot publiera alors : créative + texte « ‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — » + lien, puis un **commentaire épinglé** avec le lien article.
+### Créer un token Page qui ne expire pas
+
+1. [developers.facebook.com](https://developers.facebook.com) → ton App → **Paramètres** → **Général** : note `App ID` + `App Secret`.
+2. **Outils** → **Graph API Explorer** :
+   - Permissions : `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`, `pages_manage_engagement`, `pages_manage_metadata`
+   - Génère un **User Token** (toi, admin de la Page), pas encore le Page token.
+3. Échange en **User Token long-lived** (~60 jours) — dans le navigateur ou curl :
+
+```text
+GET https://graph.facebook.com/v21.0/oauth/access_token
+  ?grant_type=fb_exchange_token
+  &client_id=APP_ID
+  &client_secret=APP_SECRET
+  &fb_exchange_token=TOKEN_COURT_EXPLORER
+```
+
+4. Avec ce token long-lived, récupère le **Page Access Token** (celui-là ne expire en pratique pas tant que tu ne changes pas le mot de passe / les droits) :
+
+```text
+GET https://graph.facebook.com/v21.0/me/accounts?access_token=USER_TOKEN_LONG_LIVED
+```
+
+Dans la réponse, prends `id` (Page ID) et `access_token` de la Page **Le Rempart**.
+
+5. Sur **Vercel** → Project → Settings → Environment Variables :
+   - `FACEBOOK_PAGE_ID` = l’`id` de la Page
+   - `FACEBOOK_PAGE_ACCESS_TOKEN` = l’`access_token` de la Page (pas le User token)
+6. **Redeploy** (obligatoire après changement d’env).
+7. Sur Telegram : `/fb` → doit répondre `Facebook OK` + nom de la Page.
+
+Le bot publie alors : créative + texte « ‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — », puis un **commentaire épinglé** avec le lien article.
 
 ## AdSense
 

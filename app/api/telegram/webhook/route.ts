@@ -59,8 +59,36 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     if (text === "/help") {
       await telegramSendMessage(
         chatId,
-        "Envoie uniquement l'image Canva. Légende Telegram optionnelle.",
+        "Envoie uniquement l'image Canva. Légende Telegram optionnelle.\n/fb — tester le token Facebook.",
       );
+      return;
+    }
+
+    if (text === "/fb" || text === "/facebook") {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(chatId, `Accès non autorisé.\nTon id : ${userId}`);
+        return;
+      }
+      if (!isFacebookConfigured()) {
+        await telegramSendMessage(
+          chatId,
+          "Facebook non configuré sur Vercel (FACEBOOK_PAGE_ID + FACEBOOK_PAGE_ACCESS_TOKEN).",
+        );
+        return;
+      }
+      try {
+        const { assertFacebookPageToken } = await import("@/lib/facebook");
+        const page = await assertFacebookPageToken();
+        await telegramSendMessage(
+          chatId,
+          `Facebook OK.\nPage : ${page.name}\nID : ${page.id}`,
+        );
+      } catch (err) {
+        await telegramSendMessage(
+          chatId,
+          `Facebook KO — ${err instanceof Error ? err.message : "token invalide"}\n\nLe token Graph Explorer expire en 1–2h. Il faut un Page Access Token longue durée (voir README).`,
+        );
+      }
       return;
     }
 
