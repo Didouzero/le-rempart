@@ -1,8 +1,10 @@
 /**
- * Recherche d'illustration pertinente (scène réelle).
- * Openverse d'abord — budget temps strict.
+ * Recherche d'illustration pertinente.
+ * 1) Portrait Wikipedia si personnalité détectée dans le titre
+ * 2) Scène Openverse sinon
  */
 
+import { extractPersonCandidates } from "@/lib/person-names";
 import { fallbackVisualQueries } from "@/lib/visual-queries";
 
 export async function findOpenverseCoverUrl(
@@ -42,10 +44,47 @@ export async function findOpenverseCoverUrl(
   return null;
 }
 
+async function findPersonPortraitUrl(title: string): Promise<string | null> {
+  const candidates = extractPersonCandidates(title);
+  if (candidates.length === 0) return null;
+
+  const { findWikipediaCover, findWikimediaCover } = await import(
+    "@/lib/wikimedia"
+  );
+
+  for (const person of candidates) {
+    try {
+      const wiki = await findWikipediaCover(person);
+      if (wiki?.url) return wiki.url;
+    } catch (err) {
+      console.error("person wikipedia failed", person, err);
+    }
+  }
+
+  for (const person of candidates) {
+    try {
+      const commons = await findWikimediaCover(person);
+      if (commons?.url) return commons.url;
+    } catch (err) {
+      console.error("person commons failed", person, err);
+    }
+  }
+
+  return null;
+}
+
 export async function resolveRelevantCoverUrl(input: {
   title: string;
   excerpt?: string;
 }): Promise<string | null> {
+  // Personnalité dans le titre → portrait systématique
+  try {
+    const portrait = await findPersonPortraitUrl(input.title);
+    if (portrait) return portrait;
+  } catch (err) {
+    console.error("person portrait failed", err);
+  }
+
   const queries = fallbackVisualQueries(
     `${input.title} ${input.excerpt || ""}`,
   ).slice(0, 2);

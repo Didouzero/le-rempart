@@ -83,6 +83,11 @@ a:hover {
   text-underline-offset: 3px;
 }
 
+.prose-article strong {
+  font-weight: 700;
+  color: var(--color-ink, #111);
+}
+
 .marble-band {
   background-color: var(--color-marble);
   background-image:

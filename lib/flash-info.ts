@@ -17,6 +17,7 @@ export async function buildFlashInfoText(input: {
         model: getKimiTextModel(),
         maxTokens: 280,
         timeoutMs: 12_000,
+        reasoningEffort: "low",
         messages: [
           {
             role: "system",
@@ -29,11 +30,12 @@ export async function buildFlashInfoText(input: {
           },
         ],
       });
-      if (text) body = text.replace(/^["']|["']$/g, "");
+      if (text) body = text.replace(/^["']|["']$/g, "").trim();
     } catch (err) {
       console.error("flash info kimi failed", err);
     }
   }
 
-  return [PREFIX, "", body, "", input.articleUrl].join("\n");
+  // Un seul espace entre le préfixe et le texte (pas de saut de ligne)
+  return `${PREFIX} ${body}\n\n${input.articleUrl}`;
 }

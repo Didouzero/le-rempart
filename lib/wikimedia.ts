@@ -53,6 +53,10 @@ export async function findWikipediaCover(
         type?: string;
       };
       if (data.type === "disambiguation") continue;
+      const pageTitle = (data.title || "").toLowerCase();
+      const lastName = q.split(/\s+/).pop()?.toLowerCase() || "";
+      // Évite les faux positifs (ex. "Macron À" → page hors sujet)
+      if (lastName.length >= 3 && !pageTitle.includes(lastName)) continue;
       const img = data.originalimage?.source || data.thumbnail?.source;
       if (img) {
         return { url: img, source: "wikipedia", title: data.title };

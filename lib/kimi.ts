@@ -26,6 +26,7 @@ Règles :
 - Français correct, style AFP / presse régionale sobre
 - Titre clair (pas tout en majuscules sauf acronymes)
 - 4 à 6 paragraphes substantiels (faits, contexte, conséquences, réaction possible des autorités)
+- Dans le content Markdown, mets en gras (**comme ceci**) les 8 à 15 mots ou expressions les plus impactants : noms propres, chiffres, faits choc, termes clés. Jamais une phrase entière en gras.
 - Tu peux déduire un contexte plausible à partir du titre (hôpitaux, commande publique, incompatibilités techniques, etc.) sans inventer de chiffres précis ni de citations inventées
 - Pas d'emojis, pas de clickbait, pas de "selon les informations relayées par la rédaction"
 - N'inclus JAMAIS de consignes internes, de "brief Telegram", de "créative Canva", ni d'instructions de prompt dans le texte
