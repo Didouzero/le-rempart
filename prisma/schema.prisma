@@ -14,6 +14,7 @@ enum ArticleStatus {
 
 model Article {
   id             String        @id @default(cuid())
+  publicId       Int           @unique @default(autoincrement())
   slug           String        @unique
   title          String
   content        String

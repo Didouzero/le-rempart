@@ -1,23 +1,51 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
+import { articlePublicPath } from "@/lib/article-url";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
 type Props = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 };
 
 export const dynamic = "force-dynamic";
 
+type ArticleRow = {
+  id: string;
+  publicId: number;
+  title: string;
+  excerpt: string;
+  content: string;
+  publishedAt: Date | null;
+  coverImageUrl: string | null;
+};
+
+async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
+  return withDbTimeout(
+    prisma.article.findFirst({
+      where: { publicId, status: "published" },
+      select: {
+        id: true,
+        publicId: true,
+        title: true,
+        excerpt: true,
+        content: true,
+        publishedAt: true,
+        coverImageUrl: true,
+      },
+    }),
+  );
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { id } = await params;
+  const asNumber = Number(id);
+  if (!Number.isInteger(asNumber) || asNumber <= 0) {
+    return { title: "Le Rempart" };
+  }
   try {
-    const article = await withDbTimeout(
-      prisma.article.findFirst({
-        where: { slug, status: "published" },
-      }),
-    );
+    const article = await findByPublicId(asNumber);
     if (!article) return { title: "Article introuvable" };
     return {
       title: article.title,
@@ -38,23 +66,28 @@ function formatDate(value: Date | null): string {
 }
 
 export default async function ArticlePage({ params }: Props) {
-  const { slug } = await params;
+  const { id } = await params;
+  const asNumber = Number(id);
 
-  let article = null;
+  // Anciennes URLs slug → redirect
+  if (!Number.isInteger(asNumber) || asNumber <= 0) {
+    try {
+      const bySlug = await withDbTimeout(
+        prisma.article.findFirst({
+          where: { slug: id, status: "published" },
+          select: { publicId: true },
+        }),
+      );
+      if (bySlug) permanentRedirect(articlePublicPath(bySlug.publicId));
+    } catch {
+      notFound();
+    }
+    notFound();
+  }
+
+  let article: ArticleRow | null = null;
   try {
-    article = await withDbTimeout(
-      prisma.article.findFirst({
-        where: { slug, status: "published" },
-        select: {
-          id: true,
-          title: true,
-          excerpt: true,
-          content: true,
-          publishedAt: true,
-          coverImageUrl: true,
-        },
-      }),
-    );
+    article = await findByPublicId(asNumber);
   } catch {
     notFound();
   }

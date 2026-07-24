@@ -79,7 +79,7 @@ export default async function AdminDashboardPage() {
                     <div className="flex gap-3">
                       <Link href={`/admin/articles/${article.id}`}>Éditer</Link>
                       {article.status === "published" ? (
-                        <Link href={`/articles/${article.slug}`} target="_blank">
+                        <Link href={`/articles/${article.publicId}`} target="_blank">
                           Voir
                         </Link>
                       ) : null}

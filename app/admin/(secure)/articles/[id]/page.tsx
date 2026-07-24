@@ -17,7 +17,9 @@ export default async function AdminEditArticlePage({ params }: Props) {
     <div>
       <div className="mb-8">
         <h1 className="font-display text-3xl">Éditer l&apos;article</h1>
-        <p className="mt-2 text-sm text-muted">Slug : {article.slug}</p>
+        <p className="mt-2 text-sm text-muted">
+          Lien public : /articles/{article.publicId}
+        </p>
       </div>
       <ArticleEditor
         mode="edit"

@@ -7,12 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   let articles: Array<{
     id: string;
-    slug: string;
+    publicId: number;
     title: string;
     excerpt: string;
     publishedAt: Date | null;
     coverImageUrl: string | null;
-    coverImageMime: string | null;
   }> = [];
 
   try {
@@ -22,12 +21,11 @@ export default async function HomePage() {
         orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
         select: {
           id: true,
-          slug: true,
+          publicId: true,
           title: true,
           excerpt: true,
           publishedAt: true,
           coverImageUrl: true,
-          coverImageMime: true,
         },
       }),
     );
@@ -54,7 +52,7 @@ export default async function HomePage() {
             <ArticleCard
               key={article.id}
               id={article.id}
-              slug={article.slug}
+              publicId={article.publicId}
               title={article.title}
               excerpt={article.excerpt}
               publishedAt={article.publishedAt}

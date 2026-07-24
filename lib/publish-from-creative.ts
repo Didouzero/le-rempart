@@ -1,6 +1,7 @@
-import { prisma } from "@/lib/prisma";
+import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { generateArticleFromSource } from "@/lib/kimi";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
+import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
 
@@ -20,17 +21,7 @@ async function makeUniqueSlug(title: string) {
 }
 
 export function siteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(
-      /^https?:\/\//,
-      "",
-    );
-    return `https://${host}`;
-  }
-  return "https://le-rempart.org";
+  return siteUrlBase();
 }
 
 function detectImageMime(buffer: Buffer, declared?: string): string {
@@ -74,6 +65,7 @@ export async function publishArticleFromCreative(input: {
   image?: { buffer: Buffer; mime: string };
 }): Promise<{
   id: string;
+  publicId: number;
   slug: string;
   title: string;
   excerpt: string;
@@ -93,10 +85,11 @@ export async function publishArticleFromCreative(input: {
   if (recent) {
     return {
       id: recent.id,
+      publicId: recent.publicId,
       slug: recent.slug,
       title: recent.title,
       excerpt: recent.excerpt,
-      url: `${siteUrl()}/articles/${recent.slug}`,
+      url: articlePublicUrl(recent.publicId, siteUrl()),
       coverImageUrl: recent.coverImageUrl,
       creative: input.image
         ? {
@@ -107,11 +100,9 @@ export async function publishArticleFromCreative(input: {
     };
   }
 
-  // Rédaction + illustration EN PARALLÈLE (ne plus empiler les délais)
   const [generated, coverImageUrl] = await Promise.all([
     generateArticleFromSource({
       title: caption.slice(0, 200),
-      // Pas de consignes internes ici : elles polluaient le fallback / le modèle
     }),
     withTimeout(
       resolveRelevantCoverUrl({ title: caption, excerpt: caption }),
@@ -128,10 +119,10 @@ export async function publishArticleFromCreative(input: {
     ? detectImageMime(input.image.buffer, input.image.mime)
     : null;
 
-  // La créative Canva reste en mémoire pour Facebook (multipart).
-  // On évite d'écrire un gros BLOB en base (lents sur Neon) sauf si < 700 Ko.
   const storeBlob =
-    input.image && input.image.buffer.length > 0 && input.image.buffer.length < 700_000;
+    input.image &&
+    input.image.buffer.length > 0 &&
+    input.image.buffer.length < 700_000;
 
   const article = await prisma.article.create({
     data: {
@@ -150,10 +141,11 @@ export async function publishArticleFromCreative(input: {
 
   return {
     id: article.id,
+    publicId: article.publicId,
     slug: article.slug,
     title: article.title,
     excerpt: article.excerpt,
-    url: `${siteUrl()}/articles/${article.slug}`,
+    url: articlePublicUrl(article.publicId, siteUrl()),
     coverImageUrl: article.coverImageUrl,
     creative: input.image
       ? { buffer: input.image.buffer, mime: creativeMime || "image/jpeg" }
