@@ -1,6 +1,6 @@
 /**
  * Recherche d'illustration pertinente (scène réelle).
- * Openverse d'abord — pas d'appel Kimi (évite les hangs).
+ * Openverse d'abord — budget temps strict.
  */
 
 import { fallbackVisualQueries } from "@/lib/visual-queries";
@@ -13,7 +13,7 @@ export async function findOpenverseCoverUrl(
 
   const url = new URL("https://api.openverse.org/v1/images/");
   url.searchParams.set("q", q);
-  url.searchParams.set("page_size", "5");
+  url.searchParams.set("page_size", "3");
   url.searchParams.set("license_type", "commercial,modification");
   url.searchParams.set("category", "photograph");
 
@@ -23,7 +23,7 @@ export async function findOpenverseCoverUrl(
         "LeRempartBot/1.0 (https://le-rempart.org; news illustrations)",
       Accept: "application/json",
     },
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(5000),
   });
 
   if (!res.ok) {
@@ -48,7 +48,7 @@ export async function resolveRelevantCoverUrl(input: {
 }): Promise<string | null> {
   const queries = fallbackVisualQueries(
     `${input.title} ${input.excerpt || ""}`,
-  ).slice(0, 3);
+  ).slice(0, 2);
 
   for (const q of queries) {
     try {
@@ -61,26 +61,10 @@ export async function resolveRelevantCoverUrl(input: {
 
   try {
     const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
-    for (const q of queries) {
-      const u = await findUnsplashCoverUrl(q);
-      if (u) return u;
-    }
+    const u = await findUnsplashCoverUrl(queries[0] || input.title);
+    if (u) return u;
   } catch {
     // ignore
-  }
-
-  try {
-    const { findWikimediaCover, findWikipediaCover } = await import(
-      "@/lib/wikimedia"
-    );
-    for (const q of queries) {
-      const wiki = await findWikipediaCover(q);
-      if (wiki?.url) return wiki.url;
-      const commons = await findWikimediaCover(q);
-      if (commons?.url) return commons.url;
-    }
-  } catch (err) {
-    console.error("wiki fallback failed", err);
   }
 
   return null;

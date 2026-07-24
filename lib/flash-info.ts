@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { moonshotChat } from "@/lib/moonshot";
 import { getKimiTextModel } from "@/lib/kimi";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
@@ -9,21 +9,14 @@ export async function buildFlashInfoText(input: {
   excerpt: string;
   articleUrl: string;
 }): Promise<string> {
-  const apiKey = process.env.MOONSHOT_API_KEY;
   let body = input.excerpt.trim();
 
-  if (apiKey) {
+  if (process.env.MOONSHOT_API_KEY) {
     try {
-      const client = new OpenAI({
-        apiKey,
-        baseURL: "https://api.moonshot.ai/v1",
-        timeout: 15_000,
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const noThinking = { thinking: { type: "disabled" } } as any;
-      const completion = await client.chat.completions.create({
+      const text = await moonshotChat({
         model: getKimiTextModel(),
-        max_tokens: 400,
+        maxTokens: 280,
+        timeoutMs: 12_000,
         messages: [
           {
             role: "system",
@@ -35,9 +28,7 @@ export async function buildFlashInfoText(input: {
             content: `Titre : ${input.title}\nChapô : ${input.excerpt}\nRésume en 3-4 phrases pour un post Facebook.`,
           },
         ],
-        ...noThinking,
       });
-      const text = completion.choices[0]?.message?.content?.trim();
       if (text) body = text.replace(/^["']|["']$/g, "");
     } catch (err) {
       console.error("flash info kimi failed", err);

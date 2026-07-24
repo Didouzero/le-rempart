@@ -135,18 +135,14 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     await telegramSendMessage(chatId, "Rédaction de l'article…");
 
-    const { withTimeout } = await import("@/lib/with-timeout");
-    const article = await withTimeout(
-      publishArticleFromCreative({ caption, image }),
-      70_000,
-      "Timeout rédaction",
-    );
+    // publishArticleFromSource a ses propres timeouts + fallback Kimi :
+    // ne plus tuer tout le flow à 70s avec une erreur sèche.
+    const article = await publishArticleFromCreative({ caption, image });
 
     const coverLine = article.coverImageUrl
       ? "Illustration site : photo web trouvée."
       : "Illustration site : aucune photo web trouvée.";
 
-    // Répondre tout de suite après publication site (ne pas bloquer sur Facebook)
     await telegramSendMessage(
       chatId,
       [

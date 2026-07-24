@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { moonshotChat, type MoonshotMessage } from "@/lib/moonshot";
 import { getKimiVisionModels } from "@/lib/kimi";
 
 /**
@@ -8,56 +8,45 @@ export async function extractHeadlineFromCreative(input: {
   buffer: Buffer;
   mime: string;
 }): Promise<string> {
-  const apiKey = process.env.MOONSHOT_API_KEY;
-  if (!apiKey) {
+  if (!process.env.MOONSHOT_API_KEY) {
     throw new Error("MOONSHOT_API_KEY is not set");
   }
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: "https://api.moonshot.ai/v1",
-    timeout: 25_000,
-  });
-
-  const mime = input.mime || "image/png";
-  const b64 = input.buffer.toString("base64");
-  const dataUrl = `data:${mime};base64,${b64}`;
+  const mime = input.mime.startsWith("image/")
+    ? input.mime
+    : "image/jpeg";
+  const dataUrl = `data:${mime};base64,${input.buffer.toString("base64")}`;
 
   const models = getKimiVisionModels();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const noThinking = { thinking: { type: "disabled" } } as any;
-
   let lastError: unknown;
+
   for (const model of models) {
     try {
-      const completion = await client.chat.completions.create({
+      const messages: MoonshotMessage[] = [
+        {
+          role: "system",
+          content:
+            "Tu extrais le titre principal d'une créative d'actualité (image Canva). Réponds UNIQUEMENT avec le texte du titre, sans guillemets, sans commentaire.",
+        },
+        {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: dataUrl } },
+            {
+              type: "text",
+              text: "Quel est le titre / accroche principale écrite sur cette image ?",
+            },
+          ],
+        },
+      ];
+
+      const raw = await moonshotChat({
         model,
-        max_tokens: 256,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Tu extrais le titre principal d'une créative d'actualité (image Canva). Réponds UNIQUEMENT avec le texte du titre, sans guillemets, sans commentaire.",
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: dataUrl },
-              },
-              {
-                type: "text",
-                text: "Quel est le titre / accroche principale écrite sur cette image ?",
-              },
-            ],
-          },
-        ],
-        ...noThinking,
+        maxTokens: 200,
+        timeoutMs: 28_000,
+        messages,
       });
 
-      const raw = completion.choices[0]?.message?.content?.trim() || "";
       const title = raw
         .replace(/^["«»]|["«»]$/g, "")
         .replace(/^titre\s*[:\-–]\s*/i, "")

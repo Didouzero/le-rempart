@@ -82,8 +82,7 @@ async function commentAndPin(postId: string, link: string, token: string) {
 
 /**
  * Publie la créative sur la Page.
- * 1) Essai via URL publique
- * 2) Fallback upload binaire (multipart) si l'URL échoue
+ * Prefère l'upload binaire (fiable) ; URL publique en secours.
  */
 export async function postCreativeToFacebookPage(input: {
   imageUrl: string;
@@ -101,30 +100,8 @@ export async function postCreativeToFacebookPage(input: {
   let postId: string | null = null;
   let lastErr: unknown;
 
-  // Méthode A : photo publiée directement avec URL
-  try {
-    const params = new URLSearchParams({
-      url: input.imageUrl,
-      caption: input.caption,
-      published: "true",
-      access_token: config.token,
-    });
-    const photo = await graphJson<{ id: string; post_id?: string }>(
-      `${GRAPH}/${config.pageId}/photos`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params,
-      },
-    );
-    postId = photo.post_id || `${config.pageId}_${photo.id}`;
-  } catch (err) {
-    lastErr = err;
-    console.error("FB url photo failed", err);
-  }
-
-  // Méthode B : multipart avec le buffer
-  if (!postId && input.image) {
+  // Méthode A : multipart (créative en mémoire — prioritaire)
+  if (input.image) {
     try {
       const form = new FormData();
       const ext = input.image.mime.includes("png") ? "png" : "jpg";
@@ -147,6 +124,30 @@ export async function postCreativeToFacebookPage(input: {
     } catch (err) {
       lastErr = err;
       console.error("FB multipart photo failed", err);
+    }
+  }
+
+  // Méthode B : URL publique
+  if (!postId) {
+    try {
+      const params = new URLSearchParams({
+        url: input.imageUrl,
+        caption: input.caption,
+        published: "true",
+        access_token: config.token,
+      });
+      const photo = await graphJson<{ id: string; post_id?: string }>(
+        `${GRAPH}/${config.pageId}/photos`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params,
+        },
+      );
+      postId = photo.post_id || `${config.pageId}_${photo.id}`;
+    } catch (err) {
+      lastErr = err;
+      console.error("FB url photo failed", err);
     }
   }
 
