@@ -100,7 +100,7 @@ export async function findWikimediaCover(
   searchUrl.searchParams.set("prop", "imageinfo");
   searchUrl.searchParams.set(
     "iiprop",
-    "url|mime|size|extmetadata|responsiveurls",
+    "url|mime|size|extmetadata|responsiveurls|width|height",
   );
   searchUrl.searchParams.set("iiurlwidth", "1600");
 
@@ -124,6 +124,8 @@ export async function findWikimediaCover(
             url?: string;
             thumburl?: string;
             mime?: string;
+            width?: number;
+            height?: number;
             responsiveUrls?: Record<string, string>;
           }>;
         }
@@ -143,6 +145,107 @@ export async function findWikimediaCover(
   return null;
 }
 
+/** Commons : uniquement images paysage (visage / photo d'actu). */
+export async function findWikimediaLandscapeCover(
+  query: string,
+): Promise<WebCover | null> {
+  const q = query.trim().slice(0, 120);
+  if (!q) return null;
+
+  const searchUrl = new URL("https://commons.wikimedia.org/w/api.php");
+  searchUrl.searchParams.set("action", "query");
+  searchUrl.searchParams.set("format", "json");
+  searchUrl.searchParams.set("origin", "*");
+  searchUrl.searchParams.set("generator", "search");
+  searchUrl.searchParams.set("gsrsearch", q);
+  searchUrl.searchParams.set("gsrnamespace", "6");
+  searchUrl.searchParams.set("gsrlimit", "15");
+  searchUrl.searchParams.set("prop", "imageinfo");
+  searchUrl.searchParams.set(
+    "iiprop",
+    "url|mime|size|responsiveurls|width|height",
+  );
+  searchUrl.searchParams.set("iiurlwidth", "1600");
+
+  const res = await fetch(searchUrl, {
+    headers: {
+      "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news site)",
+      Accept: "application/json",
+    },
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as {
+    query?: {
+      pages?: Record<
+        string,
+        {
+          title?: string;
+          imageinfo?: Array<{
+            url?: string;
+            thumburl?: string;
+            mime?: string;
+            width?: number;
+            height?: number;
+            responsiveUrls?: Record<string, string>;
+          }>;
+        }
+      >;
+    };
+  };
+
+  for (const page of Object.values(data.query?.pages || {})) {
+    const info = page.imageinfo?.[0];
+    if (!info?.mime?.startsWith("image/") || info.mime === "image/svg+xml") {
+      continue;
+    }
+    if (!info.width || !info.height || info.width / info.height < 1.2) continue;
+    const url = pickLargestThumb(info);
+    if (!url) continue;
+    return { url, source: "wikimedia", title: page.title };
+  }
+  return null;
+}
+
+/** Wikipedia : n'accepte l'illustration que si elle est paysage. */
+export async function findWikipediaLandscapeCover(
+  query: string,
+): Promise<WebCover | null> {
+  const candidates = candidatePersonQueries(query);
+  for (const q of candidates) {
+    const url = `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q.replace(/ /g, "_"))}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news)",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) continue;
+      const data = (await res.json()) as {
+        title?: string;
+        type?: string;
+        originalimage?: { source?: string; width?: number; height?: number };
+        thumbnail?: { source?: string; width?: number; height?: number };
+      };
+      if (data.type === "disambiguation") continue;
+      const pageTitle = (data.title || "").toLowerCase();
+      const lastName = q.split(/\s+/).pop()?.toLowerCase() || "";
+      if (lastName.length >= 3 && !pageTitle.includes(lastName)) continue;
+
+      const img = data.originalimage || data.thumbnail;
+      if (!img?.source || !img.width || !img.height) continue;
+      if (img.width / img.height < 1.2) continue;
+      return { url: img.source, source: "wikipedia", title: data.title };
+    } catch (err) {
+      console.error("wikipedia landscape failed", q, err);
+    }
+  }
+  return null;
+}
+
 export async function resolveWebCoverUrl(
   title: string,
   caption: string,
@@ -151,12 +254,12 @@ export async function resolveWebCoverUrl(
   const tries = candidatePersonQueries(query);
 
   for (const q of tries) {
-    const wiki = await findWikipediaCover(q);
+    const wiki = await findWikipediaLandscapeCover(q);
     if (wiki?.url) return wiki.url;
   }
 
   for (const q of tries) {
-    const commons = await findWikimediaCover(q);
+    const commons = await findWikimediaLandscapeCover(q);
     if (commons?.url) return commons.url;
   }
 

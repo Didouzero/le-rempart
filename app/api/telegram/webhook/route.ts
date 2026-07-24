@@ -190,7 +190,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             ),
           ),
         ]);
-        facebookLine = `Facebook : publié (post ${fb.postId}).`;
+        facebookLine = fb.pinned
+          ? `Facebook : publié (post ${fb.postId}, commentaire épinglé).`
+          : `Facebook : publié (post ${fb.postId}). Commentaire avec lien OK, mais Meta n'a pas accepté l'épinglage via API.`;
       } catch (err) {
         console.error(err);
         facebookLine = `Facebook : échec — ${err instanceof Error ? err.message : "erreur"}`;

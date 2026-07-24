@@ -75,7 +75,12 @@ export async function assertFacebookPageToken(): Promise<{
   return { id: page.pageId, name: page.pageName };
 }
 
-async function commentAndPin(postId: string, link: string, token: string) {
+async function commentAndPin(
+  postId: string,
+  link: string,
+  token: string,
+): Promise<{ commentId: string; pinned: boolean; pinError?: string }> {
+  // Commentaire avec aperçu de lien (attachment_url)
   const comment = await graphJson<{ id: string }>(
     `${GRAPH}/${postId}/comments`,
     {
@@ -83,25 +88,50 @@ async function commentAndPin(postId: string, link: string, token: string) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         message: link,
+        attachment_url: link,
         access_token: token,
       }),
     },
   );
 
-  try {
-    await graphJson(`${GRAPH}/${comment.id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        is_pinned: "true",
-        access_token: token,
-      }),
-    });
-  } catch (err) {
-    console.error("Facebook pin failed", err);
+  // Meta a retiré is_pinned des params officiels Comment Update (v25).
+  // On tente quand même plusieurs variantes — si ça échoue, le commentaire reste publié.
+  const pinAttempts = [
+    async () => {
+      await graphJson(`${GRAPH}/${comment.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          is_pinned: "true",
+          access_token: token,
+        }),
+      });
+    },
+    async () => {
+      // Ancienne variante API
+      await graphJson(
+        `https://graph.facebook.com/v18.0/${comment.id}?is_pinned=true&access_token=${encodeURIComponent(token)}`,
+        { method: "POST" },
+      );
+    },
+  ];
+
+  let lastPinError: string | undefined;
+  for (const attempt of pinAttempts) {
+    try {
+      await attempt();
+      return { commentId: comment.id, pinned: true };
+    } catch (err) {
+      console.error("Facebook pin attempt failed", err);
+      lastPinError = err instanceof Error ? err.message : "pin failed";
+    }
   }
 
-  return comment.id;
+  return {
+    commentId: comment.id,
+    pinned: false,
+    pinError: lastPinError,
+  };
 }
 
 async function publishFeedWithPhoto(input: {
@@ -134,7 +164,7 @@ export async function postCreativeToFacebookPage(input: {
   caption: string;
   commentLink: string;
   image?: { buffer: Buffer; mime: string };
-}): Promise<{ postId: string; commentId: string }> {
+}): Promise<{ postId: string; commentId: string; pinned: boolean }> {
   const page = await resolvePagePublishToken();
 
   let postId: string | null = null;
@@ -252,10 +282,10 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  const commentId = await commentAndPin(
+  const { commentId, pinned } = await commentAndPin(
     postId,
     input.commentLink,
     page.token,
   );
-  return { postId, commentId };
+  return { postId, commentId, pinned };
 }
