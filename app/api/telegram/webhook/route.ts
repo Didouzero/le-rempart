@@ -190,9 +190,14 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             ),
           ),
         ]);
-        facebookLine = fb.pinned
-          ? `Facebook : publié (post ${fb.postId}, commentaire épinglé).`
-          : `Facebook : publié (post ${fb.postId}). Commentaire avec lien OK, mais Meta n'a pas accepté l'épinglage via API.`;
+        const parts = [
+          `Facebook : publié (post ${fb.postId}`,
+          fb.pinned ? "commentaire épinglé" : "commentaire lien OK",
+          fb.storyId
+            ? `story OK`
+            : `story échec${fb.storyError ? ` — ${fb.storyError}` : ""}`,
+        ];
+        facebookLine = `${parts[0]}, ${parts[1]}, ${parts[2]}).`;
       } catch (err) {
         console.error(err);
         facebookLine = `Facebook : échec — ${err instanceof Error ? err.message : "erreur"}`;

@@ -46,10 +46,8 @@ async function resolvePagePublishToken(): Promise<{
     `${GRAPH}/${config.pageId}?fields=id,name,access_token&access_token=${encodeURIComponent(config.token)}`,
   );
 
-  // Si le token env est déjà un Page token, /me === pageId et access_token peut être renvoyé
   const pageToken = page.access_token || config.token;
 
-  // Vérifie que ce token "parle" bien comme la Page
   const me = await graphJson<{ id: string; name?: string }>(
     `${GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(pageToken)}`,
   );
@@ -75,12 +73,78 @@ export async function assertFacebookPageToken(): Promise<{
   return { id: page.pageId, name: page.pageName };
 }
 
+async function uploadUnpublishedPhoto(input: {
+  pageId: string;
+  token: string;
+  imageUrl?: string;
+  image?: { buffer: Buffer; mime: string };
+}): Promise<string> {
+  if (input.image) {
+    const form = new FormData();
+    const ext = input.image.mime.includes("png") ? "png" : "jpg";
+    form.append(
+      "source",
+      new Blob([new Uint8Array(input.image.buffer)], {
+        type: input.image.mime || "image/jpeg",
+      }),
+      `creative.${ext}`,
+    );
+    form.append("published", "false");
+    form.append("access_token", input.token);
+
+    const photo = await graphJson<{ id: string }>(
+      `${GRAPH}/${input.pageId}/photos`,
+      { method: "POST", body: form },
+    );
+    return photo.id;
+  }
+
+  if (input.imageUrl) {
+    const photo = await graphJson<{ id: string }>(
+      `${GRAPH}/${input.pageId}/photos`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          url: input.imageUrl,
+          published: "false",
+          access_token: input.token,
+        }),
+      },
+    );
+    return photo.id;
+  }
+
+  throw new Error("Aucune image pour upload Facebook");
+}
+
+async function publishPhotoStory(input: {
+  pageId: string;
+  token: string;
+  photoId: string;
+}): Promise<string> {
+  const story = await graphJson<{ success?: boolean; post_id?: string }>(
+    `${GRAPH}/${input.pageId}/photo_stories`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        photo_id: input.photoId,
+        access_token: input.token,
+      }),
+    },
+  );
+  if (!story.success && !story.post_id) {
+    throw new Error("Story Facebook refusée");
+  }
+  return story.post_id || input.photoId;
+}
+
 async function commentAndPin(
   postId: string,
   link: string,
   token: string,
 ): Promise<{ commentId: string; pinned: boolean; pinError?: string }> {
-  // Commentaire avec aperçu de lien (attachment_url)
   const comment = await graphJson<{ id: string }>(
     `${GRAPH}/${postId}/comments`,
     {
@@ -94,8 +158,6 @@ async function commentAndPin(
     },
   );
 
-  // Meta a retiré is_pinned des params officiels Comment Update (v25).
-  // On tente quand même plusieurs variantes — si ça échoue, le commentaire reste publié.
   const pinAttempts = [
     async () => {
       await graphJson(`${GRAPH}/${comment.id}`, {
@@ -108,7 +170,6 @@ async function commentAndPin(
       });
     },
     async () => {
-      // Ancienne variante API
       await graphJson(
         `https://graph.facebook.com/v18.0/${comment.id}?is_pinned=true&access_token=${encodeURIComponent(token)}`,
         { method: "POST" },
@@ -156,45 +217,39 @@ async function publishFeedWithPhoto(input: {
 }
 
 /**
- * Publie la créative sur la Page avec un vrai Page Access Token.
- * Flow moderne : photo non publiée → post feed + attached_media.
+ * Publie la créative : post Page + Story + commentaire lien.
+ * Meta exige une photo inédite pour la Story (2e upload).
  */
 export async function postCreativeToFacebookPage(input: {
   imageUrl: string;
   caption: string;
   commentLink: string;
   image?: { buffer: Buffer; mime: string };
-}): Promise<{ postId: string; commentId: string; pinned: boolean }> {
+}): Promise<{
+  postId: string;
+  commentId: string;
+  pinned: boolean;
+  storyId: string | null;
+  storyError?: string;
+}> {
   const page = await resolvePagePublishToken();
 
   let postId: string | null = null;
   let lastErr: unknown;
 
-  // 1) Upload photo unpublished (multipart)
+  // 1) Upload photo unpublished (multipart) → feed
   if (input.image && !postId) {
     try {
-      const form = new FormData();
-      const ext = input.image.mime.includes("png") ? "png" : "jpg";
-      form.append(
-        "source",
-        new Blob([new Uint8Array(input.image.buffer)], {
-          type: input.image.mime || "image/jpeg",
-        }),
-        `creative.${ext}`,
-      );
-      form.append("published", "false");
-      form.append("access_token", page.token);
-
-      const photo = await graphJson<{ id: string }>(
-        `${GRAPH}/${page.pageId}/photos`,
-        { method: "POST", body: form },
-      );
-
+      const photoId = await uploadUnpublishedPhoto({
+        pageId: page.pageId,
+        token: page.token,
+        image: input.image,
+      });
       postId = await publishFeedWithPhoto({
         pageId: page.pageId,
         token: page.token,
         caption: input.caption,
-        photoId: photo.id,
+        photoId,
       });
     } catch (err) {
       lastErr = err;
@@ -202,27 +257,19 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  // 2) Upload photo unpublished (URL)
+  // 2) Upload photo unpublished (URL) → feed
   if (!postId) {
     try {
-      const photo = await graphJson<{ id: string }>(
-        `${GRAPH}/${page.pageId}/photos`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            url: input.imageUrl,
-            published: "false",
-            access_token: page.token,
-          }),
-        },
-      );
-
+      const photoId = await uploadUnpublishedPhoto({
+        pageId: page.pageId,
+        token: page.token,
+        imageUrl: input.imageUrl,
+      });
       postId = await publishFeedWithPhoto({
         pageId: page.pageId,
         token: page.token,
         caption: input.caption,
-        photoId: photo.id,
+        photoId,
       });
     } catch (err) {
       lastErr = err;
@@ -282,10 +329,31 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
+  // Story : nouvel upload obligatoire (photo déjà utilisée pour le feed = refusée)
+  let storyId: string | null = null;
+  let storyError: string | undefined;
+  try {
+    const storyPhotoId = await uploadUnpublishedPhoto({
+      pageId: page.pageId,
+      token: page.token,
+      image: input.image,
+      imageUrl: input.image ? undefined : input.imageUrl,
+    });
+    storyId = await publishPhotoStory({
+      pageId: page.pageId,
+      token: page.token,
+      photoId: storyPhotoId,
+    });
+  } catch (err) {
+    console.error("FB story failed", err);
+    storyError = err instanceof Error ? err.message : "story failed";
+  }
+
   const { commentId, pinned } = await commentAndPin(
     postId,
     input.commentLink,
     page.token,
   );
-  return { postId, commentId, pinned };
+
+  return { postId, commentId, pinned, storyId, storyError };
 }
