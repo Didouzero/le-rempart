@@ -39,6 +39,7 @@ export async function generateArticleFromSource(input: {
   const client = new OpenAI({
     apiKey,
     baseURL: "https://api.moonshot.ai/v1",
+    timeout: 50_000,
   });
 
   const userParts = [
@@ -51,36 +52,46 @@ export async function generateArticleFromSource(input: {
     .filter(Boolean)
     .join("\n\n");
 
-  const completion = await client.chat.completions.create({
-    model: getKimiTextModel(),
-    max_tokens: 4096,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `À partir des éléments suivants, rédige un article prêt à publier.\n\n${userParts}`,
-      },
-    ],
-  });
+  const models = [...new Set([getKimiTextModel(), "kimi-k2.6", "kimi-k3"])];
+  let lastErr: unknown;
 
-  const raw = completion.choices[0]?.message?.content?.trim();
-  if (!raw) {
-    throw new Error("Réponse Kimi vide");
+  for (const model of models) {
+    try {
+      const completion = await client.chat.completions.create({
+        model,
+        max_tokens: 2500,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `À partir des éléments suivants, rédige un article prêt à publier.\n\n${userParts}`,
+          },
+        ],
+      });
+
+      const raw = completion.choices[0]?.message?.content?.trim();
+      if (!raw) throw new Error("Réponse Kimi vide");
+
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Réponse Kimi non JSON");
+
+      const parsed = JSON.parse(jsonMatch[0]) as Partial<GeneratedArticle>;
+      if (!parsed.title || !parsed.content || !parsed.excerpt) {
+        throw new Error("JSON Kimi incomplet");
+      }
+
+      return {
+        title: String(parsed.title).trim(),
+        excerpt: String(parsed.excerpt).trim(),
+        content: String(parsed.content).trim(),
+      };
+    } catch (err) {
+      lastErr = err;
+      console.error("Kimi generate failed", model, err);
+    }
   }
 
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Réponse Kimi non JSON");
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]) as Partial<GeneratedArticle>;
-  if (!parsed.title || !parsed.content || !parsed.excerpt) {
-    throw new Error("JSON Kimi incomplet");
-  }
-
-  return {
-    title: String(parsed.title).trim(),
-    excerpt: String(parsed.excerpt).trim(),
-    content: String(parsed.content).trim(),
-  };
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Rédaction Kimi impossible");
 }

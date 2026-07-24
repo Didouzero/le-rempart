@@ -130,16 +130,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     let caption = manualCaption;
     if (!caption) {
       caption = await extractHeadlineFromCreative(image);
-      await telegramSendMessage(
-        chatId,
-        `Titre détecté : ${caption}\nRédaction en cours…`,
-      );
+      await telegramSendMessage(chatId, `Titre détecté : ${caption}`);
     }
 
-    const article = await publishArticleFromCreative({
-      caption,
-      image,
-    });
+    await telegramSendMessage(chatId, "Rédaction de l'article…");
+
+    const { withTimeout } = await import("@/lib/with-timeout");
+    const article = await withTimeout(
+      publishArticleFromCreative({ caption, image }),
+      70_000,
+      "Timeout rédaction",
+    );
 
     const coverLine = article.coverImageUrl
       ? "Illustration site : photo web trouvée."

@@ -1,7 +1,9 @@
 /**
  * Recherche d'illustration pertinente (scène réelle).
- * Openverse (Creative Commons) — pas de clé API.
+ * Openverse d'abord — pas d'appel Kimi (évite les hangs).
  */
+
+import { fallbackVisualQueries } from "@/lib/visual-queries";
 
 export async function findOpenverseCoverUrl(
   query: string,
@@ -17,10 +19,11 @@ export async function findOpenverseCoverUrl(
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news illustrations)",
+      "User-Agent":
+        "LeRempartBot/1.0 (https://le-rempart.org; news illustrations)",
       Accept: "application/json",
     },
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!res.ok) {
@@ -43,8 +46,9 @@ export async function resolveRelevantCoverUrl(input: {
   title: string;
   excerpt?: string;
 }): Promise<string | null> {
-  const { suggestVisualSearchQueries } = await import("@/lib/visual-queries");
-  const queries = await suggestVisualSearchQueries(input);
+  const queries = fallbackVisualQueries(
+    `${input.title} ${input.excerpt || ""}`,
+  ).slice(0, 3);
 
   for (const q of queries) {
     try {
@@ -55,7 +59,6 @@ export async function resolveRelevantCoverUrl(input: {
     }
   }
 
-  // Unsplash si clé présente
   try {
     const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
     for (const q of queries) {
@@ -66,7 +69,6 @@ export async function resolveRelevantCoverUrl(input: {
     // ignore
   }
 
-  // Wikimedia en dernier, avec les requêtes VISUELLES (pas le titre brut)
   try {
     const { findWikimediaCover, findWikipediaCover } = await import(
       "@/lib/wikimedia"
