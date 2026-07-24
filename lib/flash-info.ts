@@ -17,7 +17,10 @@ export async function buildFlashInfoText(input: {
       const client = new OpenAI({
         apiKey,
         baseURL: "https://api.moonshot.ai/v1",
+        timeout: 15_000,
       });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const noThinking = { thinking: { type: "disabled" } } as any;
       const completion = await client.chat.completions.create({
         model: getKimiTextModel(),
         max_tokens: 400,
@@ -32,6 +35,7 @@ export async function buildFlashInfoText(input: {
             content: `Titre : ${input.title}\nChapô : ${input.excerpt}\nRésume en 3-4 phrases pour un post Facebook.`,
           },
         ],
+        ...noThinking,
       });
       const text = completion.choices[0]?.message?.content?.trim();
       if (text) body = text.replace(/^["']|["']$/g, "");

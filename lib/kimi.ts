@@ -26,6 +26,34 @@ Réponds UNIQUEMENT avec un JSON valide de la forme :
 {"title":"...","excerpt":"...","content":"..."}
 L'excerpt fait 1 à 2 phrases.`;
 
+function createMoonshotClient(apiKey: string) {
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://api.moonshot.ai/v1",
+    timeout: 35_000,
+  });
+}
+
+/** kimi-k2.6 active le "thinking" par défaut → très lent / hang Vercel. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const NO_THINKING = { thinking: { type: "disabled" } } as any;
+
+function fallbackArticle(title: string, sourceText?: string): GeneratedArticle {
+  const clean = title.trim().slice(0, 160) || "Actualité";
+  const note = (sourceText || "").trim().slice(0, 400);
+  return {
+    title: clean,
+    excerpt: `${clean}.`,
+    content: [
+      `Selon les informations relayées par la rédaction, ${clean.charAt(0).toLowerCase()}${clean.slice(1)}.`,
+      note
+        ? `Éléments communiqués : ${note}`
+        : `Les détails de cette actualité sont encore en cours de vérification.`,
+      `Le Rempart suivra les éventuelles précisions apportées par les autorités et les acteurs concernés.`,
+    ].join("\n\n"),
+  };
+}
+
 export async function generateArticleFromSource(input: {
   title: string;
   sourceText?: string;
@@ -33,14 +61,10 @@ export async function generateArticleFromSource(input: {
 }): Promise<GeneratedArticle> {
   const apiKey = process.env.MOONSHOT_API_KEY;
   if (!apiKey) {
-    throw new Error("MOONSHOT_API_KEY is not set");
+    return fallbackArticle(input.title, input.sourceText);
   }
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: "https://api.moonshot.ai/v1",
-    timeout: 50_000,
-  });
+  const client = createMoonshotClient(apiKey);
 
   const userParts = [
     `Titre proposé : ${input.title}`,
@@ -52,14 +76,14 @@ export async function generateArticleFromSource(input: {
     .filter(Boolean)
     .join("\n\n");
 
-  const models = [...new Set([getKimiTextModel(), "kimi-k2.6", "kimi-k3"])];
+  const models = [...new Set([getKimiTextModel(), "kimi-k2.6"])];
   let lastErr: unknown;
 
   for (const model of models) {
     try {
       const completion = await client.chat.completions.create({
         model,
-        max_tokens: 2500,
+        max_tokens: 1800,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -67,6 +91,7 @@ export async function generateArticleFromSource(input: {
             content: `À partir des éléments suivants, rédige un article prêt à publier.\n\n${userParts}`,
           },
         ],
+        ...NO_THINKING,
       });
 
       const raw = completion.choices[0]?.message?.content?.trim();
@@ -91,7 +116,6 @@ export async function generateArticleFromSource(input: {
     }
   }
 
-  throw lastErr instanceof Error
-    ? lastErr
-    : new Error("Rédaction Kimi impossible");
+  console.error("Kimi unavailable, using fallback article", lastErr);
+  return fallbackArticle(input.title, input.sourceText);
 }

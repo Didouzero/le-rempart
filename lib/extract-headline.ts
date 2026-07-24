@@ -16,6 +16,7 @@ export async function extractHeadlineFromCreative(input: {
   const client = new OpenAI({
     apiKey,
     baseURL: "https://api.moonshot.ai/v1",
+    timeout: 25_000,
   });
 
   const mime = input.mime || "image/png";
@@ -23,6 +24,9 @@ export async function extractHeadlineFromCreative(input: {
   const dataUrl = `data:${mime};base64,${b64}`;
 
   const models = getKimiVisionModels();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const noThinking = { thinking: { type: "disabled" } } as any;
 
   let lastError: unknown;
   for (const model of models) {
@@ -50,6 +54,7 @@ export async function extractHeadlineFromCreative(input: {
             ],
           },
         ],
+        ...noThinking,
       });
 
       const raw = completion.choices[0]?.message?.content?.trim() || "";
