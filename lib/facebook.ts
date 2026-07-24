@@ -27,28 +27,52 @@ async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 /**
- * Vérifie que le token peut agir sur FACEBOOK_PAGE_ID.
- * Accepte token Page OU token utilisateur système (Business Manager).
+ * Convertit le token Vercel (souvent System User) en vrai Page Access Token.
+ * Poster avec un System User token brut déclenche l'erreur deprecated publish_actions.
  */
-export async function assertFacebookPageToken(): Promise<{
-  id: string;
-  name: string;
+async function resolvePagePublishToken(): Promise<{
+  pageId: string;
+  pageName: string;
+  token: string;
 }> {
   const config = getPageConfig();
   if (!config) throw new Error("Facebook non configuré");
 
-  // Test réel : accès à la Page configurée (valide Page token et System User token)
-  try {
-    const page = await graphJson<{ id: string; name: string }>(
-      `${GRAPH}/${config.pageId}?fields=id,name&access_token=${encodeURIComponent(config.token)}`,
-    );
-    return page;
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : "accès refusé";
+  const page = await graphJson<{
+    id: string;
+    name: string;
+    access_token?: string;
+  }>(
+    `${GRAPH}/${config.pageId}?fields=id,name,access_token&access_token=${encodeURIComponent(config.token)}`,
+  );
+
+  // Si le token env est déjà un Page token, /me === pageId et access_token peut être renvoyé
+  const pageToken = page.access_token || config.token;
+
+  // Vérifie que ce token "parle" bien comme la Page
+  const me = await graphJson<{ id: string; name?: string }>(
+    `${GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(pageToken)}`,
+  );
+
+  if (me.id !== config.pageId && !page.access_token) {
     throw new Error(
-      `Token OK mais pas d'accès à la Page ${config.pageId} : ${detail}. Affecte la Page Le Rempart à l'utilisateur système.`,
+      `Impossible d'obtenir un Page Access Token (me=${me.id}, page=${config.pageId}). Régénère le token système avec pages_manage_posts + Page affectée.`,
     );
   }
+
+  return {
+    pageId: page.id,
+    pageName: page.name,
+    token: page.access_token || pageToken,
+  };
+}
+
+export async function assertFacebookPageToken(): Promise<{
+  id: string;
+  name: string;
+}> {
+  const page = await resolvePagePublishToken();
+  return { id: page.pageId, name: page.pageName };
 }
 
 async function commentAndPin(postId: string, link: string, token: string) {
@@ -80,9 +104,30 @@ async function commentAndPin(postId: string, link: string, token: string) {
   return comment.id;
 }
 
+async function publishFeedWithPhoto(input: {
+  pageId: string;
+  token: string;
+  caption: string;
+  photoId: string;
+}): Promise<string> {
+  const feed = await graphJson<{ id: string }>(
+    `${GRAPH}/${input.pageId}/feed`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        message: input.caption,
+        attached_media: JSON.stringify([{ media_fbid: input.photoId }]),
+        access_token: input.token,
+      }),
+    },
+  );
+  return feed.id;
+}
+
 /**
- * Publie la créative sur la Page.
- * Prefère l'upload binaire (fiable) ; URL publique en secours.
+ * Publie la créative sur la Page avec un vrai Page Access Token.
+ * Flow moderne : photo non publiée → post feed + attached_media.
  */
 export async function postCreativeToFacebookPage(input: {
   imageUrl: string;
@@ -90,18 +135,73 @@ export async function postCreativeToFacebookPage(input: {
   commentLink: string;
   image?: { buffer: Buffer; mime: string };
 }): Promise<{ postId: string; commentId: string }> {
-  const config = getPageConfig();
-  if (!config) {
-    throw new Error("Facebook non configuré");
-  }
-
-  await assertFacebookPageToken();
+  const page = await resolvePagePublishToken();
 
   let postId: string | null = null;
   let lastErr: unknown;
 
-  // Méthode A : multipart (créative en mémoire — prioritaire)
-  if (input.image) {
+  // 1) Upload photo unpublished (multipart)
+  if (input.image && !postId) {
+    try {
+      const form = new FormData();
+      const ext = input.image.mime.includes("png") ? "png" : "jpg";
+      form.append(
+        "source",
+        new Blob([new Uint8Array(input.image.buffer)], {
+          type: input.image.mime || "image/jpeg",
+        }),
+        `creative.${ext}`,
+      );
+      form.append("published", "false");
+      form.append("access_token", page.token);
+
+      const photo = await graphJson<{ id: string }>(
+        `${GRAPH}/${page.pageId}/photos`,
+        { method: "POST", body: form },
+      );
+
+      postId = await publishFeedWithPhoto({
+        pageId: page.pageId,
+        token: page.token,
+        caption: input.caption,
+        photoId: photo.id,
+      });
+    } catch (err) {
+      lastErr = err;
+      console.error("FB multipart unpublished+feed failed", err);
+    }
+  }
+
+  // 2) Upload photo unpublished (URL)
+  if (!postId) {
+    try {
+      const photo = await graphJson<{ id: string }>(
+        `${GRAPH}/${page.pageId}/photos`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            url: input.imageUrl,
+            published: "false",
+            access_token: page.token,
+          }),
+        },
+      );
+
+      postId = await publishFeedWithPhoto({
+        pageId: page.pageId,
+        token: page.token,
+        caption: input.caption,
+        photoId: photo.id,
+      });
+    } catch (err) {
+      lastErr = err;
+      console.error("FB url unpublished+feed failed", err);
+    }
+  }
+
+  // 3) Photo publiée directement
+  if (!postId && input.image) {
     try {
       const form = new FormData();
       const ext = input.image.mime.includes("png") ? "png" : "jpg";
@@ -114,55 +214,31 @@ export async function postCreativeToFacebookPage(input: {
       );
       form.append("caption", input.caption);
       form.append("published", "true");
-      form.append("access_token", config.token);
+      form.append("access_token", page.token);
 
       const photo = await graphJson<{ id: string; post_id?: string }>(
-        `${GRAPH}/${config.pageId}/photos`,
+        `${GRAPH}/${page.pageId}/photos`,
         { method: "POST", body: form },
       );
-      postId = photo.post_id || `${config.pageId}_${photo.id}`;
+      postId = photo.post_id || `${page.pageId}_${photo.id}`;
     } catch (err) {
       lastErr = err;
-      console.error("FB multipart photo failed", err);
+      console.error("FB multipart published failed", err);
     }
   }
 
-  // Méthode B : URL publique
-  if (!postId) {
-    try {
-      const params = new URLSearchParams({
-        url: input.imageUrl,
-        caption: input.caption,
-        published: "true",
-        access_token: config.token,
-      });
-      const photo = await graphJson<{ id: string; post_id?: string }>(
-        `${GRAPH}/${config.pageId}/photos`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params,
-        },
-      );
-      postId = photo.post_id || `${config.pageId}_${photo.id}`;
-    } catch (err) {
-      lastErr = err;
-      console.error("FB url photo failed", err);
-    }
-  }
-
-  // Méthode C : post texte + lien (dernier recours)
+  // 4) Texte + lien
   if (!postId) {
     try {
       const feed = await graphJson<{ id: string }>(
-        `${GRAPH}/${config.pageId}/feed`,
+        `${GRAPH}/${page.pageId}/feed`,
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
             message: input.caption,
             link: input.commentLink,
-            access_token: config.token,
+            access_token: page.token,
           }),
         },
       );
@@ -179,7 +255,7 @@ export async function postCreativeToFacebookPage(input: {
   const commentId = await commentAndPin(
     postId,
     input.commentLink,
-    config.token,
+    page.token,
   );
   return { postId, commentId };
 }
