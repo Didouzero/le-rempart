@@ -86,7 +86,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       } catch (err) {
         await telegramSendMessage(
           chatId,
-          `Facebook KO — ${err instanceof Error ? err.message : "token invalide"}\n\nLe token Graph Explorer expire en 1–2h. Il faut un Page Access Token longue durée (voir README).`,
+          `Facebook KO — ${err instanceof Error ? err.message : "token invalide"}`,
         );
       }
       return;

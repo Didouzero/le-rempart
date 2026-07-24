@@ -26,6 +26,10 @@ async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
+/**
+ * Vérifie que le token peut agir sur FACEBOOK_PAGE_ID.
+ * Accepte token Page OU token utilisateur système (Business Manager).
+ */
 export async function assertFacebookPageToken(): Promise<{
   id: string;
   name: string;
@@ -33,16 +37,18 @@ export async function assertFacebookPageToken(): Promise<{
   const config = getPageConfig();
   if (!config) throw new Error("Facebook non configuré");
 
-  const me = await graphJson<{ id: string; name: string }>(
-    `${GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(config.token)}`,
-  );
-
-  if (me.id !== config.pageId) {
+  // Test réel : accès à la Page configurée (valide Page token et System User token)
+  try {
+    const page = await graphJson<{ id: string; name: string }>(
+      `${GRAPH}/${config.pageId}?fields=id,name&access_token=${encodeURIComponent(config.token)}`,
+    );
+    return page;
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "accès refusé";
     throw new Error(
-      `Token ≠ Page (token→${me.id}, env→${config.pageId}). Il faut un token d'accès de Page.`,
+      `Token OK mais pas d'accès à la Page ${config.pageId} : ${detail}. Affecte la Page Le Rempart à l'utilisateur système.`,
     );
   }
-  return me;
 }
 
 async function commentAndPin(postId: string, link: string, token: string) {
