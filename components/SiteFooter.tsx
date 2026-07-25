@@ -4,6 +4,7 @@ const links = [
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/confidentialite", label: "Politique de confidentialité" },
   { href: "/cgu", label: "CGU" },
+  { href: "/suppression-donnees", label: "Suppression des données" },
 ] as const;
 
 const FACEBOOK_PAGE_URL =
