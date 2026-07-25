@@ -78,6 +78,18 @@ a:hover {
   padding-left: 1.25rem;
 }
 
+.prose-article ul {
+  list-style: disc;
+}
+
+.prose-article ol {
+  list-style: decimal;
+}
+
+.prose-article li {
+  margin: 0.35rem 0;
+}
+
 .prose-article a {
   text-decoration: underline;
   text-underline-offset: 3px;
