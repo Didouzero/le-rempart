@@ -64,7 +64,7 @@ export function ArticleCard({
               {formatDate(publishedAt)}
             </time>
           </div>
-          <h2 className="font-display mt-3 text-3xl leading-[1.05] sm:text-5xl md:text-6xl">
+          <h2 className="font-display mt-3 text-2xl leading-[1.05] sm:text-3xl md:text-4xl">
             <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
               {title}
             </Link>
@@ -99,7 +99,7 @@ export function ArticleCard({
         >
           {formatDate(publishedAt)}
         </time>
-        <h2 className="font-display mt-2 text-2xl leading-[1.08] sm:text-3xl">
+        <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
           <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
             {title}
           </Link>

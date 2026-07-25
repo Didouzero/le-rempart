@@ -107,7 +107,7 @@ export default async function ArticlePage({ params }: Props) {
         >
           {formatDate(article.publishedAt)}
         </time>
-        <h1 className="font-display mt-3 text-4xl leading-[1.05] sm:text-5xl md:text-6xl">
+        <h1 className="font-display mt-3 text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
           {article.title}
         </h1>
         <div className="gold-rule animate-line-grow mt-5 max-w-md" />

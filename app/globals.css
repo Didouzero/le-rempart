@@ -9,8 +9,9 @@
   --color-accent: #ffbd59;
   --color-accent-deep: #e8a63f;
   --color-accent-soft: rgba(255, 189, 89, 0.14);
-  --font-display: var(--font-bebas), Impact, "Arial Narrow Bold", sans-serif;
+  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
   --font-body: var(--font-source), "Segoe UI", sans-serif;
+  --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
   --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.12);
 }
 
@@ -22,8 +23,9 @@
   --color-marble: #0a0a0a;
   --color-accent: #ffbd59;
   --color-accent-deep: #e8a63f;
-  --font-display: var(--font-bebas), Impact, sans-serif;
+  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
   --font-body: var(--font-source), sans-serif;
+  --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
 }
 
 * {
@@ -61,7 +63,14 @@ a:hover {
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.font-tagline {
+  font-family: var(--font-tagline);
+  font-weight: 400;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 

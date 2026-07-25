@@ -1,11 +1,11 @@
-import { Bebas_Neue, Source_Sans_3 } from "next/font/google";
+import { Open_Sans, Source_Sans_3 } from "next/font/google";
 import type { Metadata } from "next";
 import "./globals.css";
 
-const bebas = Bebas_Neue({
-  weight: "400",
+const openSans = Open_Sans({
   subsets: ["latin"],
-  variable: "--font-bebas",
+  weight: ["400", "500", "600"],
+  variable: "--font-open-sans",
   display: "swap",
 });
 
@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${bebas.variable} ${sourceSans.variable}`}>
+    <html lang="fr" className={`${openSans.variable} ${sourceSans.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

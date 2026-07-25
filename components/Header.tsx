@@ -11,17 +11,10 @@ export function Header({ compact = false }: HeaderProps) {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link
           href="/"
-          className="no-underline hover:no-underline"
+          className="font-display text-lg tracking-[0.12em] text-white no-underline hover:text-accent hover:no-underline sm:text-xl"
           aria-label="Le Rempart — Accueil"
         >
-          <Image
-            src="/logo.png"
-            alt="Le Rempart"
-            width={280}
-            height={108}
-            priority
-            className="h-auto w-[150px] sm:w-[190px] md:w-[220px]"
-          />
+          Actualités
         </Link>
         <nav className="flex items-center gap-4 text-sm tracking-wide text-white/80 sm:gap-6">
           <span className="hidden items-center gap-2 sm:inline-flex">
@@ -30,12 +23,6 @@ export function Header({ compact = false }: HeaderProps) {
               En direct
             </span>
           </span>
-          <Link
-            href="/"
-            className="font-display text-[0.9rem] tracking-[0.14em] text-white/90 no-underline hover:text-accent hover:no-underline"
-          >
-            Actualités
-          </Link>
         </nav>
       </div>
 
@@ -56,12 +43,19 @@ export function Header({ compact = false }: HeaderProps) {
 
       {!compact && (
         <div className="border-t border-white/10">
-          <div className="animate-fade-in mx-auto max-w-6xl px-4 py-9 text-center sm:px-6 sm:py-12">
-            <p className="font-display text-4xl tracking-[0.14em] text-white sm:text-6xl md:text-7xl">
-              Le Rempart
-            </p>
-            <div className="animate-line-grow mx-auto mt-4 h-[3px] w-28 bg-accent" />
-            <p className="mx-auto mt-4 max-w-xl font-display text-lg tracking-[0.12em] text-accent sm:text-xl">
+          <div className="animate-fade-in mx-auto flex max-w-6xl flex-col items-center px-4 py-9 text-center sm:px-6 sm:py-12">
+            <Link href="/" className="no-underline hover:no-underline" aria-label="Le Rempart">
+              <Image
+                src="/logo.png"
+                alt="Le Rempart"
+                width={420}
+                height={160}
+                priority
+                className="mx-auto h-auto w-[220px] sm:w-[300px] md:w-[360px]"
+              />
+            </Link>
+            <div className="animate-line-grow mx-auto mt-5 h-[3px] w-28 bg-accent" />
+            <p className="font-tagline mx-auto mt-5 max-w-xl text-sm text-accent sm:text-base">
               Le média de droite radicale
             </p>
           </div>

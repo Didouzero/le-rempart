@@ -16,7 +16,7 @@ export function SiteFooter() {
             <p className="font-display text-2xl tracking-[0.12em] text-white">
               Le Rempart
             </p>
-            <p className="mt-1 font-display text-sm tracking-[0.14em] text-accent">
+            <p className="font-tagline mt-1 text-sm text-accent">
               Le média de droite radicale
             </p>
           </div>
