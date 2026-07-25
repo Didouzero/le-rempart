@@ -33,9 +33,64 @@ Forme :
 - Structure OBLIGATOIRE du content Markdown : intercaler exactement 2 ou 3 sous-titres de niveau 2 (lignes ## Titre du sous-titre), pour aérer la lecture. Chaque sous-titre est court, percutant, sans numérotation. Exemple d'ordre : intro (1–2 paragraphes) → ## … → paragraphes → ## … → paragraphes → éventuellement ## … → conclusion.
 - Dans le content Markdown, mets en gras (**comme ceci**) les 8 à 15 mots ou expressions les plus impactants. Jamais une phrase entière en gras.
 - Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva
+- L'article DOIT porter UNIQUEMENT sur le titre fourni. Interdit de recycler un autre sujet, un vieux brief, ou un fait divers sans rapport.
 - Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}
 - excerpt = 1 ou 2 phrases d'accroche (ton déjà sarcastique possible)`
+
+const STOPWORDS = new Set([
+  "le",
+  "la",
+  "les",
+  "un",
+  "une",
+  "des",
+  "de",
+  "du",
+  "au",
+  "aux",
+  "et",
+  "ou",
+  "en",
+  "dans",
+  "sur",
+  "pour",
+  "par",
+  "avec",
+  "sans",
+  "mais",
+  "pas",
+  "plus",
+  "que",
+  "qui",
+  "dont",
+  "est",
+  "sont",
+  "a",
+  "ont",
+  "se",
+  "ce",
+  "ces",
+  "son",
+  "sa",
+  "ses",
+  "leur",
+  "leurs",
+  "selon",
+  "contre",
+  "entre",
+  "vers",
+  "chez",
+  "après",
+  "avant",
+  "désormais",
+  "aussi",
+  "comme",
+  "tout",
+  "tous",
+  "toute",
+  "toutes",
+]);
 
 function titleCaseNews(title: string): string {
   const t = title.trim().replace(/\s+/g, " ");
@@ -45,24 +100,48 @@ function titleCaseNews(title: string): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
+/** Mots significatifs du titre (noms propres, montants, etc.). */
+function significantTokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9€\s.-]/gi, " ")
+    .split(/[\s./-]+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+}
+
+function articleMatchesHeadline(headline: string, content: string): boolean {
+  const tokens = significantTokens(headline);
+  if (tokens.length === 0) return true;
+  const body = content
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const hits = tokens.filter((t) => body.includes(t)).length;
+  // Au moins 2 ancres du titre, ou 1 si le titre est très court
+  return hits >= Math.min(2, tokens.length);
+}
+
 function fallbackArticle(title: string): GeneratedArticle {
   const clean = titleCaseNews(title).slice(0, 160) || "Actualité";
   return {
     title: clean,
-    excerpt: `${clean} — une situation qui pose question sur la commande publique et la compatibilité technique des équipements.`,
+    excerpt: `${clean} — un dossier qui mérite d'être regardé de près.`,
     content: [
-      `${clean}. L'affaire met en lumière les risques liés aux marchés publics d'équipements, lorsque le matériel livré ne peut pas être raccordé aux installations existantes.`,
-      `## Une commande qui ne passe pas`,
-      `Dans un établissement de santé, une telle incompatibilité peut retarder la mise en service de dispositifs destinés au confort ou à la sécurité des patients, en particulier lors des périodes de forte chaleur.`,
-      `Les branchements et normes électriques ou de raccordement varient selon les fabricants et les pays d'origine. Un écart entre le matériel commandé et les infrastructures locales peut rendre des appareils inutilisables tant qu'une adaptation n'est pas réalisée.`,
-      `## Qui paie l'addition ?`,
-      `La collectivité ou l'autorité qui a passé commande devra vraisemblablement clarifier les responsabilités — fournisseur, maître d'ouvrage ou prestataire technique — et indiquer le calendrier de mise en conformité ou de remplacement.`,
-      `Le Rempart reviendra sur ce dossier dès que des précisions officielles seront disponibles.`,
+      `**${clean}**. L'information, telle qu'elle circule, soulève des questions de fond sur la responsabilité publique et le sentiment de deux poids deux mesures.`,
+      `## Ce que l'on retient`,
+      `Le titre pose un fait précis. Sans enjoliver ni inventer d'autres affaires, c'est déjà suffisant pour comprendre pourquoi le sujet crispe : argent public, privilèges perçus, et une opinion qui n'en peut plus des arrangements.`,
+      `## Pourquoi ça fâche`,
+      `Quand une partie du pays peine à tenir son budget, ce type d'annonce cristallise la colère. Le Rempart y voit surtout un révélateur : la distance entre ceux qui décident et ceux qui paient.`,
+      `## La suite`,
+      `Nous reviendrons sur ce dossier dès que des précisions, confirmations ou démentis officiels permettront d'aller plus loin — toujours sur **ce** sujet, pas un autre.`,
     ].join("\n\n"),
   };
 }
 
-function parseArticleJson(raw: string): GeneratedArticle {
+function parseArticleJson(raw: string, headline: string): GeneratedArticle {
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Réponse Kimi non JSON");
   const parsed = JSON.parse(jsonMatch[0]) as Partial<GeneratedArticle>;
@@ -78,6 +157,10 @@ function parseArticleJson(raw: string): GeneratedArticle {
     )
   ) {
     throw new Error("Article contaminé par le prompt");
+  }
+
+  if (!articleMatchesHeadline(headline, content)) {
+    throw new Error("Article hors-sujet par rapport au titre");
   }
 
   return {
@@ -108,13 +191,14 @@ export async function generateArticleFromSource(input: {
     )
       ? `Notes factuelles complémentaires :\n${input.sourceText.slice(0, 3000)}`
       : null,
-    `Produis un article complet, fluide et informatif, avec 2 ou 3 sous-titres ## dans le content.`,
+    `Produis un article complet UNIQUEMENT sur ce titre (pas un autre sujet). Inclus 2 ou 3 sous-titres ## dans le content.`,
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const attempts: Array<{ timeoutMs: number; maxTokens: number }> = [
     { timeoutMs: 35_000, maxTokens: 1100 },
+    { timeoutMs: 40_000, maxTokens: 1200 },
   ];
 
   let lastErr: unknown;
@@ -130,7 +214,7 @@ export async function generateArticleFromSource(input: {
           { role: "user", content: userContent },
         ],
       });
-      return parseArticleJson(raw);
+      return parseArticleJson(raw, headline);
     } catch (err) {
       lastErr = err;
       console.error("Kimi generate attempt failed", err);
@@ -148,7 +232,7 @@ export async function generateArticleFromSource(input: {
         { role: "user", content: userContent },
       ],
     });
-    return parseArticleJson(raw);
+    return parseArticleJson(raw, headline);
   } catch (err) {
     lastErr = err;
     console.error("Kimi k2.6 fallback failed", err);
