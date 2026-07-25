@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
+import { RelatedArticles } from "@/components/RelatedArticles";
 import { articlePublicPath } from "@/lib/article-url";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
@@ -33,6 +34,22 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
         excerpt: true,
         content: true,
         publishedAt: true,
+        coverImageUrl: true,
+      },
+    }),
+  );
+}
+
+async function findRelated(excludeId: string) {
+  return withDbTimeout(
+    prisma.article.findMany({
+      where: { status: "published", NOT: { id: excludeId } },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 3,
+      select: {
+        publicId: true,
+        title: true,
+        excerpt: true,
         coverImageUrl: true,
       },
     }),
@@ -95,6 +112,13 @@ export default async function ArticlePage({ params }: Props) {
 
   if (!article) notFound();
 
+  let related: Awaited<ReturnType<typeof findRelated>> = [];
+  try {
+    related = await findRelated(article.id);
+  } catch {
+    related = [];
+  }
+
   return (
     <article className="animate-fade-up">
       <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
@@ -148,6 +172,8 @@ export default async function ArticlePage({ params }: Props) {
       <ArticleBody content={article.content} />
 
       <AdSlot slot="article-bottom" />
+
+      <RelatedArticles articles={related} />
     </article>
   );
 }

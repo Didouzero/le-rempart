@@ -105,9 +105,16 @@ a:hover {
 .prose-article h3 {
   font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin: 2rem 0 0.75rem;
-  line-height: 1.1;
+  letter-spacing: 0.03em;
+  margin: 2.25rem 0 0.85rem;
+  line-height: 1.15;
+  font-size: 1.35rem;
+  border-left: 3px solid var(--color-accent);
+  padding-left: 0.75rem;
+}
+
+.prose-article h3 {
+  font-size: 1.15rem;
 }
 
 .prose-article ul,

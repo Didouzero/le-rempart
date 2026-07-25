@@ -30,11 +30,12 @@ Forme :
 - Vrai article de presse (pas un collage de consignes)
 - Titre clair et percutant (pas tout en majuscules sauf acronymes)
 - 4 à 6 paragraphes substantiels
+- Structure OBLIGATOIRE du content Markdown : intercaler exactement 2 ou 3 sous-titres de niveau 2 (lignes ## Titre du sous-titre), pour aérer la lecture. Chaque sous-titre est court, percutant, sans numérotation. Exemple d'ordre : intro (1–2 paragraphes) → ## … → paragraphes → ## … → paragraphes → éventuellement ## … → conclusion.
 - Dans le content Markdown, mets en gras (**comme ceci**) les 8 à 15 mots ou expressions les plus impactants. Jamais une phrase entière en gras.
 - Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva
 - Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}
-- excerpt = 1 ou 2 phrases d'accroche (ton déjà sarcastique possible)`;
+- excerpt = 1 ou 2 phrases d'accroche (ton déjà sarcastique possible)`
 
 function titleCaseNews(title: string): string {
   const t = title.trim().replace(/\s+/g, " ");
@@ -51,8 +52,10 @@ function fallbackArticle(title: string): GeneratedArticle {
     excerpt: `${clean} — une situation qui pose question sur la commande publique et la compatibilité technique des équipements.`,
     content: [
       `${clean}. L'affaire met en lumière les risques liés aux marchés publics d'équipements, lorsque le matériel livré ne peut pas être raccordé aux installations existantes.`,
+      `## Une commande qui ne passe pas`,
       `Dans un établissement de santé, une telle incompatibilité peut retarder la mise en service de dispositifs destinés au confort ou à la sécurité des patients, en particulier lors des périodes de forte chaleur.`,
       `Les branchements et normes électriques ou de raccordement varient selon les fabricants et les pays d'origine. Un écart entre le matériel commandé et les infrastructures locales peut rendre des appareils inutilisables tant qu'une adaptation n'est pas réalisée.`,
+      `## Qui paie l'addition ?`,
       `La collectivité ou l'autorité qui a passé commande devra vraisemblablement clarifier les responsabilités — fournisseur, maître d'ouvrage ou prestataire technique — et indiquer le calendrier de mise en conformité ou de remplacement.`,
       `Le Rempart reviendra sur ce dossier dès que des précisions officielles seront disponibles.`,
     ].join("\n\n"),
@@ -105,7 +108,7 @@ export async function generateArticleFromSource(input: {
     )
       ? `Notes factuelles complémentaires :\n${input.sourceText.slice(0, 3000)}`
       : null,
-    `Produis un article complet, fluide et informatif.`,
+    `Produis un article complet, fluide et informatif, avec 2 ou 3 sous-titres ## dans le content.`,
   ]
     .filter(Boolean)
     .join("\n\n");
