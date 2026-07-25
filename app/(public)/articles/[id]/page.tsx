@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
@@ -96,6 +97,25 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <article className="animate-fade-up">
+      <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
+        <ol className="flex flex-wrap items-center gap-2">
+          <li>
+            <Link
+              href="/"
+              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+            >
+              Actualités
+            </Link>
+          </li>
+          <li aria-hidden className="text-accent">
+            /
+          </li>
+          <li className="max-w-[min(100%,28rem)] truncate text-muted">
+            {article.title}
+          </li>
+        </ol>
+      </nav>
+
       <header className="mb-8 pb-8">
         <p className="section-kicker">
           <span className="live-dot" aria-hidden />
@@ -111,7 +131,7 @@ export default async function ArticlePage({ params }: Props) {
           {article.title}
         </h1>
         <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-        <p className="mt-5 max-w-2xl text-lg italic text-ink/80">{article.excerpt}</p>
+        <p className="mt-5 max-w-2xl text-lg italic text-black">{article.excerpt}</p>
       </header>
 
       {article.coverImageUrl ? (

@@ -5,25 +5,33 @@ type HeaderProps = {
   compact?: boolean;
 };
 
+const navLinkClass =
+  "font-display text-[0.85rem] tracking-[0.12em] text-white/90 no-underline transition-colors hover:text-accent hover:no-underline sm:text-[0.9rem]";
+
 export function Header({ compact = false }: HeaderProps) {
   return (
     <header className="marble-band text-paper">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link
-          href="/"
-          className="font-display text-lg tracking-[0.12em] text-white no-underline hover:text-accent hover:no-underline sm:text-xl"
-          aria-label="Le Rempart — Accueil"
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <nav
+          className="flex flex-wrap items-center gap-4 sm:gap-6"
+          aria-label="Navigation principale"
         >
-          Actualités
-        </Link>
-        <nav className="flex items-center gap-4 text-sm tracking-wide text-white/80 sm:gap-6">
-          <span className="hidden items-center gap-2 sm:inline-flex">
-            <span className="live-dot" aria-hidden />
-            <span className="font-display text-[0.8rem] tracking-[0.18em] text-accent">
-              En direct
-            </span>
-          </span>
+          <Link href="/" className={navLinkClass}>
+            Actualités
+          </Link>
+          <Link href="/contact" className={navLinkClass}>
+            Nous contacter
+          </Link>
+          <Link href="/nous-soutenir" className={navLinkClass}>
+            Nous soutenir
+          </Link>
         </nav>
+        <span className="hidden items-center gap-2 sm:inline-flex">
+          <span className="live-dot" aria-hidden />
+          <span className="font-display text-[0.8rem] tracking-[0.18em] text-accent">
+            En direct
+          </span>
+        </span>
       </div>
 
       <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
@@ -44,7 +52,11 @@ export function Header({ compact = false }: HeaderProps) {
       {!compact && (
         <div className="border-t border-white/10">
           <div className="animate-fade-in mx-auto flex max-w-6xl flex-col items-center px-4 py-9 text-center sm:px-6 sm:py-12">
-            <Link href="/" className="no-underline hover:no-underline" aria-label="Le Rempart">
+            <Link
+              href="/"
+              className="no-underline hover:no-underline"
+              aria-label="Le Rempart"
+            >
               <Image
                 src="/logo.png"
                 alt="Le Rempart"
@@ -55,7 +67,7 @@ export function Header({ compact = false }: HeaderProps) {
               />
             </Link>
             <div className="animate-line-grow mx-auto mt-5 h-[3px] w-28 bg-accent" />
-            <p className="font-tagline mx-auto mt-5 max-w-xl text-sm text-accent sm:text-base">
+            <p className="font-tagline mx-auto mt-5 max-w-xl text-sm text-white sm:text-base">
               Le média de droite radicale
             </p>
           </div>
