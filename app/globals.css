@@ -1,23 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --color-ink: #0b0b0b;
-  --color-paper: #f7f7f5;
-  --color-rule: #e8e6e3;
-  --color-muted: #6b6b6b;
-  --color-marble: #141414;
-  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-  --font-body: "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif;
+  --color-ink: #0a0a0a;
+  --color-paper: #f4f2ed;
+  --color-rule: #ddd8cf;
+  --color-muted: #5c574f;
+  --color-marble: #0a0a0a;
+  --color-accent: #ffbd59;
+  --color-accent-deep: #e8a63f;
+  --color-accent-soft: rgba(255, 189, 89, 0.14);
+  --font-display: var(--font-bebas), Impact, "Arial Narrow Bold", sans-serif;
+  --font-body: var(--font-source), "Segoe UI", sans-serif;
+  --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.12);
 }
 
 @theme inline {
-  --color-ink: #0b0b0b;
-  --color-paper: #f7f7f5;
-  --color-rule: #e8e6e3;
-  --color-muted: #6b6b6b;
-  --color-marble: #141414;
-  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-  --font-body: "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif;
+  --color-ink: #0a0a0a;
+  --color-paper: #f4f2ed;
+  --color-rule: #ddd8cf;
+  --color-muted: #5c574f;
+  --color-marble: #0a0a0a;
+  --color-accent: #ffbd59;
+  --color-accent-deep: #e8a63f;
+  --font-display: var(--font-bebas), Impact, sans-serif;
+  --font-body: var(--font-source), sans-serif;
 }
 
 * {
@@ -31,7 +37,11 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--color-paper);
+  background:
+    radial-gradient(ellipse 80% 50% at 100% -10%, rgba(255, 189, 89, 0.09), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(255, 189, 89, 0.05), transparent 45%),
+    linear-gradient(180deg, #f7f5f0 0%, var(--color-paper) 40%, #efece5 100%);
+  background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-body);
   font-size: 1.0625rem;
@@ -51,8 +61,27 @@ a:hover {
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.site-shell {
+  position: relative;
+}
+
+.site-shell::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.site-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 .prose-article {
@@ -67,9 +96,9 @@ a:hover {
 .prose-article h3 {
   font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   margin: 2rem 0 0.75rem;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .prose-article ul,
@@ -93,19 +122,126 @@ a:hover {
 .prose-article a {
   text-decoration: underline;
   text-underline-offset: 3px;
+  text-decoration-color: var(--color-accent);
 }
 
 .prose-article strong {
   font-weight: 700;
-  color: var(--color-ink, #111);
+  color: var(--color-ink);
+  box-shadow: inset 0 -0.35em 0 var(--color-accent-soft);
 }
 
 .marble-band {
   background-color: var(--color-marble);
   background-image:
-    radial-gradient(ellipse at 20% 30%, rgba(255, 255, 255, 0.06), transparent 45%),
-    radial-gradient(ellipse at 80% 70%, rgba(255, 255, 255, 0.04), transparent 40%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%, rgba(0, 0, 0, 0.25) 100%);
+    linear-gradient(90deg, transparent, rgba(255, 189, 89, 0.08), transparent),
+    radial-gradient(ellipse at 15% 0%, rgba(255, 189, 89, 0.18), transparent 42%),
+    radial-gradient(ellipse at 85% 100%, rgba(255, 255, 255, 0.04), transparent 40%),
+    linear-gradient(160deg, #141414 0%, #0a0a0a 55%, #111 100%);
+}
+
+.live-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 0 rgba(255, 189, 89, 0.7);
+  animation: pulse-live 1.8s ease-out infinite;
+}
+
+.ticker {
+  overflow: hidden;
+  white-space: nowrap;
+  border-block: 1px solid rgba(255, 189, 89, 0.35);
+  background: linear-gradient(90deg, #0a0a0a, #16130e 50%, #0a0a0a);
+}
+
+.ticker-track {
+  display: inline-flex;
+  min-width: max-content;
+  padding-block: 0.55rem;
+  animation: ticker-scroll 32s linear infinite;
+}
+
+.ticker-track span {
+  display: inline-block;
+  padding-inline: 2.5rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--color-accent);
+}
+
+.media-frame {
+  position: relative;
+  overflow: hidden;
+  background: #111;
+}
+
+.media-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.55));
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: none;
+}
+
+.media-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.02);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .media-frame img,
+a:hover .media-frame img {
+  transform: scale(1.06);
+}
+
+.group:hover .media-frame::after,
+a:hover .media-frame::after {
+  opacity: 1;
+}
+
+.gold-rule {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--color-accent), transparent 85%);
+}
+
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: var(--color-accent-deep);
+}
+
+.read-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  text-decoration: none !important;
+  border-bottom: 2px solid var(--color-accent);
+  padding-bottom: 0.1rem;
+  transition: color 0.2s ease, gap 0.25s ease;
+}
+
+.read-link:hover {
+  color: var(--color-accent-deep);
+  gap: 0.65rem;
 }
 
 .admin-input {
@@ -119,7 +255,7 @@ a:hover {
 }
 
 .admin-input:focus {
-  outline: 2px solid var(--color-ink);
+  outline: 2px solid var(--color-accent);
   outline-offset: 1px;
 }
 
@@ -135,11 +271,12 @@ a:hover {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .admin-btn:hover {
-  background: #222;
+  background: #1a1a1a;
+  border-color: var(--color-accent);
 }
 
 .admin-btn:disabled {
@@ -153,13 +290,13 @@ a:hover {
 }
 
 .admin-btn-secondary:hover {
-  background: var(--color-rule);
+  background: var(--color-accent-soft);
 }
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -176,17 +313,69 @@ a:hover {
   }
 }
 
+@keyframes pulse-live {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 189, 89, 0.65);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 189, 89, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 189, 89, 0);
+  }
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .animate-fade-up {
-  animation: fade-up 0.55s ease-out both;
+  animation: fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.7s ease-out both;
+  animation: fade-in 0.8s ease-out both;
+}
+
+.animate-line-grow {
+  transform-origin: left;
+  animation: line-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.delay-1 {
+  animation-delay: 0.08s;
+}
+.delay-2 {
+  animation-delay: 0.16s;
+}
+.delay-3 {
+  animation-delay: 0.24s;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
-  .animate-fade-in {
-    animation: none;
+  .animate-fade-in,
+  .animate-line-grow,
+  .ticker-track,
+  .live-dot {
+    animation: none !important;
+  }
+
+  .media-frame img {
+    transition: none;
   }
 }

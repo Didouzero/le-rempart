@@ -1,12 +1,26 @@
+import { Bebas_Neue, Source_Sans_3 } from "next/font/google";
 import type { Metadata } from "next";
 import "./globals.css";
+
+const bebas = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bebas",
+  display: "swap",
+});
+
+const sourceSans = Source_Sans_3({
+  subsets: ["latin"],
+  variable: "--font-source",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
     default: "Le Rempart",
     template: "%s — Le Rempart",
   },
-  description: "L'actualité claire, factuelle, sans bruit.",
+  description: "Le Rempart — Le média de droite radicale.",
   metadataBase: new URL("https://le-rempart.org"),
   icons: {
     icon: "/favicon.png",
@@ -20,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" className={`${bebas.variable} ${sourceSans.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

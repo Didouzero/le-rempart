@@ -96,26 +96,33 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <article className="animate-fade-up">
-      <header className="mb-8 border-b border-rule pb-8">
+      <header className="mb-8 pb-8">
+        <p className="section-kicker">
+          <span className="live-dot" aria-hidden />
+          Article
+        </p>
         <time
-          className="text-sm text-muted"
+          className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"
           dateTime={article.publishedAt?.toISOString()}
         >
           {formatDate(article.publishedAt)}
         </time>
-        <h1 className="font-display mt-3 text-3xl leading-[1.1] sm:text-5xl">
+        <h1 className="font-display mt-3 text-4xl leading-[1.05] sm:text-5xl md:text-6xl">
           {article.title}
         </h1>
-        <p className="mt-4 max-w-2xl text-lg italic text-ink/80">{article.excerpt}</p>
+        <div className="gold-rule animate-line-grow mt-5 max-w-md" />
+        <p className="mt-5 max-w-2xl text-lg italic text-ink/80">{article.excerpt}</p>
       </header>
 
       {article.coverImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={article.coverImageUrl}
-          alt=""
-          className="mb-8 w-full max-h-[28rem] object-cover"
-        />
+        <div className="media-frame mb-10 max-h-[32rem] w-full shadow-[var(--shadow-soft)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={article.coverImageUrl}
+            alt=""
+            className="max-h-[32rem] w-full object-cover"
+          />
+        </div>
       ) : null}
 
       <ArticleBody content={article.content} />
