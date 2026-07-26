@@ -18,12 +18,29 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  // force=1 : saute seulement le check horaire (jamais la validation Telegram)
   const force =
     request.nextUrl.searchParams.get("force") === "1" ||
     request.nextUrl.searchParams.get("force") === "true";
 
   try {
     const result = await runVeilleCycle({ force });
+    // Garde-fou : le cron ne doit JAMAIS publier directement
+    if (
+      result.ok &&
+      result.message === "Publié" &&
+      !result.pendingId
+    ) {
+      console.error("CRON SAFETY: unexpected direct publish blocked path", result);
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Sécurité : publication directe interdite. Validation Telegram obligatoire.",
+        },
+        { status: 500 },
+      );
+    }
     return NextResponse.json(result);
   } catch (err) {
     console.error("cron veille failed", err);

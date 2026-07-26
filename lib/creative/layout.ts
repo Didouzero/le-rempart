@@ -238,7 +238,7 @@ function lineRatio(lines: string[]): number {
 
 /** Fusionne la ligne la plus courte avec un voisin tant que le ratio est mauvais. */
 function mergeShortLines(lines: string[], minLines = 4): string[] {
-  let out = lines.map((l) => l.trim()).filter(Boolean);
+  const out = lines.map((l) => l.trim()).filter(Boolean);
   while (out.length > minLines && lineRatio(out) < 0.72) {
     let shortIdx = 0;
     let shortW = Infinity;
