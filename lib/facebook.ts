@@ -349,11 +349,12 @@ export async function postCreativeToFacebookPage(input: {
     storyError = err instanceof Error ? err.message : "story failed";
   }
 
-  const { commentId, pinned } = await commentAndPin(
+  // Lien déjà dans la caption (‼️ … ➡️ URL) — pas de commentaire doublon
+  return {
     postId,
-    input.commentLink,
-    page.token,
-  );
-
-  return { postId, commentId, pinned, storyId, storyError };
+    commentId: "",
+    pinned: false,
+    storyId,
+    storyError,
+  };
 }

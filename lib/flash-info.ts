@@ -1,60 +1,69 @@
 import { moonshotChat } from "@/lib/moonshot";
 import { getKimiTextModel } from "@/lib/kimi";
 
-const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
-
-/** Force une phrase par ligne. */
-function oneSentencePerLine(text: string): string {
-  const cleaned = text
-    .replace(/\r\n/g, "\n")
-    .replace(/\n+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const parts = cleaned
-    .split(/(?<=[.!?…])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) return cleaned;
-  return parts.join("\n");
+/** Une seule phrase courte, ton Rempart, pour le post Facebook. */
+function fallbackPunchline(title: string, excerpt: string): string {
+  const src = `${excerpt} ${title}`.trim();
+  // Accroche générique si Kimi indispo
+  if (/honte|scandale|indigne/i.test(src)) return "C'est vraiment la honte…";
+  if (/€|euro|retraite|impôt|subvention/i.test(src))
+    return "Et après on parle de serrer la ceinture…";
+  if (/immigration|délinquan|violence|cité/i.test(src))
+    return "On marche sur la tête.";
+  return "On n'invente rien…";
 }
 
-/** 3–4 phrases factuelles pour le post Facebook (1 phrase = 1 ligne). */
+function cleanPunchline(raw: string): string {
+  return raw
+    .replace(/^["'«»]+|["'«»]+$/g, "")
+    .replace(/^‼️\s*/u, "")
+    .replace(/\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
+/**
+ * Caption Facebook : ‼️ + micro-commentaire + ➡️ + lien article.
+ * La créative reste en image jointe au post.
+ */
 export async function buildFlashInfoText(input: {
   title: string;
   excerpt: string;
   articleUrl: string;
 }): Promise<string> {
-  let body = oneSentencePerLine(input.excerpt);
+  let punch = fallbackPunchline(input.title, input.excerpt);
 
   if (process.env.MOONSHOT_API_KEY) {
     try {
       const text = await moonshotChat({
         model: getKimiTextModel(),
-        maxTokens: 280,
-        timeoutMs: 12_000,
+        maxTokens: 60,
+        timeoutMs: 10_000,
         reasoningEffort: "low",
         messages: [
           {
             role: "system",
             content:
-              "Tu rédiges un flash info Facebook en français : exactement 3 ou 4 phrases courtes, factuelles, sans emojis, sans hashtags. OBLIGATOIRE : une seule phrase par ligne (saute une ligne entre chaque phrase). Réponds uniquement avec ces phrases, rien d'autre.",
+              "Tu écris UNE seule micro-réaction Facebook en français pour Le Rempart (média de droite radicale, ton sarcastique / aigri). Maximum 12 mots. Pas d'emoji, pas de hashtag, pas de lien, pas de guillemets. Exemples de ton : « C'est vraiment la honte… » / « On marche sur la tête. » / « Deux poids, deux mesures. » Réponds uniquement avec cette phrase.",
           },
           {
             role: "user",
-            content: `Titre : ${input.title}\nChapô : ${input.excerpt}\nÉcris 3-4 phrases, une par ligne.`,
+            content: `Titre : ${input.title}\nChapô : ${input.excerpt}`,
           },
         ],
       });
-      if (text) {
-        body = oneSentencePerLine(text.replace(/^["']|["']$/g, "").trim());
-      }
+      const cleaned = cleanPunchline(text || "");
+      if (cleaned.length >= 8) punch = cleaned;
     } catch (err) {
-      console.error("flash info kimi failed", err);
+      console.error("flash punchline kimi failed", err);
     }
   }
 
-  // Espace après le préfixe, puis une phrase par ligne, puis le lien
-  return `${PREFIX} ${body}\n\n${input.articleUrl}`;
+  const url = input.articleUrl.replace(
+    "://le-rempart.org",
+    "://www.le-rempart.org",
+  );
+
+  return `‼️ ${punch} ➡️ ${url}`;
 }

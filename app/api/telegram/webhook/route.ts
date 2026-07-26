@@ -192,12 +192,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         ]);
         const parts = [
           `Facebook : publié (post ${fb.postId}`,
-          fb.pinned ? "commentaire épinglé" : "commentaire lien OK",
           fb.storyId
-            ? `story OK`
+            ? "story OK"
             : `story échec${fb.storyError ? ` — ${fb.storyError}` : ""}`,
         ];
-        facebookLine = `${parts[0]}, ${parts[1]}, ${parts[2]}).`;
+        facebookLine = `${parts[0]}, ${parts[1]}).`;
       } catch (err) {
         console.error(err);
         facebookLine = `Facebook : échec — ${err instanceof Error ? err.message : "erreur"}`;
