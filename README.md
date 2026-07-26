@@ -117,3 +117,25 @@ Le bot publie alors : créative + texte « ‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 �
 ## AdSense
 
 Le composant `AdSlot` n'affiche rien tant que `NEXT_PUBLIC_ADSENSE_CLIENT` n'est pas défini. Emplacements prévus : sous le header de l'accueil (`home-below-header`) et en bas d'article (`article-bottom`).
+
+## Veille + créatives auto
+
+Cron Vercel (`vercel.json`) appelle `/api/cron/veille` toutes les 2 h.
+
+1. Ajouter `CRON_SECRET` sur Vercel (et optionnellement `TELEGRAM_NOTIFY_CHAT_ID`).
+2. Redeploy.
+3. Test manuel :
+   ```bash
+   curl -X POST "https://www.le-rempart.org/api/cron/veille" \
+     -H "Authorization: Bearer $CRON_SECRET"
+   ```
+4. Preview DA (admin connecté) :
+   ```bash
+   curl -X POST "https://www.le-rempart.org/api/admin/creative/preview" \
+     -H "Content-Type: application/json" \
+     -b "le_rempart_admin=…" \
+     -d '{"title":"SUR RTL BRUNO LE MAIRE…","highlightWords":["BRUNO","MAIRE"]}' \
+     --output creative.png
+   ```
+
+Pipeline : RSS Google News → score Kimi → créative 1080×1440 → article + Facebook (+ notif Telegram).

@@ -27,6 +27,7 @@ export async function telegramSendMessage(
   text: string,
   extra?: Record<string, unknown>,
 ): Promise<void> {
+  if (!chatId) return;
   const token = getToken();
   const res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: "POST",
@@ -41,6 +42,34 @@ export async function telegramSendMessage(
   const data = (await res.json()) as { ok?: boolean; description?: string };
   if (!res.ok || !data.ok) {
     console.error("telegramSendMessage failed", data.description || res.status);
+  }
+}
+
+export async function telegramSendPhoto(
+  chatId: number,
+  image: Buffer,
+  caption?: string,
+): Promise<void> {
+  if (!chatId) return;
+  const token = getToken();
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append(
+    "photo",
+    new Blob([new Uint8Array(image)], { type: "image/png" }),
+    "creative.png",
+  );
+  if (caption) {
+    form.append("caption", caption.slice(0, 1000));
+  }
+
+  const res = await fetch(`${TELEGRAM_API}/bot${token}/sendPhoto`, {
+    method: "POST",
+    body: form,
+  });
+  const data = (await res.json()) as { ok?: boolean; description?: string };
+  if (!res.ok || !data.ok) {
+    console.error("telegramSendPhoto failed", data.description || res.status);
   }
 }
 

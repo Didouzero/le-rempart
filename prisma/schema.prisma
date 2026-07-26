@@ -36,3 +36,28 @@ model TelegramUpdateLog {
   updateId  BigInt   @id
   createdAt DateTime @default(now())
 }
+
+enum VeilleStatus {
+  found
+  published
+  skipped
+  failed
+}
+
+model VeilleItem {
+  id             String       @id @default(cuid())
+  headline       String
+  headlineKey    String       @unique
+  sourceUrl      String?
+  sourceTitle    String?
+  score          Int          @default(0)
+  canvaTitle     String?
+  highlightWords String[]     @default([])
+  status         VeilleStatus @default(found)
+  errorMessage   String?
+  articleId      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status, createdAt])
+}

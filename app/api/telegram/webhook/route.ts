@@ -1,14 +1,11 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
-import { buildFlashInfoText } from "@/lib/flash-info";
-import {
-  isFacebookConfigured,
-  publishFacebookFeedPost,
-  publishFacebookStory,
-  commentArticleLinkOnPost,
-} from "@/lib/facebook";
+import { isFacebookConfigured } from "@/lib/facebook";
 import { prisma } from "@/lib/prisma";
-import { publishArticleFromCreative } from "@/lib/publish-from-creative";
+import {
+  publishCreativePipeline,
+  telegramNotifier,
+} from "@/lib/publish-pipeline";
 import {
   isTelegramUserAllowed,
   pickLargestPhoto,
@@ -68,7 +65,10 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     if (text === "/fb" || text === "/facebook") {
       if (!isTelegramUserAllowed(userId)) {
-        await telegramSendMessage(chatId, `Accès non autorisé.\nTon id : ${userId}`);
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
         return;
       }
       if (!isFacebookConfigured()) {
@@ -135,147 +135,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(chatId, `Titre détecté : ${caption}`);
     }
 
-    await telegramSendMessage(chatId, "Rédaction de l'article…");
-
-    // publishArticleFromSource a ses propres timeouts + fallback Kimi :
-    // ne plus tuer tout le flow à 70s avec une erreur sèche.
-    const article = await publishArticleFromCreative({ caption, image });
-
-    const coverLine = article.coverImageUrl
-      ? "Illustration site : photo web trouvée."
-      : "Illustration site : aucune photo web trouvée.";
-
-    await telegramSendMessage(
-      chatId,
-      [
-        "Article publié.",
-        "",
-        article.title,
-        article.url,
-        "",
-        coverLine,
-      ].join("\n"),
-    );
-
-    if (!isFacebookConfigured()) {
-      await telegramSendMessage(
-        chatId,
-        "Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).",
-      );
-      return;
-    }
-
-    if (!article.creative) {
-      await telegramSendMessage(
-        chatId,
-        "Facebook : pas de créative à envoyer (image manquante).",
-      );
-      return;
-    }
-
-    await telegramSendMessage(chatId, "Facebook : rédaction du flash…");
-
-    let flash: string;
-    try {
-      flash = await buildFlashInfoText({
-        title: article.title,
-        excerpt: article.excerpt,
-        articleUrl: article.url,
-      });
-    } catch (flashErr) {
-      console.error(flashErr);
-      flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${article.excerpt}`;
-    }
-
-    await telegramSendMessage(chatId, "Facebook : publication du post…");
-
-    try {
-      const { siteUrl } = await import("@/lib/publish-from-creative");
-      const base = siteUrl().replace(
-        "://le-rempart.org",
-        "://www.le-rempart.org",
-      );
-      const imageUrl = `${base}/api/media/${article.id}`;
-      const articleWww = article.url.replace(
-        "://le-rempart.org",
-        "://www.le-rempart.org",
-      );
-
-      const feed = await Promise.race([
-        publishFacebookFeedPost({
-          imageUrl,
-          caption: flash,
-          commentLink: articleWww,
-          image: article.creative,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Timeout post Facebook (45s)")),
-            45_000,
-          ),
-        ),
-      ]);
-
-      await telegramSendMessage(
-        chatId,
-        `✅ Post Facebook publié.\nID : ${feed.postId}`,
-      );
-
-      try {
-        const commented = await commentArticleLinkOnPost({
-          postId: feed.postId,
-          articleUrl: articleWww,
-          token: feed.token,
-        });
-        await telegramSendMessage(
-          chatId,
-          commented.pinned
-            ? `✅ Lien article en commentaire (épinglé).\n${articleWww}`
-            : `✅ Lien article en commentaire.\n${articleWww}`,
-        );
-      } catch (commentErr) {
-        console.error(commentErr);
-        await telegramSendMessage(
-          chatId,
-          `❌ Commentaire lien : échec\n${commentErr instanceof Error ? commentErr.message : "erreur"}`,
-        );
-      }
-
-      await telegramSendMessage(chatId, "Facebook : publication de la story…");
-
-      try {
-        const storyId = await Promise.race([
-          publishFacebookStory({
-            imageUrl,
-            image: article.creative,
-            pageId: feed.pageId,
-            token: feed.token,
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Timeout story Facebook (40s)")),
-              40_000,
-            ),
-          ),
-        ]);
-        await telegramSendMessage(
-          chatId,
-          `✅ Story Facebook publiée.\nID : ${storyId}`,
-        );
-      } catch (storyErr) {
-        console.error(storyErr);
-        await telegramSendMessage(
-          chatId,
-          `❌ Story Facebook : échec\n${storyErr instanceof Error ? storyErr.message : "erreur"}`,
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      await telegramSendMessage(
-        chatId,
-        `❌ Post Facebook : échec\n${err instanceof Error ? err.message : "erreur"}`,
-      );
-    }
+    await publishCreativePipeline({
+      caption,
+      image,
+      notify: telegramNotifier(chatId),
+    });
   } catch (err) {
     console.error("telegram process error", err);
     try {
@@ -297,7 +161,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Répondre tout de suite à Telegram (évite les retries / boucles)
   const claimed = await claimUpdate(update.update_id);
   if (claimed) {
     after(() => processUpdate(update));
