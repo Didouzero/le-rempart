@@ -58,7 +58,57 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     if (text === "/help") {
       await telegramSendMessage(
         chatId,
-        "Envoie uniquement l'image Canva. Légende Telegram optionnelle.\n/fb — tester le token Facebook.",
+        [
+          "Envoie une image Canva (PNG/JPG).",
+          "/fb — tester Facebook",
+          "/veille_off — couper la créative auto",
+          "/veille_on — réactiver la créative auto",
+          "/veille — statut de la veille",
+        ].join("\n"),
+      );
+      return;
+    }
+
+    if (
+      text === "/veille_off" ||
+      text === "/veille_on" ||
+      text === "/veille" ||
+      text === "/veille_status"
+    ) {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
+        return;
+      }
+      const {
+        isVeilleEnabled,
+        setVeilleEnabled,
+      } = await import("@/lib/veille/settings");
+
+      if (text === "/veille_off") {
+        await setVeilleEnabled(false);
+        await telegramSendMessage(
+          chatId,
+          "Veille / créative auto : OFF.\nPlus aucune publication automatique.",
+        );
+        return;
+      }
+      if (text === "/veille_on") {
+        await setVeilleEnabled(true);
+        await telegramSendMessage(
+          chatId,
+          "Veille / créative auto : ON.\nLe cron pourra republier (toutes les 2 h).",
+        );
+        return;
+      }
+      const on = await isVeilleEnabled();
+      await telegramSendMessage(
+        chatId,
+        on
+          ? "Statut veille : ON (créative auto active)."
+          : "Statut veille : OFF (créative auto coupée).",
       );
       return;
     }

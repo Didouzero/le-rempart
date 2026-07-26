@@ -9,11 +9,11 @@ import {
 } from "@/lib/publish-pipeline";
 import {
   getAllowedTelegramUserIds,
-  telegramSendMessage,
   telegramSendPhoto,
 } from "@/lib/telegram";
 import { headlineKey, scrapeHotNews } from "@/lib/veille/scrape";
 import { scoreAndPickStory } from "@/lib/veille/score";
+import { isVeilleEnabled } from "@/lib/veille/settings";
 
 export type VeilleRunResult = {
   ok: boolean;
@@ -39,6 +39,13 @@ export async function runVeilleCycle(): Promise<VeilleRunResult> {
     : async (t: string) => {
         console.log("[veille]", t);
       };
+
+  if (!(await isVeilleEnabled())) {
+    return {
+      ok: false,
+      message: "Veille désactivée. Telegram : /veille_on pour réactiver.",
+    };
+  }
 
   await notify("🛰️ Veille : scan des news…");
 
