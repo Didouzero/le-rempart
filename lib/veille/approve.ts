@@ -13,6 +13,7 @@ import {
   telegramSendMessage,
 } from "@/lib/telegram";
 import { setLastVeilleSlot } from "@/lib/veille/settings";
+import { runVeilleCycle, VEILLE_MAX_PROPOSALS } from "@/lib/veille/run";
 
 function adminChatId(): number | null {
   const fromEnv = process.env.TELEGRAM_NOTIFY_CHAT_ID?.trim();
@@ -25,6 +26,12 @@ export async function getLatestPendingVeille() {
   return prisma.veilleItem.findFirst({
     where: { status: "pending_approval" },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+async function countSkippedForSlot(slotKey: string): Promise<number> {
+  return prisma.veilleItem.count({
+    where: { slotKey, status: "skipped" },
   });
 }
 
@@ -67,7 +74,6 @@ export async function approveVeilleItem(
       data: {
         status: "published",
         articleId: result.article.id,
-        // Libère un peu d'espace une fois publié
         creativeImageData: null,
         errorMessage: null,
       },
@@ -115,19 +121,56 @@ export async function rejectVeilleItem(
     },
   });
 
-  if (item.slotKey) {
-    await setLastVeilleSlot(item.slotKey);
+  const chatId = opts?.chatId ?? adminChatId();
+  const slotKey = item.slotKey;
+  const skipped = slotKey ? await countSkippedForSlot(slotKey) : VEILLE_MAX_PROPOSALS;
+
+  if (slotKey && skipped < VEILLE_MAX_PROPOSALS) {
+    if (chatId) {
+      await telegramSendMessage(
+        chatId,
+        [
+          `❌ Créative refusée (${skipped}/${VEILLE_MAX_PROPOSALS}).`,
+          (item.canvaTitle || item.headline).slice(0, 180),
+          "",
+          "Je propose une autre créative…",
+        ].join("\n"),
+      );
+    }
+    // Nouvelle proposition même créneau (hors check horaire)
+    const retry = await runVeilleCycle({
+      force: true,
+      slotKeyOverride: slotKey,
+    });
+    if (!retry.ok && chatId) {
+      await telegramSendMessage(
+        chatId,
+        [
+          `Plus d'autre sujet auto pour ce créneau (${retry.message}).`,
+          "Tu peux envoyer ta créative manuelle en PNG/JPG ici — ça publie toujours, veille ON ou OFF.",
+        ].join("\n"),
+      );
+      await setLastVeilleSlot(slotKey);
+    }
+    return { ok: true, message: "Refusé — nouvelle proposition" };
   }
 
-  const chatId = opts?.chatId ?? adminChatId();
+  if (slotKey) {
+    await setLastVeilleSlot(slotKey);
+  }
+
   if (chatId) {
     await telegramSendMessage(
       chatId,
-      `❌ Créative refusée — rien n'a été publié.\n${(item.canvaTitle || item.headline).slice(0, 200)}`,
+      [
+        `❌ ${VEILLE_MAX_PROPOSALS} créatives refusées pour ce créneau — rien n'a été publié.`,
+        "",
+        "Envoie ta créative manuelle en PNG/JPG ici si tu veux publier (toujours possible, veille ON ou OFF).",
+      ].join("\n"),
     );
   }
 
-  return { ok: true, message: "Refusé" };
+  return { ok: true, message: "Refusé — quota créneau atteint" };
 }
 
 export async function handleVeilleApprovalCommand(

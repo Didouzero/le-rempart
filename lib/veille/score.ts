@@ -18,10 +18,26 @@ export type ScoredStory = {
  */
 export async function scoreAndPickStory(
   hits: VeilleHit[],
+  opts?: { excludeTitles?: string[] },
 ): Promise<ScoredStory | null> {
-  if (hits.length === 0) return null;
+  const excludeTitles = new Set(
+    (opts?.excludeTitles || []).map((t) => t.toLowerCase().trim()),
+  );
 
-  const list = hits
+  const filtered = hits.filter((h) => {
+    const title = h.title.toLowerCase().trim();
+    if (excludeTitles.has(title)) return false;
+    for (const ex of excludeTitles) {
+      if (ex.length >= 20 && (title.includes(ex.slice(0, 40)) || ex.includes(title.slice(0, 40)))) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) return null;
+
+  const list = filtered
     .slice(0, 18)
     .map((h, i) => {
       const age = h.publishedAt
@@ -32,7 +48,7 @@ export async function scoreAndPickStory(
     .join("\n");
 
   if (!process.env.MOONSHOT_API_KEY) {
-    const h = hits[0];
+    const h = filtered[0];
     return {
       sourceTitle: h.title,
       sourceUrl: h.link,
@@ -92,7 +108,7 @@ visualQuery : 4–8 mots ANGLAIS pour photo réaliste choc (ex. "french riot pol
     };
 
     const idx = (parsed.index || 1) - 1;
-    const hit = hits[Math.max(0, Math.min(hits.length - 1, idx))];
+    const hit = filtered[Math.max(0, Math.min(filtered.length - 1, idx))];
     const score = Math.max(0, Math.min(100, Number(parsed.score) || 0));
     if (score < 60) return null;
 

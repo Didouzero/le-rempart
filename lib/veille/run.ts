@@ -17,6 +17,9 @@ import {
   isVeilleEnabled,
 } from "@/lib/veille/settings";
 
+/** Max propositions auto par créneau (refus → nouvelle proposition). */
+export const VEILLE_MAX_PROPOSALS = 3;
+
 export type VeilleRunResult = {
   ok: boolean;
   message: string;
@@ -24,6 +27,7 @@ export type VeilleRunResult = {
   score?: number;
   slotKey?: string;
   pendingId?: string;
+  attempt?: number;
 };
 
 function adminChatId(): number | null {
@@ -33,12 +37,26 @@ function adminChatId(): number | null {
   return allowed[0] ?? null;
 }
 
+async function slotProposalCount(slotKey: string): Promise<number> {
+  return prisma.veilleItem.count({
+    where: {
+      slotKey,
+      status: {
+        in: ["pending_approval", "skipped", "published", "failed"],
+      },
+    },
+  });
+}
+
 /**
  * Un cycle de veille : scrape → score → créative → envoi Telegram pour validation.
  * Publication site+FB uniquement après /veille_ok (ou bouton ✅).
+ * Après /veille_non : jusqu'à 3 propositions au total pour le créneau.
  */
 export async function runVeilleCycle(opts?: {
   force?: boolean;
+  /** Garde le même créneau (retry après refus). */
+  slotKeyOverride?: string;
 }): Promise<VeilleRunResult> {
   const force = Boolean(opts?.force);
   const chatId = adminChatId();
@@ -64,12 +82,14 @@ export async function runVeilleCycle(opts?: {
   }
 
   const slot = currentVeilleSlot();
+  const slotKey = opts?.slotKeyOverride || slot.slotKey;
+
   if (!force) {
     if (!slot.inSlot) {
       return {
         ok: false,
         message: `Hors créneau (heure Paris ${slot.hour}h). Slots : 8/10/12/14/16/18/20.`,
-        slotKey: slot.slotKey,
+        slotKey,
       };
     }
     const last = await getLastVeilleSlot();
@@ -94,12 +114,22 @@ export async function runVeilleCycle(opts?: {
       ok: false,
       message: "Créative déjà en attente de validation.",
       pendingId: alreadyPending.id,
-      slotKey: slot.slotKey,
+      slotKey,
     };
   }
 
+  const priorCount = await slotProposalCount(slotKey);
+  if (priorCount >= VEILLE_MAX_PROPOSALS) {
+    return {
+      ok: false,
+      message: `Créneau ${slotKey} : ${VEILLE_MAX_PROPOSALS} propositions déjà faites.`,
+      slotKey,
+    };
+  }
+  const attempt = priorCount + 1;
+
   await notify(
-    `🛰️ Veille ${slot.dateKey} ${String(slot.hour).padStart(2, "0")}h : scan…`,
+    `🛰️ Veille ${slotKey} — proposition ${attempt}/${VEILLE_MAX_PROPOSALS} : scan…`,
   );
 
   const hits = await scrapeHotNews();
@@ -107,21 +137,45 @@ export async function runVeilleCycle(opts?: {
     return {
       ok: false,
       message: "Aucune brève fraîche (<36h) récupérée.",
-      slotKey: slot.slotKey,
+      slotKey,
     };
   }
 
-  const picked = await scoreAndPickStory(hits);
+  const priorItems = await prisma.veilleItem.findMany({
+    where: { slotKey },
+    select: { headline: true, sourceTitle: true, canvaTitle: true, headlineKey: true },
+  });
+  const excludeTitles = priorItems.flatMap((p) =>
+    [p.headline, p.sourceTitle, p.canvaTitle].filter(Boolean) as string[],
+  );
+  const excludeKeys = new Set(priorItems.map((p) => p.headlineKey));
+
+  const picked = await scoreAndPickStory(hits, { excludeTitles });
   if (!picked) {
-    await notify("Veille : rien d'assez engageant / frais ce tour-ci.");
+    await notify(
+      attempt > 1
+        ? "Veille : plus d'autre sujet frais à proposer pour ce créneau."
+        : "Veille : rien d'assez engageant / frais ce tour-ci.",
+    );
     return {
       ok: false,
       message: "Aucun sujet au-dessus du seuil.",
-      slotKey: slot.slotKey,
+      slotKey,
+      attempt,
     };
   }
 
   const key = headlineKey(picked.canvaTitle || picked.sourceTitle);
+  if (excludeKeys.has(key)) {
+    await notify("Veille : sujet déjà proposé ce créneau, abandon de ce tour.");
+    return {
+      ok: false,
+      message: "Doublon créneau.",
+      slotKey,
+      attempt,
+    };
+  }
+
   const existing = await prisma.veilleItem.findUnique({
     where: { headlineKey: key },
   });
@@ -140,7 +194,7 @@ export async function runVeilleCycle(opts?: {
         existing.status === "pending_approval"
           ? "Doublon (en attente)."
           : "Doublon (déjà publié).",
-      slotKey: slot.slotKey,
+      slotKey,
     };
   }
 
@@ -155,7 +209,7 @@ export async function runVeilleCycle(opts?: {
       canvaTitle: picked.canvaTitle,
       highlightWords: picked.highlightWords,
       status: "found",
-      slotKey: slot.slotKey,
+      slotKey,
     },
     update: {
       score: picked.score,
@@ -163,7 +217,7 @@ export async function runVeilleCycle(opts?: {
       highlightWords: picked.highlightWords,
       sourceUrl: picked.sourceUrl,
       status: "found",
-      slotKey: slot.slotKey,
+      slotKey,
       errorMessage: null,
     },
   });
@@ -190,19 +244,19 @@ export async function runVeilleCycle(opts?: {
         status: "pending_approval",
         creativeImageMime: "image/png",
         creativeImageData: new Uint8Array(png),
-        slotKey: slot.slotKey,
+        slotKey,
       },
     });
 
     const caption = [
-      "🛑 VALIDATION REQUISE",
+      `🛑 VALIDATION REQUISE — ${attempt}/${VEILLE_MAX_PROPOSALS}`,
       "",
       picked.canvaTitle.slice(0, 280),
       "",
       `Score ${picked.score}`,
       "",
       "✅ /veille_ok — publier (site + Facebook)",
-      "❌ /veille_non — refuser (rien n'est posté)",
+      "❌ /veille_non — refuser (autre proposition si dispo)",
       "",
       "Ou utilise les boutons ci-dessous.",
     ].join("\n");
@@ -215,8 +269,9 @@ export async function runVeilleCycle(opts?: {
       ok: true,
       message: "En attente de validation Telegram",
       score: picked.score,
-      slotKey: slot.slotKey,
+      slotKey,
       pendingId: item.id,
+      attempt,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "échec veille";
@@ -226,6 +281,6 @@ export async function runVeilleCycle(opts?: {
       data: { status: "failed", errorMessage: msg.slice(0, 500) },
     });
     await notify(`❌ Veille : échec\n${msg}`);
-    return { ok: false, message: msg, slotKey: slot.slotKey };
+    return { ok: false, message: msg, slotKey, attempt };
   }
 }
