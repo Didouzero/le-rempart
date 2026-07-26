@@ -1,6 +1,5 @@
 /**
- * Détecte des noms de personnalités dans un titre (ex. Sébastien Lecornu).
- * Priorité pour l'illustration Wikipedia / portrait.
+ * Détecte des noms de personnalités dans un titre (ex. Bruno Le Maire).
  */
 
 const STOP = new Set(
@@ -67,26 +66,49 @@ const STOP = new Set(
     "nord",
     "sud",
     "ouest",
-    "est",
     "nouveau",
     "nouvelle",
     "annonce",
-    "annonce",
     "commande",
-    "inutilisables",
-    "branchements",
-    "italiens",
-    "incompatibles",
-    "clims",
-    "climatiseurs",
+    "alors",
+    "pendant",
+    "tandis",
+    "quand",
+    "comme",
+    "entre",
+    "depuis",
+    "tour",
+    "assemblée",
+    "assemblee",
+    "nationale",
+    "voiture",
+    "représentation",
+    "representation",
   ].map((s) => s.toLowerCase()),
 );
+
+/** Particules de noms propres FR (ne pas traiter comme stop au milieu d'un nom). */
+const NAME_PARTICLES = new Set([
+  "le",
+  "la",
+  "de",
+  "du",
+  "des",
+  "d'",
+  "l'",
+  "van",
+  "von",
+]);
 
 function toTitleCaseWord(word: string): string {
   if (!word) return word;
   const lower = word.toLowerCase();
-  // Particules
-  if (["de", "du", "des", "d'", "l'"].includes(lower)) return lower;
+  if (["de", "du", "des", "d'", "l'", "le", "la", "van", "von"].includes(lower)) {
+    return lower;
+  }
+  if (word.includes("-")) {
+    return word.split("-").map(toTitleCaseWord).join("-");
+  }
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
@@ -106,9 +128,6 @@ function normalizeTitleCasing(title: string): string {
     return cleaned
       .split(" ")
       .map((w) => {
-        if (w.includes("-")) {
-          return w.split("-").map(toTitleCaseWord).join("-");
-        }
         if (w.includes("'")) {
           const [a, ...rest] = w.split("'");
           return [toTitleCaseWord(a), ...rest.map(toTitleCaseWord)].join("'");
@@ -120,37 +139,68 @@ function normalizeTitleCasing(title: string): string {
   return cleaned;
 }
 
+function isCapitalizedNameToken(word: string): boolean {
+  return /^\p{Lu}/u.test(word) && word.replace(/['-]/g, "").length >= 2;
+}
+
+function isStopToken(word: string): boolean {
+  const l = word.toLowerCase().replace(/^d'|^l'/, "");
+  return STOP.has(l) || STOP.has(word.toLowerCase());
+}
+
+function isParticle(word: string): boolean {
+  return NAME_PARTICLES.has(word.toLowerCase());
+}
+
 /**
- * Retourne des candidats "Prénom Nom" (et éventuellement 3 mots).
+ * Retourne des candidats "Prénom Nom" / "Prénom Le Nom" (Bruno Le Maire).
  */
 export function extractPersonCandidates(title: string): string[] {
   const normalized = normalizeTitleCasing(title);
   const words = normalized.split(/\s+/).filter(Boolean);
   const out: string[] = [];
 
-  for (let i = 0; i < words.length - 1; i += 1) {
+  for (let i = 0; i < words.length; i += 1) {
     const a = words[i];
-    const b = words[i + 1];
-    const al = a.toLowerCase().replace(/^d'|^l'/, "");
-    const bl = b.toLowerCase();
-    if (STOP.has(al) || STOP.has(bl)) continue;
-    if (a.length < 2 || b.length < 2) continue;
-    // Ignore prépositions / mots trop courts type "À"
-    if (a.length < 3 && !a.includes("'")) continue;
-    if (b.length < 3 && !b.includes("'")) continue;
-    // Doit ressembler à un nom propre (capitale)
-    if (!/^\p{Lu}/u.test(a) || !/^\p{Lu}/u.test(b)) continue;
+    if (!isCapitalizedNameToken(a) || isStopToken(a) || isParticle(a)) continue;
 
-    out.push(`${a} ${b}`);
-
-    if (i + 2 < words.length) {
+    // Prénom + particule + Nom  (Bruno Le Maire)
+    if (i + 2 < words.length && isParticle(words[i + 1])) {
+      const particle = words[i + 1];
       const c = words[i + 2];
-      const cl = c.toLowerCase();
-      if (!STOP.has(cl) && c.length >= 2 && /^\p{Lu}/u.test(c)) {
-        out.push(`${a} ${b} ${c}`);
+      if (isCapitalizedNameToken(c) && !isStopToken(c) && !isParticle(c)) {
+        out.push(`${a} ${particle} ${c}`);
+        // Aussi sans particule pour certaines pages wiki
+        out.push(`${a} ${c}`);
+      }
+    }
+
+    // Prénom + Nom
+    if (i + 1 < words.length) {
+      const b = words[i + 1];
+      if (
+        isCapitalizedNameToken(b) &&
+        !isStopToken(b) &&
+        !isParticle(b)
+      ) {
+        out.push(`${a} ${b}`);
+        // Prénom + Nom + Nom2 (Jean-Luc already one token; Charles Michel Xavier rare)
+        if (i + 2 < words.length) {
+          const c = words[i + 2];
+          if (
+            isCapitalizedNameToken(c) &&
+            !isStopToken(c) &&
+            !isParticle(c)
+          ) {
+            out.push(`${a} ${b} ${c}`);
+          }
+        }
       }
     }
   }
 
-  return [...new Set(out)].slice(0, 5);
+  // Priorité aux formes à 3 mots (Bruno Le Maire avant Bruno Maire)
+  out.sort((x, y) => y.split(" ").length - x.split(" ").length);
+
+  return [...new Set(out)].slice(0, 6);
 }

@@ -62,23 +62,37 @@ export async function findOpenverseCoverUrl(
 }
 
 async function findLandscapePersonPhoto(person: string): Promise<string | null> {
-  const queries = [
-    `${person} portrait`,
-    `${person}`,
-    `${person} france`,
-  ];
+  // 1) Wikipedia FR en premier : visage identifiable (orientation libre)
+  try {
+    const { findWikipediaCover } = await import("@/lib/wikimedia");
+    const wiki = await findWikipediaCover(person);
+    if (wiki?.url) return wiki.url;
+  } catch (err) {
+    console.error("wikipedia person failed", person, err);
+  }
 
-  // 1) Openverse paysage
+  // 2) Wikimedia Commons (portrait OK)
+  try {
+    const { findWikimediaCover } = await import("@/lib/wikimedia");
+    const commons = await findWikimediaCover(person);
+    if (commons?.url) return commons.url;
+  } catch (err) {
+    console.error("commons person failed", person, err);
+  }
+
+  const queries = [`${person} portrait`, `${person}`, `${person} france`];
+
+  // 3) Openverse (visage / nom)
   for (const q of queries) {
     try {
-      const url = await findOpenverseCoverUrl(q, { landscapeOnly: true });
+      const url = await findOpenverseCoverUrl(q, { landscapeOnly: false });
       if (url) return url;
     } catch (err) {
       console.error("openverse person failed", q, err);
     }
   }
 
-  // 2) Unsplash paysage
+  // 4) Unsplash
   try {
     const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
     for (const q of queries) {
@@ -87,24 +101,6 @@ async function findLandscapePersonPhoto(person: string): Promise<string | null> 
     }
   } catch {
     // ignore
-  }
-
-  // 3) Wikimedia Commons — uniquement si dimensions paysage
-  try {
-    const { findWikimediaLandscapeCover } = await import("@/lib/wikimedia");
-    const commons = await findWikimediaLandscapeCover(person);
-    if (commons?.url) return commons.url;
-  } catch (err) {
-    console.error("commons landscape person failed", person, err);
-  }
-
-  // 4) Wikipedia en dernier recours seulement si l'image source est paysage
-  try {
-    const { findWikipediaLandscapeCover } = await import("@/lib/wikimedia");
-    const wiki = await findWikipediaLandscapeCover(person);
-    if (wiki?.url) return wiki.url;
-  } catch (err) {
-    console.error("wikipedia landscape person failed", person, err);
   }
 
   return null;
