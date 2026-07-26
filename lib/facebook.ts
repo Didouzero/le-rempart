@@ -187,8 +187,7 @@ async function commentAndPin(
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        message: link,
-        attachment_url: link,
+        message: `➡️ ${link}`,
         access_token: token,
       }),
     },
@@ -229,6 +228,19 @@ async function commentAndPin(
     pinned: false,
     pinError: lastPinError,
   };
+}
+
+/** Lien article en 1er commentaire (meilleur pour le reach que dans la légende). */
+export async function commentArticleLinkOnPost(input: {
+  postId: string;
+  articleUrl: string;
+  token: string;
+}): Promise<{ commentId: string; pinned: boolean; pinError?: string }> {
+  const url = input.articleUrl.replace(
+    "://le-rempart.org",
+    "://www.le-rempart.org",
+  );
+  return commentAndPin(input.postId, url, input.token);
 }
 
 async function publishFeedWithPhoto(input: {
@@ -332,6 +344,7 @@ export async function publishFacebookFeedPost(input: {
 
   if (!postId) {
     try {
+      // Fallback texte seul : PAS de param link (pénalise le reach)
       const feed = await graphJson<{ id: string }>(
         `${GRAPH}/${page.pageId}/feed`,
         {
@@ -339,7 +352,6 @@ export async function publishFacebookFeedPost(input: {
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
             message: input.caption,
-            link: input.commentLink,
             access_token: page.token,
           }),
         },

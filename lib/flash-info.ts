@@ -4,7 +4,6 @@ import { getKimiTextModel } from "@/lib/kimi";
 /** Une seule phrase courte, ton Rempart, pour le post Facebook. */
 function fallbackPunchline(title: string, excerpt: string): string {
   const src = `${excerpt} ${title}`.trim();
-  // Accroche générique si Kimi indispo
   if (/honte|scandale|indigne/i.test(src)) return "C'est vraiment la honte…";
   if (/€|euro|retraite|impôt|subvention/i.test(src))
     return "Et après on parle de serrer la ceinture…";
@@ -24,13 +23,13 @@ function cleanPunchline(raw: string): string {
 }
 
 /**
- * Caption Facebook : ‼️ + micro-commentaire + ➡️ + lien article.
- * La créative reste en image jointe au post.
+ * Caption Facebook SANS lien (le lien va en 1er commentaire pour le reach).
+ * Format : ‼️ + micro-commentaire
  */
 export async function buildFlashInfoText(input: {
   title: string;
   excerpt: string;
-  articleUrl: string;
+  articleUrl?: string;
 }): Promise<string> {
   let punch = fallbackPunchline(input.title, input.excerpt);
 
@@ -60,10 +59,5 @@ export async function buildFlashInfoText(input: {
     }
   }
 
-  const url = input.articleUrl.replace(
-    "://le-rempart.org",
-    "://www.le-rempart.org",
-  );
-
-  return `‼️ ${punch} ➡️ ${url}`;
+  return `‼️ ${punch}`;
 }

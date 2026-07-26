@@ -5,6 +5,7 @@ import {
   isFacebookConfigured,
   publishFacebookFeedPost,
   publishFacebookStory,
+  commentArticleLinkOnPost,
 } from "@/lib/facebook";
 import { prisma } from "@/lib/prisma";
 import { publishArticleFromCreative } from "@/lib/publish-from-creative";
@@ -210,6 +211,26 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         chatId,
         `✅ Post Facebook publié.\nID : ${feed.postId}`,
       );
+
+      try {
+        const commented = await commentArticleLinkOnPost({
+          postId: feed.postId,
+          articleUrl: articleWww,
+          token: feed.token,
+        });
+        await telegramSendMessage(
+          chatId,
+          commented.pinned
+            ? `✅ Lien article en commentaire (épinglé).\n${articleWww}`
+            : `✅ Lien article en commentaire.\n${articleWww}`,
+        );
+      } catch (commentErr) {
+        console.error(commentErr);
+        await telegramSendMessage(
+          chatId,
+          `❌ Commentaire lien : échec\n${commentErr instanceof Error ? commentErr.message : "erreur"}`,
+        );
+      }
 
       await telegramSendMessage(chatId, "Facebook : publication de la story…");
 
