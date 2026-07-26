@@ -18,8 +18,12 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  const force =
+    request.nextUrl.searchParams.get("force") === "1" ||
+    request.nextUrl.searchParams.get("force") === "true";
+
   try {
-    const result = await runVeilleCycle();
+    const result = await runVeilleCycle({ force });
     return NextResponse.json(result);
   } catch (err) {
     console.error("cron veille failed", err);

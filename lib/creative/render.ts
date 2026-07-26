@@ -35,9 +35,9 @@ async function fileToDataUri(
 
 function pickFontSize(lines: string[]): number {
   const maxLine = Math.max(...lines.map((l) => measureImpactLine(l, 100)), 1);
-  // Largeur utile ~ 960px
-  const byWidth = (960 / maxLine) * 100;
-  return Math.max(42, Math.min(78, Math.floor(byWidth)));
+  // ~15% plus petit que la passe précédente
+  const byWidth = (900 / maxLine) * 100;
+  return Math.max(66, Math.min(88, Math.floor(byWidth)));
 }
 
 function renderLineSpans(line: string, highlightSet: Set<string>): string {
@@ -66,11 +66,13 @@ export async function renderRempartCreative(input: {
     input.highlightWords || [],
   );
   const fontSize = pickFontSize(lines);
-  const lineHeight = Math.round(fontSize * 1.05);
+  // Interligne légèrement resserré
+  const lineHeight = Math.round(fontSize * 1.28);
 
-  const [logoUri, shieldUri] = await Promise.all([
-    fileToDataUri(assetPath("logo.png"), "image/png"),
-    fileToDataUri(assetPath("favicon.png"), "image/png"),
+  const logoPath = assetPath("creative", "le-rempart.png");
+  const [logoUri, castleUri] = await Promise.all([
+    fileToDataUri(logoPath, "image/png"),
+    fileToDataUri(assetPath("creative", "castle.png"), "image/png"),
   ]);
 
   const fontPath = assetPath("fonts", "Impact.ttf");
@@ -85,37 +87,70 @@ export async function renderRempartCreative(input: {
     .jpeg({ quality: 90, mozjpeg: true })
     .toBuffer();
 
+  // Bloc titre plus aéré → on remonte un peu le bas pour tenir dans le cadre
   const textBlockHeight = lines.length * lineHeight;
-  const textBottom = CREATIVE_HEIGHT - 72;
-  const textTop = textBottom - textBlockHeight;
-  const ruleY = textTop - 48;
-  const shieldSize = 56;
-  const ruleHalfGap = 40;
+  const textBottom = CREATIVE_HEIGHT - 56;
+  const textTop = Math.max(520, textBottom - textBlockHeight);
+  const ruleY = textTop - 32;
+
+  // Wordmark haut gauche
+  const logoW = 228;
+  const logoH = Math.round(logoW * (127 / 791));
+  const logoX = 70;
+  const logoY = 88;
+
+  // Emblème castle (~+50%) — bas pile à ras des filets
+  const castleW = 252;
+  const castleH = Math.round(castleW * (174 / 838));
+  // Filets juste après le PNG château (petit air)
+  const ruleHalfGap = Math.round(castleW / 2) + 10;
+  const ruleStroke = 4;
+  const ruleLeft = 70;
+  const ruleRight = CREATIVE_WIDTH - 70;
+  // Bas du château pile à ras des filets (aligné sur l'axe des traits)
+  const castleY = ruleY - castleH + ruleStroke / 2;
 
   const textSvgLines = lines
     .map((line, i) => {
       const y = textTop + fontSize + i * lineHeight;
-      return `<text x="540" y="${y}" text-anchor="middle" font-family="Impact" font-size="${fontSize}" letter-spacing="1">${renderLineSpans(line, highlightSet)}</text>`;
+      return `<text x="540" y="${y}" text-anchor="middle" font-family="Impact" font-size="${fontSize}" letter-spacing="-1.2">${renderLineSpans(line, highlightSet)}</text>`;
     })
     .join("\n");
+
+  // Halo logo : ellipse allongée type « haricot » horizontal, bien estompée
+  const logoCx = logoX + logoW / 2;
+  const logoCy = logoY + logoH / 2;
+  const logoRx = logoW * 1.05;
+  const logoRy = Math.max(logoH * 1.55, 48);
 
   const overlaySvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${CREATIVE_WIDTH}" height="${CREATIVE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bottomFade" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
-      <stop offset="35%" stop-color="#000000" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.92"/>
+      <stop offset="12%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="28%" stop-color="#000000" stop-opacity="0.1"/>
+      <stop offset="42%" stop-color="#000000" stop-opacity="0.28"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.52"/>
+      <stop offset="68%" stop-color="#000000" stop-opacity="0.75"/>
+      <stop offset="84%" stop-color="#000000" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="1"/>
     </linearGradient>
+    <radialGradient id="logoWash" cx="50%" cy="50%" r="50%" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.48"/>
+      <stop offset="25%" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="48%" stop-color="#000000" stop-opacity="0.08"/>
+      <stop offset="72%" stop-color="#000000" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <!-- Dégradé bas -->
-  <rect x="0" y="720" width="${CREATIVE_WIDTH}" height="720" fill="url(#bottomFade)"/>
-  <!-- Logo haut gauche -->
-  <image href="${logoUri}" x="36" y="36" width="300" height="115" preserveAspectRatio="xMinYMin meet"/>
-  <!-- Filets or + bouclier -->
-  <line x1="80" y1="${ruleY}" x2="${540 - ruleHalfGap}" y2="${ruleY}" stroke="${GOLD}" stroke-width="3"/>
-  <line x1="${540 + ruleHalfGap}" y1="${ruleY}" x2="1000" y2="${ruleY}" stroke="${GOLD}" stroke-width="3"/>
-  <image href="${shieldUri}" x="${540 - shieldSize / 2}" y="${ruleY - shieldSize / 2}" width="${shieldSize}" height="${shieldSize}" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="0" y="0" width="${CREATIVE_WIDTH}" height="${CREATIVE_HEIGHT}" fill="url(#bottomFade)"/>
+  <!-- Halo noir progressif derrière LE REMPART -->
+  <ellipse cx="${logoCx}" cy="${logoCy}" rx="${logoRx}" ry="${logoRy}" fill="url(#logoWash)"/>
+  <image href="${logoUri}" x="${logoX}" y="${logoY}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMinYMin meet"/>
+  <line x1="${ruleLeft}" y1="${ruleY}" x2="${540 - ruleHalfGap}" y2="${ruleY}" stroke="${GOLD}" stroke-width="${ruleStroke}" stroke-linecap="butt"/>
+  <line x1="${540 + ruleHalfGap}" y1="${ruleY}" x2="${ruleRight}" y2="${ruleY}" stroke="${GOLD}" stroke-width="${ruleStroke}" stroke-linecap="butt"/>
+  <image href="${castleUri}" x="${540 - castleW / 2}" y="${castleY}" width="${castleW}" height="${castleH}" preserveAspectRatio="xMidYMid meet"/>
   ${textSvgLines}
 </svg>`;
 
@@ -127,10 +162,10 @@ export async function renderRempartCreative(input: {
       defaultFontFamily: "Impact",
     },
   });
-  const overlayPng = resvg.render().asPng();
+  const overlayPng = Buffer.from(resvg.render().asPng());
 
   return sharp(bg)
-    .composite([{ input: Buffer.from(overlayPng), top: 0, left: 0 }])
+    .composite([{ input: overlayPng, top: 0, left: 0 }])
     .png()
     .toBuffer();
 }

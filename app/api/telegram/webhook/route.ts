@@ -9,13 +9,25 @@ import {
 import {
   isTelegramUserAllowed,
   pickLargestPhoto,
+  telegramAnswerCallbackQuery,
   telegramDownloadFile,
   telegramSendMessage,
   type TelegramUpdate,
 } from "@/lib/telegram";
+import {
+  handleVeilleApprovalCommand,
+  handleVeilleCallback,
+} from "@/lib/veille/approve";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+/** Normalise `/veille_on@MonBot` → `/veille_on`. */
+function normalizeCommand(text: string): string {
+  const raw = text.trim().split(/\s+/)[0] || "";
+  const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  return withSlash.toLowerCase().replace(/@\w+$/i, "");
+}
 
 /** Claim update_id — si déjà vu, ignore (coupe les retries Telegram). */
 async function claimUpdate(updateId: number): Promise<boolean> {
@@ -30,6 +42,27 @@ async function claimUpdate(updateId: number): Promise<boolean> {
 }
 
 async function processUpdate(update: TelegramUpdate): Promise<void> {
+  // Boutons inline ✅ / ❌ sur les créatives veille
+  if (update.callback_query) {
+    const cq = update.callback_query;
+    if (cq.from?.is_bot) return;
+    const userId = cq.from.id;
+    const chatId = cq.message?.chat.id;
+    if (!chatId) return;
+
+    if (!isTelegramUserAllowed(userId)) {
+      await telegramAnswerCallbackQuery(cq.id, "Non autorisé");
+      return;
+    }
+
+    const data = cq.data || "";
+    const handled = await handleVeilleCallback(data, chatId, cq.id);
+    if (!handled) {
+      await telegramAnswerCallbackQuery(cq.id);
+    }
+    return;
+  }
+
   const message = update.message;
   if (!message?.from || !message.chat) return;
   if ((message.from as { is_bot?: boolean }).is_bot) return;
@@ -37,9 +70,10 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   const chatId = message.chat.id;
   const userId = message.from.id;
   const text = (message.text || "").trim();
+  const cmd = text ? normalizeCommand(text) : "";
 
   try {
-    if (text === "/start" || text === "/id") {
+    if (cmd === "/start" || cmd === "/id") {
       await telegramSendMessage(
         chatId,
         [
@@ -55,7 +89,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (text === "/help") {
+    if (cmd === "/help") {
       await telegramSendMessage(
         chatId,
         [
@@ -64,16 +98,20 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "/veille_off — couper la créative auto",
           "/veille_on — réactiver la créative auto",
           "/veille — statut de la veille",
+          "/veille_ok — valider la créative auto en attente",
+          "/veille_non — refuser la créative auto (rien n'est posté)",
         ].join("\n"),
       );
       return;
     }
 
     if (
-      text === "/veille_off" ||
-      text === "/veille_on" ||
-      text === "/veille" ||
-      text === "/veille_status"
+      cmd === "/veille_off" ||
+      cmd === "/veille_on" ||
+      cmd === "/veille" ||
+      cmd === "/veille_status" ||
+      cmd === "/veille_ok" ||
+      cmd === "/veille_non"
     ) {
       if (!isTelegramUserAllowed(userId)) {
         await telegramSendMessage(
@@ -82,12 +120,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         );
         return;
       }
+
+      if (await handleVeilleApprovalCommand(cmd, chatId)) {
+        return;
+      }
+
       const {
         isVeilleEnabled,
         setVeilleEnabled,
       } = await import("@/lib/veille/settings");
 
-      if (text === "/veille_off") {
+      if (cmd === "/veille_off") {
         await setVeilleEnabled(false);
         await telegramSendMessage(
           chatId,
@@ -95,25 +138,30 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         );
         return;
       }
-      if (text === "/veille_on") {
+      if (cmd === "/veille_on") {
         await setVeilleEnabled(true);
         await telegramSendMessage(
           chatId,
-          "Veille / créative auto : ON.\nLe cron pourra republier (toutes les 2 h).",
+          "Veille / créative auto : ON.\nLe cron proposera une créative aux créneaux 8h–20h (validation Telegram obligatoire).",
         );
         return;
       }
       const on = await isVeilleEnabled();
+      const { getLatestPendingVeille } = await import("@/lib/veille/approve");
+      const pending = await getLatestPendingVeille();
+      const pendingLine = pending
+        ? `\n\n⏳ 1 créative en attente → /veille_ok ou /veille_non`
+        : "";
       await telegramSendMessage(
         chatId,
-        on
-          ? "Statut veille : ON (créative auto active)."
-          : "Statut veille : OFF (créative auto coupée).",
+        (on
+          ? "Statut veille : ON (propositions auto + validation Telegram)."
+          : "Statut veille : OFF (créative auto coupée).") + pendingLine,
       );
       return;
     }
 
-    if (text === "/fb" || text === "/facebook") {
+    if (cmd === "/fb" || cmd === "/facebook") {
       if (!isTelegramUserAllowed(userId)) {
         await telegramSendMessage(
           chatId,

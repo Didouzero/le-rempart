@@ -3,23 +3,27 @@ import {
   renderRempartCreative,
 } from "@/lib/creative";
 import { prisma } from "@/lib/prisma";
-import {
-  publishCreativePipeline,
-  telegramNotifier,
-} from "@/lib/publish-pipeline";
+import { telegramNotifier } from "@/lib/publish-pipeline";
 import {
   getAllowedTelegramUserIds,
   telegramSendPhoto,
+  veilleApprovalKeyboard,
 } from "@/lib/telegram";
+import { currentVeilleSlot } from "@/lib/veille/schedule";
 import { headlineKey, scrapeHotNews } from "@/lib/veille/scrape";
 import { scoreAndPickStory } from "@/lib/veille/score";
-import { isVeilleEnabled } from "@/lib/veille/settings";
+import {
+  getLastVeilleSlot,
+  isVeilleEnabled,
+} from "@/lib/veille/settings";
 
 export type VeilleRunResult = {
   ok: boolean;
   message: string;
   articleUrl?: string;
   score?: number;
+  slotKey?: string;
+  pendingId?: string;
 };
 
 function adminChatId(): number | null {
@@ -30,9 +34,13 @@ function adminChatId(): number | null {
 }
 
 /**
- * Un cycle de veille : scrape → score → créative → publish site+FB.
+ * Un cycle de veille : scrape → score → créative → envoi Telegram pour validation.
+ * Publication site+FB uniquement après /veille_ok (ou bouton ✅).
  */
-export async function runVeilleCycle(): Promise<VeilleRunResult> {
+export async function runVeilleCycle(opts?: {
+  force?: boolean;
+}): Promise<VeilleRunResult> {
+  const force = Boolean(opts?.force);
   const chatId = adminChatId();
   const notify = chatId
     ? telegramNotifier(chatId)
@@ -47,26 +55,93 @@ export async function runVeilleCycle(): Promise<VeilleRunResult> {
     };
   }
 
-  await notify("🛰️ Veille : scan des news…");
+  if (!chatId) {
+    return {
+      ok: false,
+      message:
+        "Pas de chat Telegram admin (TELEGRAM_NOTIFY_CHAT_ID / ALLOWED_USER_IDS) — validation impossible.",
+    };
+  }
+
+  const slot = currentVeilleSlot();
+  if (!force) {
+    if (!slot.inSlot) {
+      return {
+        ok: false,
+        message: `Hors créneau (heure Paris ${slot.hour}h). Slots : 8/10/12/14/16/18/20.`,
+        slotKey: slot.slotKey,
+      };
+    }
+    const last = await getLastVeilleSlot();
+    if (last === slot.slotKey) {
+      return {
+        ok: false,
+        message: `Créneau ${slot.slotKey} déjà traité.`,
+        slotKey: slot.slotKey,
+      };
+    }
+  }
+
+  const alreadyPending = await prisma.veilleItem.findFirst({
+    where: { status: "pending_approval" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (alreadyPending && !force) {
+    await notify(
+      "⏳ Une créative attend déjà ta validation (/veille_ok ou /veille_non).",
+    );
+    return {
+      ok: false,
+      message: "Créative déjà en attente de validation.",
+      pendingId: alreadyPending.id,
+      slotKey: slot.slotKey,
+    };
+  }
+
+  await notify(
+    `🛰️ Veille ${slot.dateKey} ${String(slot.hour).padStart(2, "0")}h : scan…`,
+  );
 
   const hits = await scrapeHotNews();
   if (hits.length === 0) {
-    return { ok: false, message: "Aucune brève RSS récupérée." };
+    return {
+      ok: false,
+      message: "Aucune brève fraîche (<36h) récupérée.",
+      slotKey: slot.slotKey,
+    };
   }
 
   const picked = await scoreAndPickStory(hits);
   if (!picked) {
-    await notify("Veille : rien d'assez engageant ce tour-ci.");
-    return { ok: false, message: "Aucun sujet au-dessus du seuil." };
+    await notify("Veille : rien d'assez engageant / frais ce tour-ci.");
+    return {
+      ok: false,
+      message: "Aucun sujet au-dessus du seuil.",
+      slotKey: slot.slotKey,
+    };
   }
 
   const key = headlineKey(picked.canvaTitle || picked.sourceTitle);
   const existing = await prisma.veilleItem.findUnique({
     where: { headlineKey: key },
   });
-  if (existing && existing.status === "published") {
-    await notify("Veille : sujet déjà publié, skip.");
-    return { ok: false, message: "Doublon (déjà publié)." };
+  if (
+    existing &&
+    (existing.status === "published" || existing.status === "pending_approval")
+  ) {
+    await notify(
+      existing.status === "pending_approval"
+        ? "Veille : ce sujet attend déjà ta validation."
+        : "Veille : sujet déjà publié, skip.",
+    );
+    return {
+      ok: false,
+      message:
+        existing.status === "pending_approval"
+          ? "Doublon (en attente)."
+          : "Doublon (déjà publié).",
+      slotKey: slot.slotKey,
+    };
   }
 
   const item = await prisma.veilleItem.upsert({
@@ -80,6 +155,7 @@ export async function runVeilleCycle(): Promise<VeilleRunResult> {
       canvaTitle: picked.canvaTitle,
       highlightWords: picked.highlightWords,
       status: "found",
+      slotKey: slot.slotKey,
     },
     update: {
       score: picked.score,
@@ -87,50 +163,60 @@ export async function runVeilleCycle(): Promise<VeilleRunResult> {
       highlightWords: picked.highlightWords,
       sourceUrl: picked.sourceUrl,
       status: "found",
+      slotKey: slot.slotKey,
       errorMessage: null,
     },
   });
 
   await notify(
-    `Veille : sujet retenu (score ${picked.score})\n${picked.canvaTitle}`,
+    `Veille : sujet retenu (score ${picked.score})\n${picked.canvaTitle}\nVisuel: ${picked.visualQuery}`,
   );
 
   try {
     await notify("Veille : montage de la créative…");
-    const bg = await fetchCreativeBackground({ title: picked.canvaTitle });
+    const bg = await fetchCreativeBackground({
+      title: picked.canvaTitle,
+      visualQuery: picked.visualQuery,
+    });
     const png = await renderRempartCreative({
       background: bg.buffer,
       title: picked.canvaTitle,
       highlightWords: picked.highlightWords,
     });
 
-    if (chatId) {
-      await telegramSendPhoto(
-        chatId,
-        png,
-        `Créative auto\n${picked.canvaTitle.slice(0, 200)}`,
-      );
-    }
-
-    const result = await publishCreativePipeline({
-      caption: picked.canvaTitle,
-      image: { buffer: png, mime: "image/png" },
-      notify,
-    });
-
     await prisma.veilleItem.update({
       where: { id: item.id },
       data: {
-        status: "published",
-        articleId: result.article.id,
+        status: "pending_approval",
+        creativeImageMime: "image/png",
+        creativeImageData: new Uint8Array(png),
+        slotKey: slot.slotKey,
       },
+    });
+
+    const caption = [
+      "🛑 VALIDATION REQUISE",
+      "",
+      picked.canvaTitle.slice(0, 280),
+      "",
+      `Score ${picked.score}`,
+      "",
+      "✅ /veille_ok — publier (site + Facebook)",
+      "❌ /veille_non — refuser (rien n'est posté)",
+      "",
+      "Ou utilise les boutons ci-dessous.",
+    ].join("\n");
+
+    await telegramSendPhoto(chatId, png, caption, {
+      replyMarkup: veilleApprovalKeyboard(item.id),
     });
 
     return {
       ok: true,
-      message: "Publié",
-      articleUrl: result.article.url,
+      message: "En attente de validation Telegram",
       score: picked.score,
+      slotKey: slot.slotKey,
+      pendingId: item.id,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "échec veille";
@@ -140,6 +226,6 @@ export async function runVeilleCycle(): Promise<VeilleRunResult> {
       data: { status: "failed", errorMessage: msg.slice(0, 500) },
     });
     await notify(`❌ Veille : échec\n${msg}`);
-    return { ok: false, message: msg };
+    return { ok: false, message: msg, slotKey: slot.slotKey };
   }
 }

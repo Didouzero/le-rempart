@@ -1,5 +1,5 @@
 /**
- * Veille Google News FR — sujets "chauds" / trigger droite Rempart.
+ * Veille Google News FR — actu récente uniquement + sujets trigger droite.
  */
 
 export type VeilleHit = {
@@ -7,6 +7,7 @@ export type VeilleHit = {
   link?: string;
   source?: string;
   published?: string;
+  publishedAt?: Date;
 };
 
 function decodeXml(text: string): string {
@@ -24,17 +25,46 @@ function decodeXml(text: string): string {
 }
 
 const VEILLE_QUERIES = [
-  "immigration France",
-  "insécurité France",
-  "émeutes France",
-  "islamisme France",
-  "fiscalité retraite France",
-  "Assemblée nationale polémique",
-  "ministre scandale France",
-  "wokisme France",
-  "aide sociale fraude France",
-  "justice laxisme France",
+  "when:1d immigration France",
+  "when:1d insécurité France",
+  "when:1d violence police France",
+  "when:1d émeutes France",
+  "when:1d fiscalité France",
+  "when:1d Assemblée nationale",
+  "when:1d ministre polémique France",
+  "when:1d justice France",
+  "when:1d incendies France",
+  "when:1d aide sociale France",
 ];
+
+/** Max âge d'une brève (heures). */
+const MAX_AGE_HOURS = 36;
+
+function parsePubDate(raw?: string): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isFresh(publishedAt: Date | null): boolean {
+  if (!publishedAt) return false;
+  const ageMs = Date.now() - publishedAt.getTime();
+  return ageMs >= 0 && ageMs <= MAX_AGE_HOURS * 60 * 60 * 1000;
+}
+
+/** Rejette les sujets sportifs / coupe du monde trop souvent recyclés. */
+function looksStaleOrSports(title: string): boolean {
+  const t = title.toLowerCase();
+  if (/coupe du monde|world cup|qatar 2022|euro 20\d{2}/i.test(t)) return true;
+  // Match foot ancien souvent recyclé hors calendrier
+  if (
+    /france[- ]maroc|maroc[- ]france/i.test(t) &&
+    /interpell|supporter|stade|violences/i.test(t)
+  ) {
+    return true;
+  }
+  return false;
+}
 
 async function fetchGoogleNewsRss(query: string): Promise<VeilleHit[]> {
   const url = new URL("https://news.google.com/rss/search");
@@ -53,7 +83,7 @@ async function fetchGoogleNewsRss(query: string): Promise<VeilleHit[]> {
   if (!res.ok) return [];
 
   const xml = await res.text();
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0, 6);
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0, 8);
   const hits: VeilleHit[] = [];
 
   for (const match of items) {
@@ -62,6 +92,7 @@ async function fetchGoogleNewsRss(query: string): Promise<VeilleHit[]> {
     if (!titleRaw) continue;
     const title = decodeXml(titleRaw).replace(/\s+[-–—]\s+[^-–—]+$/, "").trim();
     if (title.length < 20) continue;
+    if (looksStaleOrSports(title)) continue;
     const link = decodeXml(block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "");
     const source = decodeXml(
       block.match(/<source[^>]*>([\s\S]*?)<\/source>/i)?.[1] || "",
@@ -69,11 +100,15 @@ async function fetchGoogleNewsRss(query: string): Promise<VeilleHit[]> {
     const published = decodeXml(
       block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || "",
     );
+    const publishedAt = parsePubDate(published);
+    if (!isFresh(publishedAt)) continue;
+
     hits.push({
       title,
       link: link || undefined,
       source: source || undefined,
       published: published || undefined,
+      publishedAt: publishedAt || undefined,
     });
   }
   return hits;
@@ -101,6 +136,11 @@ export async function scrapeHotNews(): Promise<VeilleHit[]> {
       out.push(hit);
     }
   }
+
+  // Plus récent d'abord
+  out.sort(
+    (a, b) => (b.publishedAt?.getTime() || 0) - (a.publishedAt?.getTime() || 0),
+  );
   return out;
 }
 

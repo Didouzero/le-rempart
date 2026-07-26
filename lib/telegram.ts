@@ -49,8 +49,11 @@ export async function telegramSendPhoto(
   chatId: number,
   image: Buffer,
   caption?: string,
-): Promise<void> {
-  if (!chatId) return;
+  extra?: {
+    replyMarkup?: Record<string, unknown>;
+  },
+): Promise<{ messageId?: number }> {
+  if (!chatId) return {};
   const token = getToken();
   const form = new FormData();
   form.append("chat_id", String(chatId));
@@ -62,14 +65,46 @@ export async function telegramSendPhoto(
   if (caption) {
     form.append("caption", caption.slice(0, 1000));
   }
+  if (extra?.replyMarkup) {
+    form.append("reply_markup", JSON.stringify(extra.replyMarkup));
+  }
 
   const res = await fetch(`${TELEGRAM_API}/bot${token}/sendPhoto`, {
     method: "POST",
     body: form,
   });
-  const data = (await res.json()) as { ok?: boolean; description?: string };
+  const data = (await res.json()) as {
+    ok?: boolean;
+    description?: string;
+    result?: { message_id?: number };
+  };
   if (!res.ok || !data.ok) {
     console.error("telegramSendPhoto failed", data.description || res.status);
+    return {};
+  }
+  return { messageId: data.result?.message_id };
+}
+
+export async function telegramAnswerCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${TELEGRAM_API}/bot${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      callback_query_id: callbackQueryId,
+      text: text?.slice(0, 200),
+      show_alert: false,
+    }),
+  });
+  const data = (await res.json()) as { ok?: boolean; description?: string };
+  if (!res.ok || !data.ok) {
+    console.error(
+      "telegramAnswerCallbackQuery failed",
+      data.description || res.status,
+    );
   }
 }
 
@@ -126,6 +161,20 @@ export type TelegramUpdate = {
       file_name?: string;
     };
   };
+  callback_query?: {
+    id: string;
+    data?: string;
+    from: {
+      id: number;
+      username?: string;
+      first_name?: string;
+      is_bot?: boolean;
+    };
+    message?: {
+      message_id: number;
+      chat: { id: number; type: string };
+    };
+  };
 };
 
 export function pickLargestPhoto(
@@ -133,4 +182,15 @@ export function pickLargestPhoto(
 ): string {
   const sorted = [...photos].sort((a, b) => b.width * b.height - a.width * a.height);
   return sorted[0].file_id;
+}
+
+export function veilleApprovalKeyboard(itemId: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "✅ Publier", callback_data: `veille:ok:${itemId}` },
+        { text: "❌ Refuser", callback_data: `veille:no:${itemId}` },
+      ],
+    ],
+  };
 }

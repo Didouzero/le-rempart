@@ -31,7 +31,7 @@ Ligne éditoriale :
 Forme (écrire comme un humain de presse, PAS comme une IA) :
 - Vrai article de presse français, rythme irrégulier : phrases courtes et phrases plus longues mélangées.
 - Titre clair et percutant (pas tout en majuscules sauf acronymes).
-- 4 à 6 paragraphes substantiels.
+- Article de longueur moyenne : 4 à 6 paragraphes substantiels (vise ~300 à 400 mots). Ni flash de 3 phrases, ni pavé de 800 mots.
 - Structure OBLIGATOIRE du content Markdown : exactement 2 ou 3 sous-titres ## (courts, sans numérotation).
 - Gras (**comme ceci**) sur 8 à 15 mots ou expressions impactants. Jamais une phrase entière en gras.
 - INTERDIT le tiret long (—) et le tiret demi-cadratin (–). Utilise plutôt une virgule, un point, deux-points, ou des parenthèses.
@@ -224,14 +224,14 @@ export async function generateArticleFromSource(input: {
     )
       ? `Notes factuelles complémentaires :\n${input.sourceText.slice(0, 3000)}`
       : null,
-    `Produis un article complet UNIQUEMENT sur ce titre. Si un briefing presse est fourni, ancre le contexte d'actu dessus (sans inventer une autre crise). Inclus 2 ou 3 sous-titres ## dans le content.`,
+    `Produis un article complet (~300–400 mots, 4–6 paragraphes) UNIQUEMENT sur ce titre. Si un briefing presse est fourni, ancre le contexte d'actu dessus (sans inventer une autre crise). Inclus 2 ou 3 sous-titres ## dans le content.`,
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const attempts: Array<{ timeoutMs: number; maxTokens: number }> = [
-    { timeoutMs: 35_000, maxTokens: 1100 },
-    { timeoutMs: 40_000, maxTokens: 1200 },
+    { timeoutMs: 40_000, maxTokens: 1400 },
+    { timeoutMs: 45_000, maxTokens: 1500 },
   ];
 
   let lastErr: unknown;
@@ -258,8 +258,8 @@ export async function generateArticleFromSource(input: {
   try {
     const raw = await moonshotChat({
       model: "kimi-k2.6",
-      maxTokens: 1000,
-      timeoutMs: 30_000,
+      maxTokens: 1400,
+      timeoutMs: 35_000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userContent },

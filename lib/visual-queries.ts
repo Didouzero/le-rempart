@@ -5,31 +5,74 @@
 
 export function fallbackVisualQueries(title: string): string[] {
   const t = title.toLowerCase();
-  const hospital = /h[oô]pital|clinique|patient|soignant/.test(t);
-  const clim = /clim|climatisation|canicule|chaleur|air.?cond/.test(t);
 
-  if (hospital && clim) {
+  if (/interpell|arrestation|police|crs|gendarmerie/.test(t)) {
     return [
-      "hospital patient room",
-      "hospital room",
-      "air conditioning unit wall",
-      "elderly patient hospital bed",
+      "french riot police night arrest street",
+      "police arrest protesters night france",
+      "crs police night street france",
+      "riot police baton night",
     ];
   }
-  if (hospital) {
+  if (/émeute|emeute|casseurs|incendie|feu|brûle|brule/.test(t)) {
+    return [
+      "riots france burning cars night",
+      "street fire night france",
+      "protesters fire barricade night",
+      "burning vehicle night urban",
+    ];
+  }
+  if (/immigr|migrant|clandestin|frontière|frontiere/.test(t)) {
+    return [
+      "migrants border fence europe night",
+      "border patrol europe",
+      "refugee camp europe fence",
+    ];
+  }
+  if (/h[oô]pital|clinique|patient|soignant/.test(t)) {
+    if (/clim|climatisation|canicule|chaleur|air.?cond/.test(t)) {
+      return [
+        "hospital patient room",
+        "air conditioning unit wall",
+        "elderly patient hospital bed",
+      ];
+    }
     return ["hospital room", "hospital ward", "patient hospital bed"];
   }
-  if (clim) {
+  if (/clim|climatisation|canicule|chaleur/.test(t)) {
     return [
       "air conditioning unit",
-      "air conditioner wall",
-      "cooling fan hot weather",
+      "hot weather city street",
+      "heatwave urban night",
     ];
   }
-  if (/macron|attal|ministre|assemblée|élysée/.test(t)) {
-    return [title.slice(0, 60)];
+  if (/fiscal|impôt|impot|taxe|fraude fiscale/.test(t)) {
+    return [
+      "french tax office building",
+      "euros cash stack",
+      "paris ministry finance building",
+    ];
   }
-  return ["france city street", "french hospital building", "news france"];
+  if (/justice|tribunal|procureur|juge/.test(t)) {
+    return [
+      "french courthouse facade",
+      "courtroom empty benches",
+      "palais de justice paris",
+    ];
+  }
+  if (/macron|attal|ministre|assemblée|elysee|élysée/.test(t)) {
+    return [
+      title.slice(0, 60),
+      "french national assembly hemicycle",
+      "elysee palace paris exterior",
+    ];
+  }
+
+  return [
+    "french police street night",
+    "paris protest night crowd",
+    "france politics demonstration",
+  ];
 }
 
 export async function suggestVisualSearchQueries(input: {

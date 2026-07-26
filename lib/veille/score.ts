@@ -8,11 +8,13 @@ export type ScoredStory = {
   score: number;
   canvaTitle: string;
   highlightWords: string[];
+  visualQuery: string;
   reason: string;
 };
 
 /**
- * Kimi choisit LA meilleure news putaclic / trigger droite et rédige un titre Canva.
+ * Kimi choisit LA meilleure news FRAÎCHE et rédige un titre Canva
+ * pensé pour 4–5 lignes Impact équilibrées + requête visuelle.
  */
 export async function scoreAndPickStory(
   hits: VeilleHit[],
@@ -21,10 +23,12 @@ export async function scoreAndPickStory(
 
   const list = hits
     .slice(0, 18)
-    .map(
-      (h, i) =>
-        `${i + 1}. ${h.title}${h.source ? ` (${h.source})` : ""}${h.link ? ` | ${h.link}` : ""}`,
-    )
+    .map((h, i) => {
+      const age = h.publishedAt
+        ? `${Math.round((Date.now() - h.publishedAt.getTime()) / 36e5)}h`
+        : "?";
+      return `${i + 1}. [${age}] ${h.title}${h.source ? ` (${h.source})` : ""}${h.link ? ` | ${h.link}` : ""}`;
+    })
     .join("\n");
 
   if (!process.env.MOONSHOT_API_KEY) {
@@ -38,6 +42,7 @@ export async function scoreAndPickStory(
         .split(/\s+/)
         .filter((w) => w.length >= 6)
         .slice(0, 5),
+      visualQuery: "french police night street arrest",
       reason: "fallback sans Kimi",
     };
   }
@@ -45,22 +50,32 @@ export async function scoreAndPickStory(
   try {
     const raw = await moonshotChat({
       model: getKimiTextModel(),
-      maxTokens: 500,
-      timeoutMs: 25_000,
+      maxTokens: 650,
+      timeoutMs: 28_000,
       reasoningEffort: "low",
       messages: [
         {
           role: "system",
           content: `Tu es éditeur du média Le Rempart (droite radicale, putaclic politique français).
-Parmi une liste de brèves, choisis LA plus engageante pour une audience de droite (colère, deux poids deux mesures, immigration, fiscalité, élites, insécurité, wokisme, justice laxiste).
+Parmi des brèves DÉJÀ FILTRÉES (<36h), choisis LA plus engageante (actu chaude du jour, pas un vieux fait divers sportif recyclé).
+INTERDIT : recycler une polémique de coupe du monde / match ancien / sujet daté de plus d'une semaine.
+
 Réponds UNIQUEMENT en JSON :
-{"index":1,"score":0-100,"canvaTitle":"TITRE CANVA EN MAJUSCULES PERCUTANT","highlightWords":["MOT1","MOT2"],"reason":"court"}
-canvaTitle : style flash info Facebook, 12 à 22 mots, sans emoji, prêt pour une créative Impact.
-highlightWords : 3 à 6 mots du titre à mettre en or (noms propres, verbes forts).`,
+{"index":1,"score":0-100,"canvaTitle":"...","highlightWords":["..."],"visualQuery":"english photo keywords","reason":"court"}
+
+Règles canvaTitle (OBLIGATOIRE) :
+- MAJUSCULES, sans emoji, 18 à 28 mots (assez de matière pour remplir 4–5 lignes)
+- pensé pour EXACTEMENT 4 ou 5 lignes Impact : chaque ligne ~26–38 caractères, largeurs VISUELLES quasi égales
+- INTERDIT une ligne courte isolée ("SEULEMENT 10", "AU MAROC", un seul chiffre, un seul mot court)
+- regroupe les idées en blocs denses du type "À PEINE DIX INTERPELLATIONS" plutôt que "SEULEMENT 10" / "INTERPELLATIONS"
+- style choc Rempart
+
+highlightWords : 4 à 7 mots forts du titre (or #ffbd59).
+visualQuery : 4–8 mots ANGLAIS pour photo réaliste choc (ex. "french riot police night arrest street" / "burning forest france night") — PAS de texte dans l'image, PAS de logo, PAS de carte.`,
         },
         {
           role: "user",
-          content: `Brèves :\n${list}\n\nChoisis la meilleure.`,
+          content: `Date du jour (Paris) : ${new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}\nBrèves :\n${list}\n\nChoisis la meilleure ACTU DU MOMENT.`,
         },
       ],
     });
@@ -72,20 +87,29 @@ highlightWords : 3 à 6 mots du titre à mettre en or (noms propres, verbes fort
       score?: number;
       canvaTitle?: string;
       highlightWords?: string[];
+      visualQuery?: string;
       reason?: string;
     };
 
     const idx = (parsed.index || 1) - 1;
     const hit = hits[Math.max(0, Math.min(hits.length - 1, idx))];
     const score = Math.max(0, Math.min(100, Number(parsed.score) || 0));
-    if (score < 55) return null;
+    if (score < 60) return null;
+
+    const canvaTitle = (parsed.canvaTitle || hit.title)
+      .toUpperCase()
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 220);
 
     return {
       sourceTitle: hit.title,
       sourceUrl: hit.link,
       score,
-      canvaTitle: (parsed.canvaTitle || hit.title).toUpperCase().slice(0, 200),
+      canvaTitle,
       highlightWords: (parsed.highlightWords || []).slice(0, 8),
+      visualQuery:
+        (parsed.visualQuery || "france news police street night").slice(0, 120),
       reason: parsed.reason || "",
     };
   } catch (err) {
