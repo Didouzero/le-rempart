@@ -18,7 +18,7 @@ import {
 } from "@/lib/telegram";
 
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 300;
 
 /** Claim update_id — si déjà vu, ignore (coupe les retries Telegram). */
 async function claimUpdate(updateId: number): Promise<boolean> {
@@ -173,14 +173,23 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    await telegramSendMessage(chatId, "Facebook : publication du post…");
+    await telegramSendMessage(chatId, "Facebook : rédaction du flash…");
 
+    let flash: string;
     try {
-      const flash = await buildFlashInfoText({
+      flash = await buildFlashInfoText({
         title: article.title,
         excerpt: article.excerpt,
         articleUrl: article.url,
       });
+    } catch (flashErr) {
+      console.error(flashErr);
+      flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${article.excerpt}`;
+    }
+
+    await telegramSendMessage(chatId, "Facebook : publication du post…");
+
+    try {
       const { siteUrl } = await import("@/lib/publish-from-creative");
       const base = siteUrl().replace(
         "://le-rempart.org",
@@ -201,8 +210,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         }),
         new Promise<never>((_, reject) =>
           setTimeout(
-            () => reject(new Error("Timeout post Facebook (35s)")),
-            35_000,
+            () => reject(new Error("Timeout post Facebook (45s)")),
+            45_000,
           ),
         ),
       ]);

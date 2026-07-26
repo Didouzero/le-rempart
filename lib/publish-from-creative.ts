@@ -119,10 +119,11 @@ export async function publishArticleFromCreative(input: {
     ? detectImageMime(input.image.buffer, input.image.mime)
     : null;
 
+  // Toujours tenter de stocker la créative (jusqu'à ~2,5 Mo) pour /api/media + FB URL fallback
   const storeBlob =
     input.image &&
     input.image.buffer.length > 0 &&
-    input.image.buffer.length < 700_000;
+    input.image.buffer.length < 2_500_000;
 
   const article = await prisma.article.create({
     data: {

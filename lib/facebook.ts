@@ -16,7 +16,10 @@ type GraphError = {
 };
 
 async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetch(url, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(22_000),
+  });
   const data = (await res.json()) as T & GraphError;
   if (!res.ok || data.error) {
     throw new Error(
@@ -266,6 +269,7 @@ async function publishFeedWithPhoto(input: {
 
 /**
  * Publie uniquement le post Page (créative + caption).
+ * Ordre : photo publiée compressée (1 appel) → unpublished+feed → URL → texte.
  */
 export async function publishFacebookFeedPost(input: {
   imageUrl: string;
@@ -274,16 +278,49 @@ export async function publishFacebookFeedPost(input: {
   image?: { buffer: Buffer; mime: string };
 }): Promise<{ postId: string; pageId: string; token: string }> {
   const page = await resolvePagePublishToken();
+  const { prepareFacebookImage } = await import("@/lib/fb-image");
 
   let postId: string | null = null;
   let lastErr: unknown;
+  let prepared = input.image;
 
-  if (input.image && !postId) {
+  if (input.image) {
+    prepared = await prepareFacebookImage(input.image);
+  }
+
+  // 1) Photo publiée directement (chemin le plus fiable)
+  if (prepared && !postId) {
+    try {
+      const form = new FormData();
+      form.append(
+        "source",
+        new Blob([new Uint8Array(prepared.buffer)], {
+          type: prepared.mime || "image/jpeg",
+        }),
+        "creative.jpg",
+      );
+      form.append("caption", input.caption);
+      form.append("published", "true");
+      form.append("access_token", page.token);
+
+      const photo = await graphJson<{ id: string; post_id?: string }>(
+        `${GRAPH}/${page.pageId}/photos`,
+        { method: "POST", body: form },
+      );
+      postId = photo.post_id || `${page.pageId}_${photo.id}`;
+    } catch (err) {
+      lastErr = err;
+      console.error("FB multipart published failed", err);
+    }
+  }
+
+  // 2) Unpublished + feed
+  if (prepared && !postId) {
     try {
       const photoId = await uploadUnpublishedPhoto({
         pageId: page.pageId,
         token: page.token,
-        image: input.image,
+        image: prepared,
       });
       postId = await publishFeedWithPhoto({
         pageId: page.pageId,
@@ -297,6 +334,7 @@ export async function publishFacebookFeedPost(input: {
     }
   }
 
+  // 3) Via URL publique
   if (!postId) {
     try {
       const photoId = await uploadUnpublishedPhoto({
@@ -316,35 +354,9 @@ export async function publishFacebookFeedPost(input: {
     }
   }
 
-  if (!postId && input.image) {
-    try {
-      const form = new FormData();
-      const ext = input.image.mime.includes("png") ? "png" : "jpg";
-      form.append(
-        "source",
-        new Blob([new Uint8Array(input.image.buffer)], {
-          type: input.image.mime || "image/jpeg",
-        }),
-        `creative.${ext}`,
-      );
-      form.append("caption", input.caption);
-      form.append("published", "true");
-      form.append("access_token", page.token);
-
-      const photo = await graphJson<{ id: string; post_id?: string }>(
-        `${GRAPH}/${page.pageId}/photos`,
-        { method: "POST", body: form },
-      );
-      postId = photo.post_id || `${page.pageId}_${photo.id}`;
-    } catch (err) {
-      lastErr = err;
-      console.error("FB multipart published failed", err);
-    }
-  }
-
+  // 4) Texte seul
   if (!postId) {
     try {
-      // Fallback texte seul : PAS de param link (pénalise le reach)
       const feed = await graphJson<{ id: string }>(
         `${GRAPH}/${page.pageId}/feed`,
         {
@@ -390,7 +402,9 @@ export async function publishFacebookStory(input: {
     pageId: page.pageId,
     token: page.token,
     imageUrl: input.imageUrl,
-    image: input.image,
+    image: input.image
+      ? await (await import("@/lib/fb-image")).prepareFacebookImage(input.image)
+      : undefined,
   });
 }
 
