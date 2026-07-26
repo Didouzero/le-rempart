@@ -28,9 +28,17 @@ function stripPublisherSuffix(title: string): string {
   return title.replace(/\s+[-–—]\s+[^-–—]+$/, "").trim();
 }
 
+function foldAccents(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 /** Requêtes de veille dérivées du titre (dont expansions de métaphores). */
 export function buildNewsSearchQueries(headline: string): string[] {
   const h = headline.replace(/\s+/g, " ").trim();
+  const folded = foldAccents(h);
   const queries: string[] = [];
 
   // Requête principale : titre allégé
@@ -43,22 +51,22 @@ export function buildNewsSearchQueries(headline: string): string[] {
   if (core.length >= 12) queries.push(core);
 
   // Expansions contextuelles (métaphores / sous-entendus d'actu)
-  if (/brûl|incendie|feu(x)?\b|flamme/i.test(h)) {
+  if (/brul|incendie|feu(x)?\b|flamme|megafeu|mégafeu/.test(folded)) {
     queries.push("incendies France", "feux de forêt France");
   }
-  if (/canicule|vague de chaleur|record de chaleur/i.test(h)) {
+  if (/canicule|vague de chaleur|record de chaleur/.test(folded)) {
     queries.push("canicule France");
   }
-  if (/inondation|crue|intempérie/i.test(h)) {
+  if (/inondation|crue|intemperie/.test(folded)) {
     queries.push("inondations France");
   }
-  if (/tour de france/i.test(h)) {
-    queries.push("Tour de France voiture présidentielle");
+  if (/tour de france/.test(folded)) {
+    queries.push("Tour de France");
   }
-  if (/braun[- ]?pivet/i.test(h)) {
+  if (/braun[- ]?pivet/.test(folded)) {
     queries.push("Yaël Braun-Pivet");
   }
-  if (/assemblée nationale/i.test(h) && /braun|présidente/i.test(h)) {
+  if (/assemblee nationale/.test(folded) && /braun|presidente/.test(folded)) {
     queries.push("présidente Assemblée nationale");
   }
 
