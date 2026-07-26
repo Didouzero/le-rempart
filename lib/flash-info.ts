@@ -24,7 +24,7 @@ function cleanPunchline(raw: string): string {
 
 /**
  * Caption Facebook SANS lien (le lien va en 1er commentaire pour le reach).
- * Format : ‼️ + micro-commentaire
+ * Format : ‼️🇫🇷 FLASH INFO — + micro-commentaire
  */
 export async function buildFlashInfoText(input: {
   title: string;
@@ -59,5 +59,5 @@ export async function buildFlashInfoText(input: {
     }
   }
 
-  return `‼️ ${punch}`;
+  return `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${punch}`;
 }
