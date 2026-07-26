@@ -3,7 +3,8 @@ import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   isFacebookConfigured,
-  postCreativeToFacebookPage,
+  publishFacebookFeedPost,
+  publishFacebookStory,
 } from "@/lib/facebook";
 import { prisma } from "@/lib/prisma";
 import { publishArticleFromCreative } from "@/lib/publish-from-creative";
@@ -152,59 +153,98 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         article.url,
         "",
         coverLine,
-        "Facebook : envoi en cours…",
       ].join("\n"),
     );
 
-    let facebookLine =
-      "Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).";
+    if (!isFacebookConfigured()) {
+      await telegramSendMessage(
+        chatId,
+        "Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).",
+      );
+      return;
+    }
 
-    if (isFacebookConfigured() && article.creative) {
+    if (!article.creative) {
+      await telegramSendMessage(
+        chatId,
+        "Facebook : pas de créative à envoyer (image manquante).",
+      );
+      return;
+    }
+
+    await telegramSendMessage(chatId, "Facebook : publication du post…");
+
+    try {
+      const flash = await buildFlashInfoText({
+        title: article.title,
+        excerpt: article.excerpt,
+        articleUrl: article.url,
+      });
+      const { siteUrl } = await import("@/lib/publish-from-creative");
+      const base = siteUrl().replace(
+        "://le-rempart.org",
+        "://www.le-rempart.org",
+      );
+      const imageUrl = `${base}/api/media/${article.id}`;
+      const articleWww = article.url.replace(
+        "://le-rempart.org",
+        "://www.le-rempart.org",
+      );
+
+      const feed = await Promise.race([
+        publishFacebookFeedPost({
+          imageUrl,
+          caption: flash,
+          commentLink: articleWww,
+          image: article.creative,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout post Facebook (35s)")),
+            35_000,
+          ),
+        ),
+      ]);
+
+      await telegramSendMessage(
+        chatId,
+        `✅ Post Facebook publié.\nID : ${feed.postId}`,
+      );
+
+      await telegramSendMessage(chatId, "Facebook : publication de la story…");
+
       try {
-        const flash = await buildFlashInfoText({
-          title: article.title,
-          excerpt: article.excerpt,
-          articleUrl: article.url,
-        });
-        const { siteUrl } = await import("@/lib/publish-from-creative");
-        const base = siteUrl().replace(
-          "://le-rempart.org",
-          "://www.le-rempart.org",
-        );
-        const imageUrl = `${base}/api/media/${article.id}`;
-
-        const fb = await Promise.race([
-          postCreativeToFacebookPage({
+        const storyId = await Promise.race([
+          publishFacebookStory({
             imageUrl,
-            caption: flash,
-            commentLink: article.url.replace(
-              "://le-rempart.org",
-              "://www.le-rempart.org",
-            ),
             image: article.creative,
+            pageId: feed.pageId,
+            token: feed.token,
           }),
           new Promise<never>((_, reject) =>
             setTimeout(
-              () => reject(new Error("Timeout Facebook (25s)")),
-              25000,
+              () => reject(new Error("Timeout story Facebook (40s)")),
+              40_000,
             ),
           ),
         ]);
-        const parts = [
-          `Facebook : publié (post ${fb.postId}`,
-          fb.storyId
-            ? "story OK"
-            : `story échec${fb.storyError ? ` — ${fb.storyError}` : ""}`,
-        ];
-        facebookLine = `${parts[0]}, ${parts[1]}).`;
-      } catch (err) {
-        console.error(err);
-        facebookLine = `Facebook : échec — ${err instanceof Error ? err.message : "erreur"}`;
+        await telegramSendMessage(
+          chatId,
+          `✅ Story Facebook publiée.\nID : ${storyId}`,
+        );
+      } catch (storyErr) {
+        console.error(storyErr);
+        await telegramSendMessage(
+          chatId,
+          `❌ Story Facebook : échec\n${storyErr instanceof Error ? storyErr.message : "erreur"}`,
+        );
       }
-
-      await telegramSendMessage(chatId, facebookLine);
-    } else {
-      await telegramSendMessage(chatId, facebookLine);
+    } catch (err) {
+      console.error(err);
+      await telegramSendMessage(
+        chatId,
+        `❌ Post Facebook : échec\n${err instanceof Error ? err.message : "erreur"}`,
+      );
     }
   } catch (err) {
     console.error("telegram process error", err);

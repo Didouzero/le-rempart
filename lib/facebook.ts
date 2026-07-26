@@ -152,7 +152,7 @@ async function publishCreativeAsStory(input: {
   image?: { buffer: Buffer; mime: string };
 }): Promise<string> {
   let lastErr: unknown;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const storyPhotoId = await uploadUnpublishedPhoto({
         pageId: input.pageId,
@@ -168,7 +168,7 @@ async function publishCreativeAsStory(input: {
     } catch (err) {
       lastErr = err;
       console.error(`FB story attempt ${attempt} failed`, err);
-      if (attempt < 3) await sleep(800 * attempt);
+      if (attempt < 2) await sleep(800 * attempt);
     }
   }
   throw lastErr instanceof Error
@@ -253,27 +253,19 @@ async function publishFeedWithPhoto(input: {
 }
 
 /**
- * Publie la créative : post Page + Story + commentaire lien.
- * Meta exige une photo inédite pour la Story (2e upload).
+ * Publie uniquement le post Page (créative + caption).
  */
-export async function postCreativeToFacebookPage(input: {
+export async function publishFacebookFeedPost(input: {
   imageUrl: string;
   caption: string;
   commentLink: string;
   image?: { buffer: Buffer; mime: string };
-}): Promise<{
-  postId: string;
-  commentId: string;
-  pinned: boolean;
-  storyId: string | null;
-  storyError?: string;
-}> {
+}): Promise<{ postId: string; pageId: string; token: string }> {
   const page = await resolvePagePublishToken();
 
   let postId: string | null = null;
   let lastErr: unknown;
 
-  // 1) Upload photo unpublished (multipart) → feed
   if (input.image && !postId) {
     try {
       const photoId = await uploadUnpublishedPhoto({
@@ -293,7 +285,6 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  // 2) Upload photo unpublished (URL) → feed
   if (!postId) {
     try {
       const photoId = await uploadUnpublishedPhoto({
@@ -313,7 +304,6 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  // 3) Photo publiée directement
   if (!postId && input.image) {
     try {
       const form = new FormData();
@@ -340,7 +330,6 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  // 4) Texte + lien
   if (!postId) {
     try {
       const feed = await graphJson<{ id: string }>(
@@ -365,24 +354,68 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  // Story automatique (photo inédite obligatoire ; 3 essais)
+  return { postId, pageId: page.pageId, token: page.token };
+}
+
+/**
+ * Publie la créative en Story Page (photo inédite + retries).
+ */
+export async function publishFacebookStory(input: {
+  imageUrl: string;
+  image?: { buffer: Buffer; mime: string };
+  pageId?: string;
+  token?: string;
+}): Promise<string> {
+  const page =
+    input.pageId && input.token
+      ? { pageId: input.pageId, token: input.token }
+      : await resolvePagePublishToken().then((p) => ({
+          pageId: p.pageId,
+          token: p.token,
+        }));
+
+  return publishCreativeAsStory({
+    pageId: page.pageId,
+    token: page.token,
+    imageUrl: input.imageUrl,
+    image: input.image,
+  });
+}
+
+/**
+ * Publie la créative : post Page + Story.
+ * Préférer publishFacebookFeedPost + publishFacebookStory pour notifier entre les deux.
+ */
+export async function postCreativeToFacebookPage(input: {
+  imageUrl: string;
+  caption: string;
+  commentLink: string;
+  image?: { buffer: Buffer; mime: string };
+}): Promise<{
+  postId: string;
+  commentId: string;
+  pinned: boolean;
+  storyId: string | null;
+  storyError?: string;
+}> {
+  const feed = await publishFacebookFeedPost(input);
+
   let storyId: string | null = null;
   let storyError: string | undefined;
   try {
-    storyId = await publishCreativeAsStory({
-      pageId: page.pageId,
-      token: page.token,
+    storyId = await publishFacebookStory({
       imageUrl: input.imageUrl,
       image: input.image,
+      pageId: feed.pageId,
+      token: feed.token,
     });
   } catch (err) {
     console.error("FB story failed after retries", err);
     storyError = err instanceof Error ? err.message : "story failed";
   }
 
-  // Lien déjà dans la caption (‼️ … ➡️ URL) : pas de commentaire doublon
   return {
-    postId,
+    postId: feed.postId,
     commentId: "",
     pinned: false,
     storyId,

@@ -28,16 +28,20 @@ export async function telegramSendMessage(
   extra?: Record<string, unknown>,
 ): Promise<void> {
   const token = getToken();
-  await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
+  const res = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
       text,
-      disable_web_page_preview: false,
+      disable_web_page_preview: true,
       ...extra,
     }),
   });
+  const data = (await res.json()) as { ok?: boolean; description?: string };
+  if (!res.ok || !data.ok) {
+    console.error("telegramSendMessage failed", data.description || res.status);
+  }
 }
 
 export async function telegramGetFileUrl(fileId: string): Promise<string> {
