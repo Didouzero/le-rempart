@@ -1,4 +1,6 @@
 import { moonshotChat } from "@/lib/moonshot";
+import { fetchNewsContextBriefing } from "@/lib/news-context";
+import { withTimeout } from "@/lib/with-timeout";
 
 /** Modèles dispo sur le compte Moonshot ; surcharge possible via env. */
 export function getKimiTextModel(): string {
@@ -36,6 +38,7 @@ Forme (écrire comme un humain de presse, PAS comme une IA) :
 - INTERDIT le style ChatGPT : pas de "Il convient de noter", "Dans un contexte où", "Il est important de souligner", "En conclusion", "Cela dit", listes de trois adjectifs en série, formules toutes faites, symétrie parfaite des paragraphes.
 - Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva.
 - L'article DOIT porter UNIQUEMENT sur le titre fourni.
+- Tu peux recevoir un "Briefing presse récente". Utilise-le pour ancrer le contexte d'actualité (ex. si le briefing parle d'incendies / feux de forêt, "la France brûle" = incendies, PAS des émeutes). INTERDIT d'inventer une autre crise nationale non mentionnée dans le titre ni dans le briefing.
 - Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}
 - excerpt = 1 ou 2 phrases d'accroche (ton sarcastique possible).`;
@@ -199,17 +202,29 @@ export async function generateArticleFromSource(input: {
     return fallbackArticle(headline);
   }
 
+  let newsBriefing = "";
+  try {
+    newsBriefing = await withTimeout(
+      fetchNewsContextBriefing(headline),
+      10_000,
+      "Timeout veille actu",
+    );
+  } catch (err) {
+    console.error("news briefing skipped", err);
+  }
+
   const userContent = [
     `Titre / accroche à développer en article :`,
     headline,
     input.sourceUrl ? `Lien utile : ${input.sourceUrl}` : null,
+    newsBriefing || null,
     input.sourceText &&
     !/créative visuelle|brief Telegram|Rédige un article/i.test(
       input.sourceText,
     )
       ? `Notes factuelles complémentaires :\n${input.sourceText.slice(0, 3000)}`
       : null,
-    `Produis un article complet UNIQUEMENT sur ce titre (pas un autre sujet). Inclus 2 ou 3 sous-titres ## dans le content.`,
+    `Produis un article complet UNIQUEMENT sur ce titre. Si un briefing presse est fourni, ancre le contexte d'actu dessus (sans inventer une autre crise). Inclus 2 ou 3 sous-titres ## dans le content.`,
   ]
     .filter(Boolean)
     .join("\n\n");
