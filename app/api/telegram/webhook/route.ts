@@ -29,6 +29,33 @@ function normalizeCommand(text: string): string {
   return withSlash.toLowerCase().replace(/@\w+$/i, "");
 }
 
+function commandsHelpText(): string {
+  return [
+    "📘 COMMANDES LE REMPART",
+    "",
+    "── Manuel (toujours dispo, veille ON ou OFF) ──",
+    "Envoie une créative PNG/JPG → article site + Facebook",
+    "",
+    "── Veille auto ──",
+    "/veille_on — active l’agent (7 créneaux/jour, 8h–20h Paris)",
+    "/veille_off — coupe l’agent (manuel seul)",
+    "/veille — statut (+ créative en attente si besoin)",
+    "",
+    "── Validation d’une créative auto ──",
+    "/veille_ok — publier la proposition en attente",
+    "/veille_non — refuser (nouvelle proposition, max 3/créneau)",
+    "Boutons ✅ / ❌ sous la photo = même effet",
+    "",
+    "── Autres ──",
+    "/fb — tester la connexion Facebook",
+    "/id — afficher ton user id Telegram",
+    "/help ou /commandes — cette liste",
+    "",
+    "Créneaux veille : 8h, 10h, 12h, 14h, 16h, 18h, 20h (heure FR).",
+    "Rien n’est publié en auto sans ton OK.",
+  ].join("\n");
+}
+
 /** Claim update_id — si déjà vu, ignore (coupe les retries Telegram). */
 async function claimUpdate(updateId: number): Promise<boolean> {
   try {
@@ -89,19 +116,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (cmd === "/help") {
-      await telegramSendMessage(
-        chatId,
-        [
-          "Envoie une image Canva (PNG/JPG).",
-          "/fb — tester Facebook",
-          "/veille_off — couper la créative auto",
-          "/veille_on — réactiver la créative auto",
-          "/veille — statut de la veille",
-          "/veille_ok — valider la créative auto en attente",
-          "/veille_non — refuser la créative auto (rien n'est posté)",
-        ].join("\n"),
-      );
+    if (cmd === "/help" || cmd === "/commandes" || cmd === "/cmds") {
+      await telegramSendMessage(chatId, commandsHelpText());
       return;
     }
 
@@ -134,7 +150,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await setVeilleEnabled(false);
         await telegramSendMessage(
           chatId,
-          "Veille / créative auto : OFF.\nPlus aucune publication automatique.",
+          [
+            "Veille : OFF.",
+            "L’agent auto est arrêté.",
+            "Tu peux toujours envoyer une créative manuelle (PNG/JPG).",
+          ].join("\n"),
         );
         return;
       }
@@ -142,7 +162,12 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await setVeilleEnabled(true);
         await telegramSendMessage(
           chatId,
-          "Veille / créative auto : ON.\nLe cron proposera une créative aux créneaux 8h–20h (validation Telegram obligatoire).",
+          [
+            "Veille : ON.",
+            "7 propositions/jour (8h, 10h, 12h, 14h, 16h, 18h, 20h heure FR).",
+            "Chaque créative attend ton OK (/veille_ok) — max 3 essais si tu refuses.",
+            "Le manuel (envoi PNG/JPG) reste toujours possible.",
+          ].join("\n"),
         );
         return;
       }
@@ -155,8 +180,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(
         chatId,
         (on
-          ? "Statut veille : ON (propositions auto + validation Telegram)."
-          : "Statut veille : OFF (créative auto coupée).") + pendingLine,
+          ? "Statut veille : ON\n→ auto aux créneaux + validation\n→ manuel toujours OK"
+          : "Statut veille : OFF\n→ auto coupé\n→ manuel seul") + pendingLine,
       );
       return;
     }
