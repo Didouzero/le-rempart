@@ -140,6 +140,42 @@ async function publishPhotoStory(input: {
   return story.post_id || input.photoId;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Story = upload photo inédite + photo_stories. Retries si Meta refuse. */
+async function publishCreativeAsStory(input: {
+  pageId: string;
+  token: string;
+  imageUrl: string;
+  image?: { buffer: Buffer; mime: string };
+}): Promise<string> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const storyPhotoId = await uploadUnpublishedPhoto({
+        pageId: input.pageId,
+        token: input.token,
+        image: input.image,
+        imageUrl: input.image ? undefined : input.imageUrl,
+      });
+      return await publishPhotoStory({
+        pageId: input.pageId,
+        token: input.token,
+        photoId: storyPhotoId,
+      });
+    } catch (err) {
+      lastErr = err;
+      console.error(`FB story attempt ${attempt} failed`, err);
+      if (attempt < 3) await sleep(800 * attempt);
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Story Facebook impossible");
+}
+
 async function commentAndPin(
   postId: string,
   link: string,
@@ -329,27 +365,22 @@ export async function postCreativeToFacebookPage(input: {
     }
   }
 
-  // Story : nouvel upload obligatoire (photo déjà utilisée pour le feed = refusée)
+  // Story automatique (photo inédite obligatoire ; 3 essais)
   let storyId: string | null = null;
   let storyError: string | undefined;
   try {
-    const storyPhotoId = await uploadUnpublishedPhoto({
+    storyId = await publishCreativeAsStory({
       pageId: page.pageId,
       token: page.token,
+      imageUrl: input.imageUrl,
       image: input.image,
-      imageUrl: input.image ? undefined : input.imageUrl,
-    });
-    storyId = await publishPhotoStory({
-      pageId: page.pageId,
-      token: page.token,
-      photoId: storyPhotoId,
     });
   } catch (err) {
-    console.error("FB story failed", err);
+    console.error("FB story failed after retries", err);
     storyError = err instanceof Error ? err.message : "story failed";
   }
 
-  // Lien déjà dans la caption (‼️ … ➡️ URL) — pas de commentaire doublon
+  // Lien déjà dans la caption (‼️ … ➡️ URL) : pas de commentaire doublon
   return {
     postId,
     commentId: "",

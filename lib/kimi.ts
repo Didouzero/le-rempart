@@ -21,22 +21,40 @@ export type GeneratedArticle = {
 const SYSTEM_PROMPT = `Tu es journaliste pour Le Rempart, média d'actualité français clairement ancré à droite.
 
 Ligne éditoriale :
-- Ton provocateur, sarcastique, parfois aigri — tu dénonces l'incompétence, le gaspillage, l'absurde administratif et le deux poids deux mesures
-- Orienté droite politiquement : défense du contribuable, méfiance envers la bureaucratie, l'État central, les élites technocratiques et le progressisme de façade
-- Tu restes factuel sur le fond (pas de fake news inventées), mais l'angle et le choix des mots sont tranchants, ironiques, jamais "neutres AFP"
-- Tu peux souligner le ridicule d'une situation sans devenir vulgaire ni complotiste
+- Ton provocateur, sarcastique, parfois aigri. Tu dénonces l'incompétence, le gaspillage, l'absurde administratif et le deux poids deux mesures.
+- Orienté droite politiquement : défense du contribuable, méfiance envers la bureaucratie, l'État central, les élites technocratiques et le progressisme de façade.
+- Factuel sur le fond (pas de fake news inventées), angle et vocabulaire tranchants, ironiques, jamais "neutres AFP".
+- Tu peux souligner le ridicule sans devenir vulgaire ni complotiste.
 
-Forme :
-- Vrai article de presse (pas un collage de consignes)
-- Titre clair et percutant (pas tout en majuscules sauf acronymes)
-- 4 à 6 paragraphes substantiels
-- Structure OBLIGATOIRE du content Markdown : intercaler exactement 2 ou 3 sous-titres de niveau 2 (lignes ## Titre du sous-titre), pour aérer la lecture. Chaque sous-titre est court, percutant, sans numérotation. Exemple d'ordre : intro (1–2 paragraphes) → ## … → paragraphes → ## … → paragraphes → éventuellement ## … → conclusion.
-- Dans le content Markdown, mets en gras (**comme ceci**) les 8 à 15 mots ou expressions les plus impactants. Jamais une phrase entière en gras.
-- Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva
-- L'article DOIT porter UNIQUEMENT sur le titre fourni. Interdit de recycler un autre sujet, un vieux brief, ou un fait divers sans rapport.
+Forme (écrire comme un humain de presse, PAS comme une IA) :
+- Vrai article de presse français, rythme irrégulier : phrases courtes et phrases plus longues mélangées.
+- Titre clair et percutant (pas tout en majuscules sauf acronymes).
+- 4 à 6 paragraphes substantiels.
+- Structure OBLIGATOIRE du content Markdown : exactement 2 ou 3 sous-titres ## (courts, sans numérotation).
+- Gras (**comme ceci**) sur 8 à 15 mots ou expressions impactants. Jamais une phrase entière en gras.
+- INTERDIT le tiret long (—) et le tiret demi-cadratin (–). Utilise plutôt une virgule, un point, deux-points, ou des parenthèses.
+- INTERDIT le style ChatGPT : pas de "Il convient de noter", "Dans un contexte où", "Il est important de souligner", "En conclusion", "Cela dit", listes de trois adjectifs en série, formules toutes faites, symétrie parfaite des paragraphes.
+- Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva.
+- L'article DOIT porter UNIQUEMENT sur le titre fourni.
 - Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}
-- excerpt = 1 ou 2 phrases d'accroche (ton déjà sarcastique possible)`
+- excerpt = 1 ou 2 phrases d'accroche (ton sarcastique possible).`;
+
+/** Nettoie les tics typographiques / formulations trop "IA". */
+function humanizeCopy(text: string): string {
+  return text
+    .replace(/\u2014/g, ",") // —
+    .replace(/\u2013/g, ",") // –
+    .replace(/\s+—\s+/g, ", ")
+    .replace(/\s+–\s+/g, ", ")
+    .replace(/\s*,\s*,+/g, ", ")
+    .replace(
+      /\b(Il convient de noter que|Il est important de (noter|souligner) que|Dans un contexte où|En conclusion,?|Cela étant dit,?|Il va sans dire que)\s*/gi,
+      "",
+    )
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
 
 const STOPWORDS = new Set([
   "le",
@@ -128,7 +146,7 @@ function fallbackArticle(title: string): GeneratedArticle {
   const clean = titleCaseNews(title).slice(0, 160) || "Actualité";
   return {
     title: clean,
-    excerpt: `${clean} — un dossier qui mérite d'être regardé de près.`,
+    excerpt: `${clean} : un dossier qui mérite d'être regardé de près.`,
     content: [
       `**${clean}**. L'information, telle qu'elle circule, soulève des questions de fond sur la responsabilité publique et le sentiment de deux poids deux mesures.`,
       `## Ce que l'on retient`,
@@ -136,7 +154,7 @@ function fallbackArticle(title: string): GeneratedArticle {
       `## Pourquoi ça fâche`,
       `Quand une partie du pays peine à tenir son budget, ce type d'annonce cristallise la colère. Le Rempart y voit surtout un révélateur : la distance entre ceux qui décident et ceux qui paient.`,
       `## La suite`,
-      `Nous reviendrons sur ce dossier dès que des précisions, confirmations ou démentis officiels permettront d'aller plus loin — toujours sur **ce** sujet, pas un autre.`,
+      `Nous reviendrons sur ce dossier dès que des précisions, confirmations ou démentis officiels permettront d'aller plus loin. Toujours sur **ce** sujet, pas un autre.`,
     ].join("\n\n"),
   };
 }
@@ -149,7 +167,7 @@ function parseArticleJson(raw: string, headline: string): GeneratedArticle {
     throw new Error("JSON Kimi incomplet");
   }
 
-  const content = String(parsed.content).trim();
+  const content = humanizeCopy(String(parsed.content).trim());
   // Garde-fou : si le modèle a quand même collé le brief interne
   if (
     /créative visuelle|brief Telegram|Contexte :|Rédige un article/i.test(
@@ -164,8 +182,8 @@ function parseArticleJson(raw: string, headline: string): GeneratedArticle {
   }
 
   return {
-    title: titleCaseNews(String(parsed.title)),
-    excerpt: String(parsed.excerpt).trim(),
+    title: humanizeCopy(titleCaseNews(String(parsed.title))),
+    excerpt: humanizeCopy(String(parsed.excerpt).trim()),
     content,
   };
 }
