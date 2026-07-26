@@ -21,7 +21,28 @@ export const metadata: Metadata = {
     template: "%s — Le Rempart",
   },
   description: "Le Rempart — Le média de droite radicale.",
-  metadataBase: new URL("https://le-rempart.org"),
+  metadataBase: new URL("https://www.le-rempart.org"),
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: "Le Rempart",
+    title: "Le Rempart",
+    description: "Le Rempart — Le média de droite radicale.",
+    images: [
+      {
+        url: "/favicon.png",
+        width: 512,
+        height: 512,
+        alt: "Le Rempart",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Le Rempart",
+    description: "Le Rempart — Le média de droite radicale.",
+    images: ["/favicon.png"],
+  },
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",

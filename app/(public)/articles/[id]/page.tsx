@@ -65,9 +65,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const article = await findByPublicId(asNumber);
     if (!article) return { title: "Article introuvable" };
+
+    const url = `https://www.le-rempart.org/articles/${article.publicId}`;
+    // Photo d'article en priorité — sinon favicon carré (évite le crop grotesque du logo large)
+    const imageUrl =
+      article.coverImageUrl || "https://www.le-rempart.org/favicon.png";
+
     return {
       title: article.title,
       description: article.excerpt,
+      alternates: { canonical: url },
+      openGraph: {
+        title: article.title,
+        description: article.excerpt,
+        type: "article",
+        url,
+        siteName: "Le Rempart",
+        locale: "fr_FR",
+        images: [
+          {
+            url: imageUrl,
+            alt: article.title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: article.title,
+        description: article.excerpt,
+        images: [imageUrl],
+      },
     };
   } catch {
     return { title: "Le Rempart" };
