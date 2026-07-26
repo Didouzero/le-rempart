@@ -39,13 +39,13 @@ export function Header({ compact = false }: HeaderProps) {
       <div className="ticker" aria-label="Devise du média">
         <div className="ticker-track">
           <span>Le Rempart — Le média de droite radicale</span>
-          <span>Actualité sans filtre</span>
+          <span>Actualité de droite</span>
           <span>Le Rempart — Le média de droite radicale</span>
-          <span>Actualité sans filtre</span>
+          <span>Actualité de droite</span>
           <span>Le Rempart — Le média de droite radicale</span>
-          <span>Actualité sans filtre</span>
+          <span>Actualité de droite</span>
           <span>Le Rempart — Le média de droite radicale</span>
-          <span>Actualité sans filtre</span>
+          <span>Actualité de droite</span>
         </div>
       </div>
 
@@ -63,11 +63,11 @@ export function Header({ compact = false }: HeaderProps) {
                 width={420}
                 height={160}
                 priority
-                className="mx-auto h-auto w-[220px] sm:w-[300px] md:w-[360px]"
+                className="mx-auto h-auto w-[130px] sm:w-[180px] md:w-[215px]"
               />
             </Link>
             <div className="animate-line-grow mx-auto mt-5 h-[3px] w-28 bg-accent" />
-            <p className="font-tagline mx-auto mt-5 max-w-xl text-sm text-white sm:text-base">
+            <p className="font-tagline mx-auto mt-5 max-w-xl text-[0.8rem] text-white sm:text-[0.925rem]">
               Le média de droite radicale
             </p>
           </div>
