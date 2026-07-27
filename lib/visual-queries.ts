@@ -2,14 +2,24 @@
  * Requêtes VISUELLES pour banques d'images (pas le titre journalistique brut).
  */
 
-export function isSceneFirstTopic(title: string): boolean {
+export function isCrimeOrArrestTopic(title: string): boolean {
   const t = title.toLowerCase();
-  return /incendie|feu de for[eê]t|feux|brûle|brule|émeute|emeute|casseurs|interpell|arrestation|police|crs|immigr|migrant|canicule|inondation|attentat/.test(
+  return /interpell|arrestation|police|crs|gendarmerie|arme|armé|arme |fusillade|attentat|terror|agresseur|agress|blesse|blessé|attaque|couteau|tirs?|prise d.otage|otage|meurtre|homicide|stabbing|shooting/.test(
     t,
   );
 }
 
-/** Banlist globale : croquis / objets absurdes qui polluent Openverse. */
+export function isSceneFirstTopic(title: string): boolean {
+  const t = title.toLowerCase();
+  return (
+    isCrimeOrArrestTopic(title) ||
+    /incendie|feu de for[eê]t|feux|brûle|brule|émeute|emeute|casseurs|immigr|migrant|canicule|inondation/.test(
+      t,
+    )
+  );
+}
+
+/** Banlist globale : croquis / textures / objets absurdes qui polluent Openverse. */
 export const GLOBAL_IMAGE_BAN = [
   "zeppelin",
   "dirigible",
@@ -30,6 +40,46 @@ export const GLOBAL_IMAGE_BAN = [
   "etching",
   "lithograph",
   "postcard",
+  // Textures / abstrait (ex. livre / binder passés pour "paris")
+  "book",
+  "books",
+  "binder",
+  "notebook",
+  "texture",
+  "abstract",
+  "pattern",
+  "fabric",
+  "textile",
+  "marble",
+  "wallpaper",
+  "macro",
+  "close-up",
+  "closeup",
+  "still life",
+  "still-life",
+  "typography",
+  "letterpress",
+  "paper",
+  "pages",
+  "spine",
+  "leather",
+  "bokeh",
+  "gradient",
+  "background only",
+];
+
+const POLICE_MUST = [
+  "police",
+  "riot",
+  "arrest",
+  "crs",
+  "officer",
+  "handcuff",
+  "detain",
+  "gendarmerie",
+  "protest",
+  "crowd",
+  "street",
 ];
 
 /** Mots-clés pour scorer/filtrer les hits Openverse vs le sujet. */
@@ -63,7 +113,14 @@ export function topicImageKeywords(title: string): {
       ban,
     };
   }
-  if (/interpell|arrestation|police|crs|gendarmerie|émeute|emeute/.test(t)) {
+  if (isCrimeOrArrestTopic(title)) {
+    return {
+      must: POLICE_MUST,
+      nice: ["france", "night", "paris"],
+      ban,
+    };
+  }
+  if (/émeute|emeute|casseurs/.test(t)) {
     return {
       must: ["police", "riot", "arrest", "crs", "protest", "crowd", "street"],
       nice: ["france", "night", "paris"],
@@ -81,7 +138,7 @@ export function topicImageKeywords(title: string): {
   return { must: [], nice: [], ban };
 }
 
-/** Toujours rejeter les croquis / dirigeables, même hors sujet "incendie". */
+/** Toujours rejeter les croquis / textures / dirigeables. */
 export function hitIsGloballyBanned(text: string): boolean {
   const hay = text
     .toLowerCase()
@@ -103,18 +160,50 @@ export function hitMatchesTopic(
   return keywords.must.some((m) => hay.includes(m));
 }
 
+/**
+ * La visualQuery Kimi n'est crédible que si elle colle au sujet
+ * (évite "paris texture book" pour une fusillade).
+ */
+export function isVisualQueryCredible(query: string, title: string): boolean {
+  const q = query.toLowerCase();
+  if (!q || q.length < 6) return false;
+  if (hitIsGloballyBanned(q)) return false;
+
+  if (
+    /incendie|feu|feux|brûle|brule|gironde|landes|for[eê]t/.test(
+      title.toLowerCase(),
+    )
+  ) {
+    return /fire|wildfire|flame|smoke|forest|burn|firefighter/.test(q);
+  }
+  if (isCrimeOrArrestTopic(title)) {
+    return /police|arrest|riot|crs|officer|handcuff|detain|gendarme|protest/.test(
+      q,
+    );
+  }
+  if (/immigr|migrant|frontière|frontiere/.test(title.toLowerCase())) {
+    return /migrant|border|refugee|fence|camp/.test(q);
+  }
+  // Hors sujet critique : on accepte, sauf banlist
+  return !/book|texture|abstract|pattern|fabric|marble|macro/.test(q);
+}
+
 export function fallbackVisualQueries(title: string): string[] {
   const t = title.toLowerCase();
 
-  if (/interpell|arrestation|police|crs|gendarmerie/.test(t)) {
+  if (isCrimeOrArrestTopic(title)) {
     return [
       "french riot police night arrest street",
-      "police arrest protesters night france",
-      "crs police night street france",
-      "riot police baton night",
+      "police arrest handcuffs night france",
+      "crs police night street france arrest",
+      "riot police baton night france",
+      "police officers arresting suspect street",
     ];
   }
-  if (/incendie|feu de for[eê]t|feux|brûle|brule|landes|canicule.*feu/.test(t) || (/gironde/.test(t) && /feu|incendie|brûl|brul/.test(t))) {
+  if (
+    /incendie|feu de for[eê]t|feux|brûle|brule|landes|canicule.*feu/.test(t) ||
+    (/gironde/.test(t) && /feu|incendie|brûl|brul/.test(t))
+  ) {
     return [
       "wildfire forest fire night france",
       "forest fire flames smoke night",

@@ -6,7 +6,10 @@
 import sharp from "sharp";
 import { extractPersonCandidates } from "@/lib/person-names";
 import { findOpenverseCoverUrls } from "@/lib/openverse";
-import { fallbackVisualQueries } from "@/lib/visual-queries";
+import {
+  fallbackVisualQueries,
+  isVisualQueryCredible,
+} from "@/lib/visual-queries";
 
 async function fetchRawBuffer(url: string): Promise<Buffer | null> {
   try {
@@ -163,12 +166,15 @@ export async function fetchCreativeBackground(input: {
   title: string;
   visualQuery?: string;
 }): Promise<{ buffer: Buffer; sourceUrl: string | null }> {
+  const thematic = fallbackVisualQueries(input.title);
+  const kimiQ = input.visualQuery?.trim();
+  // Kimi d'abord SEULEMENT si la requête colle au sujet (sinon textures / livres)
   const queries = [
-    input.visualQuery?.trim(),
-    ...fallbackVisualQueries(input.title),
+    kimiQ && isVisualQueryCredible(kimiQ, input.title) ? kimiQ : null,
+    ...thematic,
   ].filter((q): q is string => Boolean(q && q.length >= 6));
 
-  // 1) Scènes thématiques
+  // 1) Scènes thématiques (police / feux / etc.)
   for (const q of queries) {
     const hit = await tryQuery(q, input.title);
     if (hit) return hit;

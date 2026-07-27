@@ -1,6 +1,11 @@
+import { sanitizeCreativeTitle } from "@/lib/creative/title-fix";
 import { moonshotChat } from "@/lib/moonshot";
 import { getKimiTextModel } from "@/lib/kimi";
 import type { VeilleHit } from "@/lib/veille/scrape";
+import {
+  fallbackVisualQueries,
+  isVisualQueryCredible,
+} from "@/lib/visual-queries";
 
 export type ScoredStory = {
   sourceTitle: string;
@@ -81,13 +86,17 @@ Réponds UNIQUEMENT en JSON :
 
 Règles canvaTitle (OBLIGATOIRE) :
 - MAJUSCULES, sans emoji, 18 à 28 mots (assez de matière pour remplir 4–5 lignes)
+- Orthographe FR correcte : apostrophes (L'AGRESSEUR, D'UN, QU'IL), accents (INTERPELLÉ, BLESSÉS, ARRÊTÉ, ÉMEUTE, ÉVÉNEMENTS)
 - pensé pour EXACTEMENT 4 ou 5 lignes Impact : chaque ligne ~26–38 caractères, largeurs VISUELLES quasi égales
 - INTERDIT une ligne courte isolée ("SEULEMENT 10", "AU MAROC", un seul chiffre, un seul mot court)
+- INTERDIT "L AGRESSEUR" (mettre L'AGRESSEUR) ; INTERDIT "INTERPELLE" participe sans accent (INTERPELLÉ)
 - regroupe les idées en blocs denses du type "À PEINE DIX INTERPELLATIONS" plutôt que "SEULEMENT 10" / "INTERPELLATIONS"
 - style choc Rempart
 
 highlightWords : 4 à 7 mots forts du titre (or #ffbd59).
-visualQuery : 4–8 mots ANGLAIS pour photo réaliste choc (ex. "french riot police night arrest street" / "burning forest france night") — PAS de texte dans l'image, PAS de logo, PAS de carte.`,
+visualQuery : 4–8 mots ANGLAIS pour photo réaliste choc du MÊME sujet.
+  Faits divers / arme / terreur / interpellation → OBLIGATOIREMENT police/arrest (ex. "french riot police night arrest street").
+  Incendies → wildfire/flames. INTERDIT : book, texture, abstract, map, logo, cartoon.`,
         },
         {
           role: "user",
@@ -112,11 +121,15 @@ visualQuery : 4–8 mots ANGLAIS pour photo réaliste choc (ex. "french riot pol
     const score = Math.max(0, Math.min(100, Number(parsed.score) || 0));
     if (score < 60) return null;
 
-    const canvaTitle = (parsed.canvaTitle || hit.title)
-      .toUpperCase()
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 220);
+    const canvaTitle = sanitizeCreativeTitle(
+      (parsed.canvaTitle || hit.title).slice(0, 220),
+    );
+
+    const rawVisual = (parsed.visualQuery || "").trim().slice(0, 120);
+    const visualQuery = isVisualQueryCredible(rawVisual, canvaTitle)
+      ? rawVisual
+      : fallbackVisualQueries(canvaTitle)[0] ||
+        "french riot police night arrest street";
 
     return {
       sourceTitle: hit.title,
@@ -124,8 +137,7 @@ visualQuery : 4–8 mots ANGLAIS pour photo réaliste choc (ex. "french riot pol
       score,
       canvaTitle,
       highlightWords: (parsed.highlightWords || []).slice(0, 8),
-      visualQuery:
-        (parsed.visualQuery || "france news police street night").slice(0, 120),
+      visualQuery,
       reason: parsed.reason || "",
     };
   } catch (err) {

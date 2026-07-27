@@ -1,9 +1,11 @@
+import { sanitizeCreativeTitle } from "@/lib/creative/title-fix";
+
 const GOLD = "#ffbd59";
 const WHITE = "#ffffff";
 
 /** Approx. largeur relative Impact (condensé). */
 function impactCharWidth(ch: string): number {
-  if (ch === " ") return 0.28;
+  if (ch === " " || ch === "'") return 0.28;
   if ("MW@".includes(ch)) return 0.72;
   if ("IL1!|i.,:;".includes(ch)) return 0.28;
   if ("ABCDEFGHJKNOPQRSTUVXYZÀÂÄÉÈÊËÏÎÔÙÛÜÇ".includes(ch)) return 0.52;
@@ -144,12 +146,9 @@ export function layoutTitleLines(
   title: string,
   highlightWords: string[] = [],
 ): { lines: string[]; highlightSet: Set<string> } {
-  const cleaned = title
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase()
-    .replace(/['']/g, "'");
+  const cleaned = sanitizeCreativeTitle(title);
 
+  // Ne pas casser L'AGRESSEUR : on split sur espaces seulement
   const words = cleaned.split(" ").filter(Boolean);
   const highlightSet = new Set(
     highlightWords.map((w) =>
