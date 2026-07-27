@@ -5,7 +5,13 @@
  */
 
 import { extractPersonCandidates } from "@/lib/person-names";
-import { fallbackVisualQueries } from "@/lib/visual-queries";
+import {
+  fallbackVisualQueries,
+  hitIsGloballyBanned,
+  hitMatchesTopic,
+  isSceneFirstTopic,
+  topicImageKeywords,
+} from "@/lib/visual-queries";
 
 function isLandscape(width?: number | null, height?: number | null): boolean {
   if (!width || !height || width <= 0 || height <= 0) return false;
@@ -45,7 +51,7 @@ type OpenverseHit = {
 
 export async function findOpenverseCoverUrl(
   query: string,
-  opts?: { landscapeOnly?: boolean; person?: string },
+  opts?: { landscapeOnly?: boolean; person?: string; topic?: string },
 ): Promise<string | null> {
   const urls = await findOpenverseCoverUrls(query, { ...opts, limit: 1 });
   return urls[0] || null;
@@ -53,11 +59,18 @@ export async function findOpenverseCoverUrl(
 
 export async function findOpenverseCoverUrls(
   query: string,
-  opts?: { landscapeOnly?: boolean; person?: string; limit?: number },
+  opts?: {
+    landscapeOnly?: boolean;
+    person?: string;
+    limit?: number;
+    /** Titre / sujet article — pour filtrer la pertinence (pas la requête EN). */
+    topic?: string;
+  },
 ): Promise<string[]> {
   const q = query.trim().slice(0, 120);
   if (!q) return [];
   const limit = Math.max(1, Math.min(opts?.limit ?? 8, 20));
+  const topicBlob = `${opts?.topic || ""} ${q}`.trim();
 
   const url = new URL("https://api.openverse.org/v1/images/");
   url.searchParams.set("q", q);
@@ -117,14 +130,31 @@ export async function findOpenverseCoverUrls(
     if (matched.length) return matched.slice(0, limit).map((h) => h.url);
   }
 
-  // Trie : URLs qui ressemblent à jpeg/png d'abord
-  hits.sort((a, b) => {
-    const score = (u: string) =>
-      /\.(jpe?g|png)(\?|$)/i.test(u) ? 0 : /\.webp(\?|$)/i.test(u) ? 1 : 2;
-    return score(a.url) - score(b.url);
-  });
+  // Filtre sur le SUJET article (+ requête), pas seulement la query EN
+  const keywords = topicImageKeywords(topicBlob);
+  const scored = hits
+    .map((h) => {
+      const blob = `${h.title || ""} ${h.creator || ""} ${h.url}`;
+      const relevant = hitMatchesTopic(blob, keywords);
+      const fmt = /\.(jpe?g|png)(\?|$)/i.test(h.url)
+        ? 0
+        : /\.webp(\?|$)/i.test(h.url)
+          ? 1
+          : 2;
+      return { h, blob, relevant, fmt };
+    })
+    .filter((x) => {
+      if (hitIsGloballyBanned(x.blob)) return false;
+      // Si on a des must-keywords, jeter les hors-sujet (dirigeable, sketch…)
+      if (keywords.must.length > 0 && !x.relevant) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.relevant !== b.relevant) return a.relevant ? -1 : 1;
+      return a.fmt - b.fmt;
+    });
 
-  return hits.slice(0, limit).map((h) => h.url);
+  return scored.slice(0, limit).map((x) => x.h.url);
 }
 
 async function findLandscapePersonPhoto(person: string): Promise<string | null> {
@@ -197,33 +227,54 @@ export async function resolveRelevantCoverUrl(input: {
   title: string;
   excerpt?: string;
 }): Promise<string | null> {
-  try {
-    const personCover = await findPersonCoverUrl(input.title);
-    if (personCover) return personCover;
-  } catch (err) {
-    console.error("person landscape cover failed", err);
-  }
+  const blob = `${input.title} ${input.excerpt || ""}`;
+  const queries = fallbackVisualQueries(blob);
+  const sceneFirst = isSceneFirstTopic(input.title);
 
-  const queries = fallbackVisualQueries(
-    `${input.title} ${input.excerpt || ""}`,
-  ).slice(0, 2);
-
-  for (const q of queries) {
-    try {
-      const openverse = await findOpenverseCoverUrl(q, { landscapeOnly: true });
-      if (openverse) return openverse;
-    } catch (err) {
-      console.error("openverse failed", q, err);
+  const tryThematic = async (): Promise<string | null> => {
+    for (const q of queries.slice(0, 4)) {
+      try {
+        const urls = await findOpenverseCoverUrls(q, {
+          landscapeOnly: true,
+          limit: 8,
+          topic: input.title,
+        });
+        for (const u of urls) {
+          if (u) return u;
+        }
+      } catch (err) {
+        console.error("openverse failed", q, err);
+      }
     }
+    try {
+      const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
+      const u = await findUnsplashCoverUrl(queries[0] || input.title);
+      if (u) return u;
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const tryPerson = async (): Promise<string | null> => {
+    try {
+      return await findPersonCoverUrl(input.title);
+    } catch (err) {
+      console.error("person landscape cover failed", err);
+      return null;
+    }
+  };
+
+  // Incendies / émeutes / faits de rue : la SCÈNE d'abord (pas un portrait foireux)
+  if (sceneFirst) {
+    const thematic = await tryThematic();
+    if (thematic) return thematic;
+    const person = await tryPerson();
+    if (person) return person;
+    return null;
   }
 
-  try {
-    const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
-    const u = await findUnsplashCoverUrl(queries[0] || input.title);
-    if (u) return u;
-  } catch {
-    // ignore
-  }
-
-  return null;
+  const person = await tryPerson();
+  if (person) return person;
+  return tryThematic();
 }

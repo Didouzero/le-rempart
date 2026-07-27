@@ -1,7 +1,107 @@
 /**
  * Requêtes VISUELLES pour banques d'images (pas le titre journalistique brut).
- * Heuristique rapide — pas d'appel Kimi (évite les hangs Telegram).
  */
+
+export function isSceneFirstTopic(title: string): boolean {
+  const t = title.toLowerCase();
+  return /incendie|feu de for[eê]t|feux|brûle|brule|émeute|emeute|casseurs|interpell|arrestation|police|crs|immigr|migrant|canicule|inondation|attentat/.test(
+    t,
+  );
+}
+
+/** Banlist globale : croquis / objets absurdes qui polluent Openverse. */
+export const GLOBAL_IMAGE_BAN = [
+  "zeppelin",
+  "dirigible",
+  "airship",
+  "ballon",
+  "balloon",
+  "blimp",
+  "cartoon",
+  "illustration",
+  "drawing",
+  "sketch",
+  "logo",
+  "map",
+  "diagram",
+  "clipart",
+  "vector",
+  "engraving",
+  "etching",
+  "lithograph",
+  "postcard",
+];
+
+/** Mots-clés pour scorer/filtrer les hits Openverse vs le sujet. */
+export function topicImageKeywords(title: string): {
+  must: string[];
+  nice: string[];
+  ban: string[];
+} {
+  const t = title.toLowerCase();
+  const ban = [...GLOBAL_IMAGE_BAN];
+
+  if (
+    /incendie|feu|feux|brûle|brule|gironde|landes|for[eê]t|wildfire|firefighter|flame|burning forest/.test(
+      t,
+    )
+  ) {
+    return {
+      must: [
+        "fire",
+        "wildfire",
+        "flame",
+        "smoke",
+        "forest",
+        "burn",
+        "incendie",
+        "feu",
+        "pompier",
+        "firefighter",
+      ],
+      nice: ["france", "night", "gironde", "landes"],
+      ban,
+    };
+  }
+  if (/interpell|arrestation|police|crs|gendarmerie|émeute|emeute/.test(t)) {
+    return {
+      must: ["police", "riot", "arrest", "crs", "protest", "crowd", "street"],
+      nice: ["france", "night", "paris"],
+      ban,
+    };
+  }
+  if (/immigr|migrant|frontière|frontiere/.test(t)) {
+    return {
+      must: ["migrant", "border", "refugee", "fence", "camp"],
+      nice: ["europe", "france"],
+      ban,
+    };
+  }
+
+  return { must: [], nice: [], ban };
+}
+
+/** Toujours rejeter les croquis / dirigeables, même hors sujet "incendie". */
+export function hitIsGloballyBanned(text: string): boolean {
+  const hay = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return GLOBAL_IMAGE_BAN.some((b) => hay.includes(b));
+}
+
+export function hitMatchesTopic(
+  text: string,
+  keywords: ReturnType<typeof topicImageKeywords>,
+): boolean {
+  const hay = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (keywords.ban.some((b) => hay.includes(b))) return false;
+  if (keywords.must.length === 0) return true;
+  return keywords.must.some((m) => hay.includes(m));
+}
 
 export function fallbackVisualQueries(title: string): string[] {
   const t = title.toLowerCase();
@@ -14,12 +114,13 @@ export function fallbackVisualQueries(title: string): string[] {
       "riot police baton night",
     ];
   }
-  if (/incendie|feu de for[eê]t|feux|brûle|brule|gironde|landes|canicule.*feu/.test(t)) {
+  if (/incendie|feu de for[eê]t|feux|brûle|brule|landes|canicule.*feu/.test(t) || (/gironde/.test(t) && /feu|incendie|brûl|brul/.test(t))) {
     return [
       "wildfire forest fire night france",
       "forest fire flames smoke night",
       "firefighter wildfire night europe",
       "burning forest night aerial",
+      "france wildfire 2022 landes",
     ];
   }
   if (/émeute|emeute|casseurs|incendie|feu|brûle|brule/.test(t)) {
@@ -68,7 +169,7 @@ export function fallbackVisualQueries(title: string): string[] {
       "palais de justice paris",
     ];
   }
-  if (/macron|attal|ministre|assemblée|elysee|élysée/.test(t)) {
+  if (/macron|attal|lecornu|ministre|assemblée|elysee|élysée/.test(t)) {
     return [
       title.slice(0, 60),
       "french national assembly hemicycle",

@@ -31,9 +31,10 @@ Ligne éditoriale :
 Forme (écrire comme un humain de presse, PAS comme une IA) :
 - Vrai article de presse français, rythme irrégulier : phrases courtes et phrases plus longues mélangées.
 - Titre clair et percutant (pas tout en majuscules sauf acronymes).
-- Article de longueur moyenne : 4 à 6 paragraphes substantiels (vise ~300 à 400 mots). Ni flash de 3 phrases, ni pavé de 800 mots.
+- Article de longueur moyenne : 5 à 7 paragraphes substantiels (vise ~300 à 400 mots). Ni flash de 3 phrases, ni pavé de 800 mots.
 - Structure OBLIGATOIRE du content Markdown : exactement 2 ou 3 sous-titres ## (courts, sans numérotation).
 - Gras (**comme ceci**) sur 8 à 15 mots ou expressions impactants. Jamais une phrase entière en gras.
+- INTERDIT les articles génériques / templates : pas de "Le titre pose un fait précis", pas de "Nous reviendrons sur ce dossier dès que des précisions". Chaque phrase doit parler DU sujet nommé dans le titre.
 - INTERDIT le tiret long (—) et le tiret demi-cadratin (–). Utilise plutôt une virgule, un point, deux-points, ou des parenthèses.
 - INTERDIT le style ChatGPT : pas de "Il convient de noter", "Dans un contexte où", "Il est important de souligner", "En conclusion", "Cela dit", listes de trois adjectifs en série, formules toutes faites, symétrie parfaite des paragraphes.
 - Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva.
@@ -145,19 +146,43 @@ function articleMatchesHeadline(headline: string, content: string): boolean {
   return hits >= Math.min(2, tokens.length);
 }
 
-function fallbackArticle(title: string): GeneratedArticle {
+function countWords(text: string): number {
+  return text
+    .replace(/##\s+/g, " ")
+    .replace(/\*\*/g, "")
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function fallbackArticle(
+  title: string,
+  briefing?: string,
+): GeneratedArticle {
   const clean = titleCaseNews(title).slice(0, 160) || "Actualité";
+  const facts = (briefing || "")
+    .replace(/Briefing presse récente\s*:?/i, "")
+    .trim()
+    .slice(0, 900);
+
+  const lead = facts
+    ? `**${clean}**. D'après les éléments qui circulent côté presse : ${facts.split(/\n+/).filter(Boolean).slice(0, 2).join(" ")}`
+    : `**${clean}**. Le dossier s'impose dans l'actualité, et le décalage entre l'urgence du terrain et la communication officielle saute aux yeux.`;
+
   return {
     title: clean,
-    excerpt: `${clean} : un dossier qui mérite d'être regardé de près.`,
+    excerpt: `${clean} : un signal d'alarme que l'exécutif peinerait à assumer.`,
     content: [
-      `**${clean}**. L'information, telle qu'elle circule, soulève des questions de fond sur la responsabilité publique et le sentiment de deux poids deux mesures.`,
-      `## Ce que l'on retient`,
-      `Le titre pose un fait précis. Sans enjoliver ni inventer d'autres affaires, c'est déjà suffisant pour comprendre pourquoi le sujet crispe : argent public, privilèges perçus, et une opinion qui n'en peut plus des arrangements.`,
-      `## Pourquoi ça fâche`,
-      `Quand une partie du pays peine à tenir son budget, ce type d'annonce cristallise la colère. Le Rempart y voit surtout un révélateur : la distance entre ceux qui décident et ceux qui paient.`,
+      lead,
+      `## Ce qui se passe`,
+      facts
+        ? `Les faits rapportés ne laissent guère de place au storytelling. ${facts.split(/\n+/).filter(Boolean).slice(2, 5).join(" ") || "La séquence met en lumière une gestion à chaud, entre communication de crise et réalité du terrain."}`
+        : `Sur le fond, le titre dit l'essentiel : une situation qui déborde, des responsables qui s'en défendent mal, et une opinion qui n'a plus la patience des éléments de langage.`,
+      `## Le décalage qui crispe`,
+      `Quand le pays regarde une crise en direct, chaque phrase de ministre est passée au crible. Dire être "dépassé" n'est pas un détail de style : c'est un aveu politique, immédiatement lu comme un signe de faiblesse ou d'impréparation.`,
+      `## Ce que ça révèle`,
+      `Le Rempart y voit surtout un révélateur : la distance entre ceux qui commentent depuis Paris et ceux qui subissent sur le terrain. Tant que l'État répond par la posture plutôt que par des moyens et une ligne claire, la défiance ne fera que monter.`,
       `## La suite`,
-      `Nous reviendrons sur ce dossier dès que des précisions, confirmations ou démentis officiels permettront d'aller plus loin. Toujours sur **ce** sujet, pas un autre.`,
+      `Le dossier reste ouvert. Chaque nouvelle information, chaque bilan, chaque annonce budgétaire viendra confirmer ou contredire cette impression d'un exécutif à la traîne, toujours sur **ce** sujet, pas un autre.`,
     ].join("\n\n"),
   };
 }
@@ -182,6 +207,21 @@ function parseArticleJson(raw: string, headline: string): GeneratedArticle {
 
   if (!articleMatchesHeadline(headline, content)) {
     throw new Error("Article hors-sujet par rapport au titre");
+  }
+
+  const words = countWords(content);
+  if (words < 220) {
+    throw new Error(`Article trop court (${words} mots)`);
+  }
+
+  // Interdit le vieux template générique
+  if (
+    /Le titre pose un fait précis\. Sans enjoliver/i.test(content) ||
+    /Nous reviendrons sur ce dossier dès que des précisions, confirmations ou démentis/i.test(
+      content,
+    )
+  ) {
+    throw new Error("Article générique détecté");
   }
 
   return {
@@ -224,24 +264,32 @@ export async function generateArticleFromSource(input: {
     )
       ? `Notes factuelles complémentaires :\n${input.sourceText.slice(0, 3000)}`
       : null,
-    `Produis un article complet (~300–400 mots, 4–6 paragraphes) UNIQUEMENT sur ce titre. Si un briefing presse est fourni, ancre le contexte d'actu dessus (sans inventer une autre crise). Inclus 2 ou 3 sous-titres ## dans le content.`,
+    `Produis un article de presse COMPLET (~300–400 mots, 5 à 7 paragraphes) UNIQUEMENT sur ce titre.
+OBLIGATOIRE : faits, contexte, angle critique Rempart, 2 ou 3 sous-titres ##.
+INTERDIT : article générique, phrases creuses, filler type "le titre pose un fait précis".
+Ancre-toi sur le briefing presse s'il est fourni.`,
   ]
     .filter(Boolean)
     .join("\n\n");
 
-  const attempts: Array<{ timeoutMs: number; maxTokens: number }> = [
-    { timeoutMs: 40_000, maxTokens: 1400 },
-    { timeoutMs: 45_000, maxTokens: 1500 },
+  const attempts: Array<{
+    timeoutMs: number;
+    maxTokens: number;
+    model?: string;
+  }> = [
+    { timeoutMs: 45_000, maxTokens: 1600 },
+    { timeoutMs: 50_000, maxTokens: 1800 },
+    { timeoutMs: 40_000, maxTokens: 1600, model: "kimi-k2.6" },
   ];
 
   let lastErr: unknown;
   for (const attempt of attempts) {
     try {
       const raw = await moonshotChat({
-        model: getKimiTextModel(),
+        model: attempt.model || getKimiTextModel(),
         maxTokens: attempt.maxTokens,
         timeoutMs: attempt.timeoutMs,
-        reasoningEffort: "low",
+        reasoningEffort: attempt.model ? undefined : "low",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
@@ -254,23 +302,6 @@ export async function generateArticleFromSource(input: {
     }
   }
 
-  // Dernier essai : k2.6 sans thinking (parfois plus réactif)
-  try {
-    const raw = await moonshotChat({
-      model: "kimi-k2.6",
-      maxTokens: 1400,
-      timeoutMs: 35_000,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userContent },
-      ],
-    });
-    return parseArticleJson(raw, headline);
-  } catch (err) {
-    lastErr = err;
-    console.error("Kimi k2.6 fallback failed", err);
-  }
-
-  console.error("Kimi unavailable after retries, using improved fallback", lastErr);
-  return fallbackArticle(headline);
+  console.error("Kimi unavailable after retries, using briefing fallback", lastErr);
+  return fallbackArticle(headline, newsBriefing);
 }

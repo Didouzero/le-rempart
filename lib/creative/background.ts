@@ -125,11 +125,13 @@ async function findPortraitPersonUrl(person: string): Promise<string | null> {
 
 async function tryQuery(
   q: string,
+  topic?: string,
 ): Promise<{ buffer: Buffer; sourceUrl: string } | null> {
   try {
     const urls = await findOpenverseCoverUrls(q, {
       landscapeOnly: false,
       limit: 8,
+      topic,
     });
     for (const url of urls) {
       const buffer = await fetchImageJpeg(url);
@@ -168,7 +170,7 @@ export async function fetchCreativeBackground(input: {
 
   // 1) Scènes thématiques
   for (const q of queries) {
-    const hit = await tryQuery(q);
+    const hit = await tryQuery(q, input.title);
     if (hit) return hit;
   }
 
@@ -190,7 +192,7 @@ export async function fetchCreativeBackground(input: {
     "riot police france night",
     "paris street protest night",
   ]) {
-    const hit = await tryQuery(q);
+    const hit = await tryQuery(q, input.title);
     if (hit) return hit;
   }
 
