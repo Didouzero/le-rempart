@@ -9,6 +9,7 @@ import {
   fallbackVisualQueries,
   hitIsGloballyBanned,
   hitMatchesTopic,
+  isCrimeOrArrestTopic,
   isSceneFirstTopic,
   topicImageKeywords,
 } from "@/lib/visual-queries";
@@ -232,7 +233,7 @@ export async function resolveRelevantCoverUrl(input: {
   const sceneFirst = isSceneFirstTopic(input.title);
 
   const tryThematic = async (): Promise<string | null> => {
-    for (const q of queries.slice(0, 4)) {
+    for (const q of queries.slice(0, 6)) {
       try {
         const urls = await findOpenverseCoverUrls(q, {
           landscapeOnly: true,
@@ -246,10 +247,15 @@ export async function resolveRelevantCoverUrl(input: {
         console.error("openverse failed", q, err);
       }
     }
+    // Unsplash : uniquement avec une requête visuelle EN, jamais le titre FR brut
+    // (sinon « Allah » → hymnes / partitions)
     try {
       const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
-      const u = await findUnsplashCoverUrl(queries[0] || input.title);
-      if (u) return u;
+      for (const q of queries.slice(0, 3)) {
+        if (!q || /allah|dieu|god|jesus/i.test(q)) continue;
+        const u = await findUnsplashCoverUrl(q);
+        if (u) return u;
+      }
     } catch {
       // ignore
     }
@@ -257,6 +263,10 @@ export async function resolveRelevantCoverUrl(input: {
   };
 
   const tryPerson = async (): Promise<string | null> => {
+    // Jamais de « portrait » sur faits divers (Allah, migrant anonyme…)
+    if (isSceneFirstTopic(input.title) && isCrimeOrArrestTopic(input.title)) {
+      return null;
+    }
     try {
       return await findPersonCoverUrl(input.title);
     } catch (err) {

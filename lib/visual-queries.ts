@@ -3,8 +3,11 @@
  */
 
 export function isCrimeOrArrestTopic(title: string): boolean {
-  const t = title.toLowerCase();
-  return /interpell|arrestation|police|crs|gendarmerie|arme|armé|arme |fusillade|attentat|terror|agresseur|agress|blesse|blessé|attaque|couteau|tirs?|prise d.otage|otage|meurtre|homicide|stabbing|shooting/.test(
+  const t = title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return /interpell|arrestation|police|crs|gendarmerie|arme|arme |fusillade|attentat|terror|agresseur|agress|blesse|attaque|couteau|poignard|stab|tirs?\b|prise d.otage|otage|meurtre|homicide|shooting|tuerie|egorge|desequilibr|allah|akbar|terroriste|assassin/.test(
     t,
   );
 }
@@ -66,6 +69,24 @@ export const GLOBAL_IMAGE_BAN = [
   "bokeh",
   "gradient",
   "background only",
+  // Partitions / musique / religion (ex. hymne pour un titre avec « Allah »)
+  "sheet music",
+  "music score",
+  "musical score",
+  "hymn",
+  "chorale",
+  "choral",
+  "luther",
+  "manuscript",
+  "notation",
+  "stave",
+  "staff paper",
+  "feste burg",
+  "gott",
+  "psalm",
+  "gregorian",
+  "organ",
+  "piano score",
 ];
 
 const POLICE_MUST = [
@@ -117,7 +138,21 @@ export function topicImageKeywords(title: string): {
     return {
       must: POLICE_MUST,
       nice: ["france", "night", "paris"],
-      ban,
+      ban: [
+        ...ban,
+        "allah",
+        "mosque",
+        "quran",
+        "koran",
+        "church",
+        "cathedral",
+        "bible",
+        "jesus",
+        "christ",
+        "religion",
+        "prayer",
+        "worship",
+      ],
     };
   }
   if (/émeute|emeute|casseurs/.test(t)) {
@@ -177,7 +212,7 @@ export function isVisualQueryCredible(query: string, title: string): boolean {
     return /fire|wildfire|flame|smoke|forest|burn|firefighter/.test(q);
   }
   if (isCrimeOrArrestTopic(title)) {
-    return /police|arrest|riot|crs|officer|handcuff|detain|gendarme|protest/.test(
+    return /police|arrest|riot|crs|officer|handcuff|detain|gendarme|protest|stab|knife|crime/.test(
       q,
     );
   }
@@ -191,13 +226,15 @@ export function isVisualQueryCredible(query: string, title: string): boolean {
 export function fallbackVisualQueries(title: string): string[] {
   const t = title.toLowerCase();
 
+  // Faits divers violents : requêtes EN COURTES (Openverse rate les phrases trop longues)
   if (isCrimeOrArrestTopic(title)) {
     return [
-      "french riot police night arrest street",
-      "police arrest handcuffs night france",
-      "crs police night street france arrest",
-      "riot police baton night france",
-      "police officers arresting suspect street",
+      "police arrest",
+      "riot police france",
+      "police handcuffs",
+      "crs police",
+      "police officers street",
+      "arrest protest police",
     ];
   }
   if (

@@ -193,10 +193,10 @@ export async function fetchCreativeBackground(input: {
 
   // 3) Filets
   for (const q of [
-    "wildfire forest fire night france",
-    "forest fire flames night europe",
-    "riot police france night",
-    "paris street protest night",
+    "police arrest",
+    "riot police france",
+    "wildfire forest fire",
+    "paris protest night",
   ]) {
     const hit = await tryQuery(q, input.title);
     if (hit) return hit;

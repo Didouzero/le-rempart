@@ -12,6 +12,7 @@ type ArticleEditorProps = {
     content: string;
     sourceText: string;
     sourceUrl: string;
+    coverImageUrl?: string;
     status: "draft" | "published";
   };
 };
@@ -23,11 +24,15 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
   const [content, setContent] = useState(initial?.content ?? "");
   const [sourceText, setSourceText] = useState(initial?.sourceText ?? "");
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState(
+    initial?.coverImageUrl ?? "",
+  );
   const [status, setStatus] = useState<"draft" | "published">(
     initial?.status ?? "draft",
   );
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [refreshingCover, setRefreshingCover] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -70,6 +75,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
         content,
         sourceText: sourceText || null,
         sourceUrl: sourceUrl || null,
+        coverImageUrl: coverImageUrl.trim() || null,
         status: nextStatus,
       };
 
@@ -90,6 +96,9 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
       }
 
       setStatus(nextStatus);
+      if (data.coverImageUrl != null) {
+        setCoverImageUrl(data.coverImageUrl || "");
+      }
       setMessage(
         nextStatus === "published"
           ? "Article publié."
@@ -106,6 +115,32 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
       setError(err instanceof Error ? err.message : "Erreur d'enregistrement");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onRefreshCover() {
+    if (!articleId) return;
+    setRefreshingCover(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(
+        `/api/admin/articles/${articleId}/refresh-cover`,
+        { method: "POST" },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Régénération impossible");
+      }
+      setCoverImageUrl(data.coverImageUrl || "");
+      setMessage("Illustration régénérée.");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Erreur régénération illustration",
+      );
+    } finally {
+      setRefreshingCover(false);
     }
   }
 
@@ -201,6 +236,49 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
             onChange={(e) => setContent(e.target.value)}
           />
         </label>
+
+        {mode === "edit" && articleId ? (
+          <div className="space-y-3 border-t border-rule pt-4">
+            <h3 className="font-display text-lg">Illustration (site)</h3>
+            {coverImageUrl ? (
+              <div className="overflow-hidden border border-rule bg-black/5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverImageUrl}
+                  alt=""
+                  className="max-h-64 w-full object-cover"
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Aucune illustration.</p>
+            )}
+            <label className="block text-sm font-semibold">
+              URL de l&apos;image
+              <input
+                className="admin-input mt-2"
+                type="url"
+                placeholder="https://…"
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+              />
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                disabled={refreshingCover || saving}
+                onClick={onRefreshCover}
+              >
+                {refreshingCover
+                  ? "Recherche…"
+                  : "Régénérer une illustration"}
+              </button>
+              <p className="text-xs text-muted self-center">
+                Ou colle une URL puis enregistre / publie.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         {message ? <p className="text-sm text-green-800">{message}</p> : null}

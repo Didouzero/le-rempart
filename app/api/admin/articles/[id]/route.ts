@@ -12,6 +12,9 @@ const articleSchema = z.object({
   content: z.string().min(1),
   sourceText: z.string().nullable().optional(),
   sourceUrl: z.string().nullable().optional(),
+  coverImageUrl: z
+    .union([z.string().url(), z.literal(""), z.null()])
+    .optional(),
   status: z.enum(["draft", "published"]),
 });
 
@@ -59,6 +62,15 @@ export async function PATCH(request: Request, { params }: Params) {
         content: data.content.trim(),
         sourceText: data.sourceText?.trim() || null,
         sourceUrl: data.sourceUrl?.trim() || null,
+        ...(parsed.data.coverImageUrl !== undefined
+          ? {
+              coverImageUrl:
+                typeof parsed.data.coverImageUrl === "string" &&
+                parsed.data.coverImageUrl.trim()
+                  ? parsed.data.coverImageUrl.trim()
+                  : null,
+            }
+          : {}),
         slug,
         status,
         publishedAt:
