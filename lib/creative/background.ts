@@ -1,33 +1,71 @@
 /**
  * Fond créative 1080×1440 : scène thématique choc d'abord, portrait perso ensuite.
+ * Toute image est normalisée en JPEG (évite AVIF/WebP/HTML → "unsupported image format").
  */
 
 import sharp from "sharp";
 import { extractPersonCandidates } from "@/lib/person-names";
-import { findOpenverseCoverUrl } from "@/lib/openverse";
+import { findOpenverseCoverUrls } from "@/lib/openverse";
 import { fallbackVisualQueries } from "@/lib/visual-queries";
 
-async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+async function fetchRawBuffer(url: string): Promise<Buffer | null> {
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent": "LeRempartBot/1.0 (+https://le-rempart.org; creatives)",
-        Accept: "image/*,*/*",
+        Accept: "image/jpeg,image/png,image/webp,image/*,*/*",
       },
       signal: AbortSignal.timeout(15_000),
+      redirect: "follow",
     });
     if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 1_000) return null;
+    // HTML / JSON d'erreur
+    const head = buf.subarray(0, 32).toString("utf8").toLowerCase();
+    if (
+      head.includes("<!doctype") ||
+      head.includes("<html") ||
+      head.startsWith("{") ||
+      head.startsWith("<?xml")
+    ) {
+      return null;
+    }
+    return buf;
   } catch (err) {
-    console.error("fetchImageBuffer failed", url, err);
+    console.error("fetchRawBuffer failed", url, err);
     return null;
   }
 }
 
-/** Rejette les fonds blancs / graphiques type "AU MAROC" (trop clairs / plats). */
-async function looksLikePhoto(buffer: Buffer): Promise<boolean> {
+/** Décode n'importe quel format supporté → JPEG RGB stable pour Sharp/Resvg. */
+async function toJpegBuffer(buffer: Buffer): Promise<Buffer | null> {
   try {
-    const { data, info } = await sharp(buffer)
+    const meta = await sharp(buffer, { failOn: "none" }).metadata();
+    if (!meta.format || meta.format === "svg" || meta.format === "pdf") {
+      return null;
+    }
+    return await sharp(buffer, { failOn: "none" })
+      .rotate()
+      .removeAlpha()
+      .jpeg({ quality: 90, mozjpeg: true })
+      .toBuffer();
+  } catch (err) {
+    console.error("toJpegBuffer failed", err);
+    return null;
+  }
+}
+
+async function fetchImageJpeg(url: string): Promise<Buffer | null> {
+  const raw = await fetchRawBuffer(url);
+  if (!raw) return null;
+  return toJpegBuffer(raw);
+}
+
+/** Rejette les fonds blancs / graphiques type "AU MAROC" (trop clairs / plats). */
+async function looksLikePhoto(jpegBuffer: Buffer): Promise<boolean> {
+  try {
+    const { data, info } = await sharp(jpegBuffer)
       .resize(64, 64, { fit: "fill" })
       .removeAlpha()
       .raw()
@@ -44,13 +82,11 @@ async function looksLikePhoto(buffer: Buffer): Promise<boolean> {
       if (lum > 220) bright += 1;
     }
     const avg = sum / n;
-    // Trop blanc / plat = probablement un graphic avec texte
     if (avg > 200 && bright / n > 0.55) return false;
-    // Un peu de contraste attendu sur une vraie photo
     if (dark / n < 0.02 && bright / n > 0.7) return false;
-    return buffer.length > 12_000;
+    return jpegBuffer.length > 8_000;
   } catch {
-    return buffer.length > 20_000;
+    return false;
   }
 }
 
@@ -65,11 +101,12 @@ async function findPortraitPersonUrl(person: string): Promise<string | null> {
 
   for (const q of [`${person}`, `${person} portrait`, `${person} france`]) {
     try {
-      const url = await findOpenverseCoverUrl(q, {
+      const urls = await findOpenverseCoverUrls(q, {
         landscapeOnly: false,
         person,
+        limit: 5,
       });
-      if (url) return url;
+      if (urls[0]) return urls[0];
     } catch {
       // continue
     }
@@ -90,15 +127,34 @@ async function tryQuery(
   q: string,
 ): Promise<{ buffer: Buffer; sourceUrl: string } | null> {
   try {
-    const url = await findOpenverseCoverUrl(q, { landscapeOnly: false });
-    if (!url) return null;
-    const buffer = await fetchImageBuffer(url);
-    if (!buffer) return null;
-    if (!(await looksLikePhoto(buffer))) return null;
-    return { buffer, sourceUrl: url };
+    const urls = await findOpenverseCoverUrls(q, {
+      landscapeOnly: false,
+      limit: 8,
+    });
+    for (const url of urls) {
+      const buffer = await fetchImageJpeg(url);
+      if (!buffer) continue;
+      if (!(await looksLikePhoto(buffer))) continue;
+      return { buffer, sourceUrl: url };
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+/** Fond unicolore de secours (évite de planter le créneau). */
+async function solidFallbackBackground(): Promise<Buffer> {
+  return sharp({
+    create: {
+      width: 1080,
+      height: 1440,
+      channels: 3,
+      background: { r: 28, g: 24, b: 22 },
+    },
+  })
+    .jpeg({ quality: 90 })
+    .toBuffer();
 }
 
 export async function fetchCreativeBackground(input: {
@@ -110,32 +166,37 @@ export async function fetchCreativeBackground(input: {
     ...fallbackVisualQueries(input.title),
   ].filter((q): q is string => Boolean(q && q.length >= 6));
 
-  // 1) Scènes thématiques (priorité — photos réalistes / choc)
+  // 1) Scènes thématiques
   for (const q of queries) {
     const hit = await tryQuery(q);
     if (hit) return hit;
   }
 
-  // 2) Portrait personnalité seulement si présent dans le titre
+  // 2) Portrait personnalité
   const people = extractPersonCandidates(input.title);
   for (const person of people) {
     const url = await findPortraitPersonUrl(person);
     if (!url) continue;
-    const buffer = await fetchImageBuffer(url);
+    const buffer = await fetchImageJpeg(url);
     if (buffer && (await looksLikePhoto(buffer))) {
       return { buffer, sourceUrl: url };
     }
   }
 
-  // 3) Derniers filets
+  // 3) Filets
   for (const q of [
+    "wildfire forest fire night france",
+    "forest fire flames night europe",
     "riot police france night",
     "paris street protest night",
-    "french gendarmerie street",
   ]) {
     const hit = await tryQuery(q);
     if (hit) return hit;
   }
 
-  throw new Error("Impossible de trouver une image de fond pour la créative");
+  console.error(
+    "fetchCreativeBackground: no usable photo, using solid fallback",
+    input.title.slice(0, 80),
+  );
+  return { buffer: await solidFallbackBackground(), sourceUrl: null };
 }

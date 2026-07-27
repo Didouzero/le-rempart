@@ -14,6 +14,14 @@ export function fallbackVisualQueries(title: string): string[] {
       "riot police baton night",
     ];
   }
+  if (/incendie|feu de for[eê]t|feux|brûle|brule|gironde|landes|canicule.*feu/.test(t)) {
+    return [
+      "wildfire forest fire night france",
+      "forest fire flames smoke night",
+      "firefighter wildfire night europe",
+      "burning forest night aerial",
+    ];
+  }
   if (/émeute|emeute|casseurs|incendie|feu|brûle|brule/.test(t)) {
     return [
       "riots france burning cars night",

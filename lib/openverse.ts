@@ -47,8 +47,17 @@ export async function findOpenverseCoverUrl(
   query: string,
   opts?: { landscapeOnly?: boolean; person?: string },
 ): Promise<string | null> {
+  const urls = await findOpenverseCoverUrls(query, { ...opts, limit: 1 });
+  return urls[0] || null;
+}
+
+export async function findOpenverseCoverUrls(
+  query: string,
+  opts?: { landscapeOnly?: boolean; person?: string; limit?: number },
+): Promise<string[]> {
   const q = query.trim().slice(0, 120);
-  if (!q) return null;
+  if (!q) return [];
+  const limit = Math.max(1, Math.min(opts?.limit ?? 8, 20));
 
   const url = new URL("https://api.openverse.org/v1/images/");
   url.searchParams.set("q", q);
@@ -70,7 +79,7 @@ export async function findOpenverseCoverUrl(
 
   if (!res.ok) {
     console.error("Openverse error", res.status);
-    return null;
+    return [];
   }
 
   const data = (await res.json()) as {
@@ -91,6 +100,7 @@ export async function findOpenverseCoverUrl(
     if (opts?.landscapeOnly !== false) {
       if (r.width && r.height && !isLandscape(r.width, r.height)) continue;
     }
+    // Préférer jpeg/png dans l'URL si possible
     hits.push({
       url: img,
       width: r.width,
@@ -101,13 +111,20 @@ export async function findOpenverseCoverUrl(
   }
 
   if (opts?.person) {
-    const matched = hits.find((h) =>
+    const matched = hits.filter((h) =>
       textMentionsPerson(`${h.title || ""} ${h.creator || ""}`, opts.person!),
     );
-    if (matched) return matched.url;
+    if (matched.length) return matched.slice(0, limit).map((h) => h.url);
   }
 
-  return hits[0]?.url || null;
+  // Trie : URLs qui ressemblent à jpeg/png d'abord
+  hits.sort((a, b) => {
+    const score = (u: string) =>
+      /\.(jpe?g|png)(\?|$)/i.test(u) ? 0 : /\.webp(\?|$)/i.test(u) ? 1 : 2;
+    return score(a.url) - score(b.url);
+  });
+
+  return hits.slice(0, limit).map((h) => h.url);
 }
 
 async function findLandscapePersonPhoto(person: string): Promise<string | null> {

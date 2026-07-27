@@ -77,15 +77,30 @@ export async function renderRempartCreative(input: {
 
   const fontPath = assetPath("fonts", "Impact.ttf");
 
-  // Fond recadré cover 1080×1440
-  const bg = await sharp(input.background)
-    .rotate()
-    .resize(CREATIVE_WIDTH, CREATIVE_HEIGHT, {
-      fit: "cover",
-      position: "centre",
+  // Fond recadré cover 1080×1440 (buffer déjà JPEG en théorie, on re-valide)
+  let bg: Buffer;
+  try {
+    bg = await sharp(input.background, { failOn: "none" })
+      .rotate()
+      .resize(CREATIVE_WIDTH, CREATIVE_HEIGHT, {
+        fit: "cover",
+        position: "centre",
+      })
+      .jpeg({ quality: 90, mozjpeg: true })
+      .toBuffer();
+  } catch (err) {
+    console.error("renderRempartCreative background decode failed", err);
+    bg = await sharp({
+      create: {
+        width: CREATIVE_WIDTH,
+        height: CREATIVE_HEIGHT,
+        channels: 3,
+        background: { r: 28, g: 24, b: 22 },
+      },
     })
-    .jpeg({ quality: 90, mozjpeg: true })
-    .toBuffer();
+      .jpeg({ quality: 90 })
+      .toBuffer();
+  }
 
   // Bloc titre plus aéré → on remonte un peu le bas pour tenir dans le cadre
   const textBlockHeight = lines.length * lineHeight;
