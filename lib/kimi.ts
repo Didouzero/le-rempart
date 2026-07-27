@@ -42,7 +42,7 @@ Forme (écrire comme un humain de presse, PAS comme une IA) :
 - Tu peux recevoir un "Briefing presse récente". Utilise-le pour ancrer le contexte d'actualité (ex. si le briefing parle d'incendies / feux de forêt, "la France brûle" = incendies, PAS des émeutes). INTERDIT d'inventer une autre crise nationale non mentionnée dans le titre ni dans le briefing.
 - Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}
-- excerpt = 1 ou 2 phrases d'accroche (ton sarcastique possible).`;
+- excerpt = 1 ou 2 phrases d'accroche FACTUELLES (qui / quoi / où). Pas de sarcasme anti-médias, pas de "pendant que…", pas de couplet éditorial. L'angle critique va dans le corps de l'article, pas dans le chapô.`;
 
 /** Nettoie les tics typographiques / formulations trop "IA". */
 function humanizeCopy(text: string): string {
@@ -170,7 +170,7 @@ function fallbackArticle(
 
   return {
     title: clean,
-    excerpt: `${clean} : un signal d'alarme que l'exécutif peinerait à assumer.`,
+    excerpt: `${clean} : les faits connus à cette heure.`,
     content: [
       lead,
       `## Ce qui se passe`,
