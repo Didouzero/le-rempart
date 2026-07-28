@@ -5,12 +5,15 @@ type ArticleBodyProps = {
   content: string;
 };
 
-/** Rend cliquables les URLs collées en brut (sans syntaxe [texte](url)). */
+/**
+ * Rend cliquables les URLs collées en brut.
+ * Ne touche PAS aux liens Markdown déjà écrits : [texte](https://…).
+ */
 function autolinkBareUrls(markdown: string): string {
   return markdown.replace(
-    /(^|[\s(])(https?:\/\/[^\s<>\[\]"'<>]+)/g,
+    // (?<!]\() : évite de casser ](https://…)
+    /(^|[\s])(?<!]\()(https?:\/\/[^\s<>\[\]"']+)/gm,
     (_m, pre: string, url: string) => {
-      // Enlève ponctuation finale collée (.) , ; : )
       const trimmed = url.replace(/[),.;:!?]+$/u, "");
       const trail = url.slice(trimmed.length);
       return `${pre}[${trimmed}](${trimmed})${trail}`;
