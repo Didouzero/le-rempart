@@ -136,9 +136,15 @@ a:hover {
 }
 
 .prose-article a {
+  color: var(--color-accent-deep, #8a3b12);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--color-accent);
+  word-break: break-word;
+}
+
+.prose-article a:hover {
+  color: var(--color-ink);
 }
 
 .prose-article strong {
