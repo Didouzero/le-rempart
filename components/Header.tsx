@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
 
 type HeaderProps = {
   compact?: boolean;
@@ -13,17 +14,26 @@ export function Header({ compact = false }: HeaderProps) {
     <header className="marble-band text-paper">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <nav
-          className="flex flex-wrap items-center gap-4 sm:gap-6"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-5"
           aria-label="Navigation principale"
         >
           <Link href="/" className={navLinkClass}>
             Actualités
           </Link>
+          {ARTICLE_CATEGORIES.map((key) => (
+            <Link
+              key={key}
+              href={`/rubriques/${CATEGORY_META[key].slug}`}
+              className={navLinkClass}
+            >
+              {CATEGORY_META[key].short}
+            </Link>
+          ))}
           <Link href="/contact" className={navLinkClass}>
-            Nous contacter
+            Contact
           </Link>
           <Link href="/nous-soutenir" className={navLinkClass}>
-            Nous soutenir
+            Soutenir
           </Link>
         </nav>
         <span className="hidden items-center gap-2 sm:inline-flex">

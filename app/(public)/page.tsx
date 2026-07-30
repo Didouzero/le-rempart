@@ -12,6 +12,7 @@ export default async function HomePage() {
     excerpt: string;
     publishedAt: Date | null;
     coverImageUrl: string | null;
+    category: string;
   }> = [];
 
   try {
@@ -26,6 +27,7 @@ export default async function HomePage() {
           excerpt: true,
           publishedAt: true,
           coverImageUrl: true,
+          category: true,
         },
       }),
     );
@@ -64,6 +66,7 @@ export default async function HomePage() {
               title={featured.title}
               excerpt={featured.excerpt}
               publishedAt={featured.publishedAt}
+              category={featured.category}
               hasCover={Boolean(featured.coverImageUrl)}
               coverUrl={featured.coverImageUrl}
               featured
@@ -83,6 +86,7 @@ export default async function HomePage() {
                   title={article.title}
                   excerpt={article.excerpt}
                   publishedAt={article.publishedAt}
+                  category={article.category}
                   hasCover={Boolean(article.coverImageUrl)}
                   coverUrl={article.coverImageUrl}
                   index={index + 1}

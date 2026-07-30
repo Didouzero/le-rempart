@@ -1,4 +1,5 @@
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
+import { classifyArticleCategory } from "@/lib/categories";
 import { generateArticleFromSource } from "@/lib/kimi";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { prisma } from "@/lib/prisma";
@@ -125,6 +126,12 @@ export async function publishArticleFromCreative(input: {
     input.image.buffer.length > 0 &&
     input.image.buffer.length < 2_500_000;
 
+  const category = classifyArticleCategory({
+    title: generated.title,
+    excerpt: generated.excerpt,
+    content: generated.content,
+  });
+
   const article = await prisma.article.create({
     data: {
       title: generated.title,
@@ -132,6 +139,7 @@ export async function publishArticleFromCreative(input: {
       content: generated.content,
       sourceText: caption,
       slug,
+      category,
       status: "published",
       publishedAt: new Date(),
       coverImageUrl,

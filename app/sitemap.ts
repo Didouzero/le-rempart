@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { articlePublicPath, siteUrlBase } from "@/lib/article-url";
+import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
 /** Rafraîchit le sitemap au plus toutes les heures. */
@@ -16,6 +17,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 1,
     },
+    ...ARTICLE_CATEGORIES.map((key) => ({
+      url: `${base}/rubriques/${CATEGORY_META[key].slug}`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
     {
       url: `${base}/nous-soutenir`,
       lastModified: now,

@@ -5,6 +5,11 @@ import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
 import { RelatedArticles } from "@/components/RelatedArticles";
 import { articlePublicPath } from "@/lib/article-url";
+import {
+  categoryLabel,
+  categoryPath,
+  type ArticleCategory,
+} from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
 type Props = {
@@ -21,6 +26,7 @@ type ArticleRow = {
   content: string;
   publishedAt: Date | null;
   coverImageUrl: string | null;
+  category: ArticleCategory;
 };
 
 async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
@@ -35,6 +41,7 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
         content: true,
         publishedAt: true,
         coverImageUrl: true,
+        category: true,
       },
     }),
   );
@@ -170,7 +177,12 @@ export default async function ArticlePage({ params }: Props) {
       <header className="mb-8 pb-8">
         <p className="section-kicker">
           <span className="live-dot" aria-hidden />
-          Article
+          <Link
+            href={categoryPath(article.category)}
+            className="text-inherit no-underline hover:underline"
+          >
+            {categoryLabel(article.category)}
+          </Link>
         </p>
         <time
           className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"

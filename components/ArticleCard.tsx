@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { articlePublicPath } from "@/lib/article-url";
+import {
+  categoryLabel,
+  categoryPath,
+  type ArticleCategory,
+} from "@/lib/categories";
 
 type ArticleCardProps = {
   id?: string;
@@ -7,6 +12,7 @@ type ArticleCardProps = {
   title: string;
   excerpt: string;
   publishedAt: Date | string | null;
+  category?: ArticleCategory | string | null;
   hasCover?: boolean;
   coverUrl?: string | null;
   featured?: boolean;
@@ -29,6 +35,7 @@ export function ArticleCard({
   title,
   excerpt,
   publishedAt,
+  category,
   hasCover,
   coverUrl,
   featured = false,
@@ -38,6 +45,8 @@ export function ArticleCard({
   const src = coverUrl || (hasCover && id ? `/api/media/${id}` : null);
   const delayClass =
     index === 0 ? "" : index === 1 ? "delay-1" : index === 2 ? "delay-2" : "delay-3";
+  const cat = category as ArticleCategory | undefined;
+  const catLabel = category ? categoryLabel(category) : null;
 
   if (featured) {
     return (
@@ -59,6 +68,17 @@ export function ArticleCard({
         <div className="mt-5 border-l-[3px] border-accent pl-4 sm:pl-5">
           <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em] text-muted">
             <span className="font-display text-accent">À la une</span>
+            {cat && catLabel ? (
+              <>
+                <span aria-hidden>•</span>
+                <Link
+                  href={categoryPath(cat)}
+                  className="font-display text-accent no-underline hover:underline"
+                >
+                  {catLabel}
+                </Link>
+              </>
+            ) : null}
             <span aria-hidden>•</span>
             <time dateTime={publishedAt ? new Date(publishedAt).toISOString() : undefined}>
               {formatDate(publishedAt)}
@@ -93,12 +113,22 @@ export function ArticleCard({
         <div className="hidden aspect-[16/10] bg-ink/5 sm:block" />
       )}
       <div>
-        <time
-          className="text-xs uppercase tracking-[0.14em] text-muted"
-          dateTime={publishedAt ? new Date(publishedAt).toISOString() : undefined}
-        >
-          {formatDate(publishedAt)}
-        </time>
+        <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em] text-muted">
+          {cat && catLabel ? (
+            <Link
+              href={categoryPath(cat)}
+              className="font-display text-accent no-underline hover:underline"
+            >
+              {catLabel}
+            </Link>
+          ) : null}
+          {cat && catLabel ? <span aria-hidden>•</span> : null}
+          <time
+            dateTime={publishedAt ? new Date(publishedAt).toISOString() : undefined}
+          >
+            {formatDate(publishedAt)}
+          </time>
+        </div>
         <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
           <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
             {title}

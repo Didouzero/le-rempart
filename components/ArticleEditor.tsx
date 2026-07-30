@@ -2,6 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ARTICLE_CATEGORIES,
+  CATEGORY_META,
+  classifyArticleCategory,
+  type ArticleCategory,
+} from "@/lib/categories";
 
 type ArticleEditorProps = {
   mode: "create" | "edit";
@@ -13,6 +19,7 @@ type ArticleEditorProps = {
     sourceText: string;
     sourceUrl: string;
     coverImageUrl?: string;
+    category?: ArticleCategory;
     status: "draft" | "published";
   };
 };
@@ -26,6 +33,9 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState(
     initial?.coverImageUrl ?? "",
+  );
+  const [category, setCategory] = useState<ArticleCategory>(
+    initial?.category ?? "insolite",
   );
   const [status, setStatus] = useState<"draft" | "published">(
     initial?.status ?? "draft",
@@ -55,6 +65,13 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
       setTitle(data.title);
       setExcerpt(data.excerpt);
       setContent(data.content);
+      setCategory(
+        classifyArticleCategory({
+          title: data.title,
+          excerpt: data.excerpt,
+          content: data.content,
+        }),
+      );
       setMessage("Article généré — relisez et éditez avant publication.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de génération");
@@ -76,6 +93,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
         sourceText: sourceText || null,
         sourceUrl: sourceUrl || null,
         coverImageUrl: coverImageUrl.trim() || null,
+        category,
         status: nextStatus,
       };
 
@@ -99,6 +117,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
       if (data.coverImageUrl != null) {
         setCoverImageUrl(data.coverImageUrl || "");
       }
+      if (data.category) setCategory(data.category);
       setMessage(
         nextStatus === "published"
           ? "Article publié."
@@ -227,6 +246,20 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
             value={excerpt}
             onChange={(e) => setExcerpt(e.target.value)}
           />
+        </label>
+        <label className="block text-sm font-semibold">
+          Rubrique
+          <select
+            className="admin-input mt-2"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as ArticleCategory)}
+          >
+            {ARTICLE_CATEGORIES.map((key) => (
+              <option key={key} value={key}>
+                {CATEGORY_META[key].label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block text-sm font-semibold">
           Contenu (Markdown)

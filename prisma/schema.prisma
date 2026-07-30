@@ -12,10 +12,18 @@ enum ArticleStatus {
   published
 }
 
+enum ArticleCategory {
+  immigration
+  justice
+  economie
+  patrimoine
+  insolite
+}
+
 model Article {
-  id             String        @id @default(cuid())
-  publicId       Int           @unique @default(autoincrement())
-  slug           String        @unique
+  id             String          @id @default(cuid())
+  publicId       Int             @unique @default(autoincrement())
+  slug           String          @unique
   title          String
   content        String
   excerpt        String
@@ -24,12 +32,14 @@ model Article {
   coverImageUrl  String?
   coverImageMime String?
   coverImageData Bytes?
-  status         ArticleStatus @default(draft)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  category       ArticleCategory @default(insolite)
+  status         ArticleStatus   @default(draft)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   publishedAt    DateTime?
 
   @@index([status, publishedAt])
+  @@index([status, category, publishedAt])
 }
 
 model TelegramUpdateLog {

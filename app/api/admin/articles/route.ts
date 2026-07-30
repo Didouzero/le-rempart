@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { ArticleStatus } from "@prisma/client";
+import { ArticleCategory, ArticleStatus } from "@prisma/client";
 import { z } from "zod";
+import { classifyArticleCategory } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 
@@ -10,6 +11,9 @@ const articleSchema = z.object({
   content: z.string().min(1),
   sourceText: z.string().nullable().optional(),
   sourceUrl: z.string().nullable().optional(),
+  category: z
+    .enum(["immigration", "justice", "economie", "patrimoine", "insolite"])
+    .optional(),
   status: z.enum(["draft", "published"]),
 });
 
@@ -39,6 +43,12 @@ export async function POST(request: Request) {
     const data = parsed.data;
     const slug = await makeUniqueSlug(data.title);
     const status = data.status as ArticleStatus;
+    const category = (data.category ||
+      classifyArticleCategory({
+        title: data.title,
+        excerpt: data.excerpt,
+        content: data.content,
+      })) as ArticleCategory;
 
     const article = await prisma.article.create({
       data: {
@@ -47,6 +57,7 @@ export async function POST(request: Request) {
         content: data.content.trim(),
         sourceText: data.sourceText?.trim() || null,
         sourceUrl: data.sourceUrl?.trim() || null,
+        category,
         slug,
         status,
         publishedAt: status === "published" ? new Date() : null,
