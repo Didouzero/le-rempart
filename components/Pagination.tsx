@@ -46,8 +46,8 @@ export function Pagination({
             aria-current={active ? "page" : undefined}
             className={`font-display min-w-10 px-3 py-2 text-center text-sm tracking-[0.12em] no-underline ${
               active
-                ? "bg-ink text-accent"
-                : "text-muted hover:bg-ink/5 hover:text-accent"
+                ? "text-ink underline decoration-accent decoration-2 underline-offset-4"
+                : "text-muted hover:text-accent"
             }`}
           >
             {p}
