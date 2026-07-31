@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
@@ -32,6 +33,8 @@ function BrandWordmark({ className = "" }: { className?: string }) {
 }
 
 function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
+  const pathname = usePathname() || "/";
+
   return (
     <nav
       className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-5 px-4 py-4 lg:flex lg:px-6"
@@ -60,15 +63,23 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
         role="group"
         aria-label="Rubriques"
       >
-        {rubriqueLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="font-display text-[1.22rem] tracking-[0.12em] text-white/90 no-underline transition-colors hover:text-accent hover:no-underline"
-          >
-            {link.label}
-          </Link>
-        ))}
+        {rubriqueLinks.map((link) => {
+          const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={active ? "page" : undefined}
+              className={`font-display text-[1.22rem] tracking-[0.12em] transition-colors hover:text-accent ${
+                active
+                  ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                  : "text-white/90 no-underline hover:no-underline"
+              }`}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
       </div>
 
       <span
@@ -142,6 +153,7 @@ function MenuButton({
 }
 
 export function SiteNav() {
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
   const [stickyVisible, setStickyVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -279,25 +291,35 @@ export function SiteNav() {
                   Rubriques
                 </p>
                 <div className="flex flex-col gap-4">
-                  {rubriqueLinks.map((link, i) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      tabIndex={open ? 0 : -1}
-                      className="font-display text-xl tracking-[0.12em] text-white no-underline transition-all duration-300 hover:text-accent"
-                      style={{
-                        color: "#fff",
-                        transitionDelay: open ? `${120 + i * 35}ms` : "0ms",
-                        opacity: open ? 1 : 0,
-                        transform: open
-                          ? "translateX(0)"
-                          : "translateX(0.75rem)",
-                      }}
-                      onClick={close}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  {rubriqueLinks.map((link, i) => {
+                    const active =
+                      pathname === link.href ||
+                      pathname.startsWith(`${link.href}/`);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        tabIndex={open ? 0 : -1}
+                        aria-current={active ? "page" : undefined}
+                        className={`font-display text-xl tracking-[0.12em] no-underline transition-all duration-300 hover:text-accent ${
+                          active
+                            ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                            : "text-white"
+                        }`}
+                        style={{
+                          color: active ? undefined : "#fff",
+                          transitionDelay: open ? `${120 + i * 35}ms` : "0ms",
+                          opacity: open ? 1 : 0,
+                          transform: open
+                            ? "translateX(0)"
+                            : "translateX(0.75rem)",
+                        }}
+                        onClick={close}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
 
