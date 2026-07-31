@@ -188,7 +188,11 @@ export function SiteNav() {
                 Fermer
               </button>
             </div>
-            <nav className="flex flex-col gap-5" aria-label="Navigation mobile">
+            <nav
+              className="flex flex-col gap-5 text-white"
+              aria-label="Navigation mobile"
+              style={{ color: "#fff" }}
+            >
               {links.map((link, i) => (
                 <Link
                   key={link.href}
@@ -200,6 +204,7 @@ export function SiteNav() {
                       : "translate-x-3 opacity-0"
                   }`}
                   style={{
+                    color: "#fff",
                     transitionDelay: open ? `${80 + i * 40}ms` : "0ms",
                   }}
                   onClick={close}
