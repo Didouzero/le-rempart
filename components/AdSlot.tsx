@@ -3,27 +3,24 @@ type AdSlotProps = {
   className?: string;
 };
 
+/** Pubs visibles seulement quand AdSense est explicitement activé. */
+export function adsEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ADSENSE_ENABLED === "true";
+}
+
 /**
- * Placeholder AdSense slot. Renders nothing until NEXT_PUBLIC_ADSENSE_CLIENT is set.
+ * Emplacement AdSense. Masqué tant que NEXT_PUBLIC_ADSENSE_ENABLED !== "true".
  */
 export function AdSlot({ slot, className = "" }: AdSlotProps) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT?.trim();
 
-  if (!client) {
-    // Emplacements visibles même sans AdSense (prépare la DA latérale)
-    return (
-      <aside
-        className={`my-8 flex min-h-[90px] items-center justify-center border border-dashed border-rule bg-white/40 text-xs text-muted ${className}`}
-        aria-label="Emplacement publicité"
-      >
-        Publicité
-      </aside>
-    );
+  if (!adsEnabled() || !client) {
+    return null;
   }
 
   return (
     <aside
-      className={`my-8 flex min-h-[90px] items-center justify-center border border-dashed border-rule bg-white/40 text-xs text-muted ${className}`}
+      className={`my-8 min-h-[90px] w-full ${className}`}
       aria-label="Publicité"
       data-ad-client={client}
       data-ad-slot={slot}

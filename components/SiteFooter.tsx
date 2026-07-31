@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const links = [
@@ -33,10 +34,14 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-white/70 sm:px-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="font-display text-2xl tracking-[0.12em] text-white">
-              Le Rempart
-            </p>
-            <p className="font-tagline mt-1 text-sm text-white">
+            <Image
+              src="/logo-wordmark.png"
+              alt="Le Rempart"
+              width={791}
+              height={127}
+              className="h-auto w-[11rem] sm:w-[13rem]"
+            />
+            <p className="font-tagline mt-2 text-sm text-white">
               Le média de droite radicale
             </p>
           </div>
