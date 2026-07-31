@@ -5,18 +5,78 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
 
-const navLinkClass =
-  "font-display text-[0.935rem] tracking-[0.14em] text-white/90 no-underline transition-colors hover:text-accent hover:no-underline";
+const homeLink = { href: "/", label: "Dernières news" } as const;
 
-const links = [
-  { href: "/", label: "Actualités" },
-  ...ARTICLE_CATEGORIES.map((key) => ({
-    href: `/rubriques/${CATEGORY_META[key].slug}`,
-    label: CATEGORY_META[key].short,
-  })),
+const rubriqueLinks = ARTICLE_CATEGORIES.map((key) => ({
+  href: `/rubriques/${CATEGORY_META[key].slug}`,
+  label: CATEGORY_META[key].short,
+}));
+
+const utilityLinks = [
   { href: "/contact", label: "Contact" },
-  { href: "/nous-soutenir", label: "Soutenir" },
-];
+  { href: "/nous-soutenir", label: "Nous soutenir" },
+] as const;
+
+function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
+  return (
+    <nav
+      className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-5 px-4 py-4 lg:flex lg:px-6"
+      aria-label={ariaLabel}
+    >
+      {/* Accueil — mis en avant */}
+      <Link
+        href={homeLink.href}
+        className="font-display shrink-0 text-[1.22rem] tracking-[0.12em] text-accent no-underline underline-offset-4 transition-colors hover:text-accent-deep hover:underline hover:no-underline"
+      >
+        {homeLink.label}
+      </Link>
+
+      <span
+        className="h-5 w-px shrink-0 bg-gradient-to-b from-transparent via-accent/70 to-transparent"
+        aria-hidden
+      />
+
+      {/* Rubriques info — un même bloc */}
+      <div
+        className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-sm border border-white/15 bg-white/[0.04] px-4 py-2"
+        role="group"
+        aria-label="Rubriques"
+      >
+        {rubriqueLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="font-display text-[1.22rem] tracking-[0.12em] text-white/90 no-underline transition-colors hover:text-accent hover:no-underline"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+
+      <span
+        className="h-5 w-px shrink-0 bg-gradient-to-b from-transparent via-white/25 to-transparent"
+        aria-hidden
+      />
+
+      {/* Pages utilitaires — style distinct */}
+      <div
+        className="flex items-center gap-3"
+        role="group"
+        aria-label="Contact et soutien"
+      >
+        {utilityLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="font-display border border-accent/45 px-3 py-1.5 text-[0.8rem] tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
 
 function HamburgerIcon({ open }: { open: boolean }) {
   return (
@@ -116,7 +176,6 @@ export function SiteNav() {
     mounted &&
     createPortal(
       <>
-        {/* Mega menu sticky — au-dessus des images / contenu */}
         <div
           style={{ zIndex: 10040 }}
           className={`fixed inset-x-0 top-0 border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
@@ -126,16 +185,7 @@ export function SiteNav() {
           }`}
         >
           <div className="marble-band text-paper">
-            <nav
-              className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-7 gap-y-2 px-4 py-3.5 lg:flex lg:px-6"
-              aria-label="Navigation sticky"
-            >
-              {links.map((link) => (
-                <Link key={link.href} href={link.href} className={navLinkClass}>
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+            <DesktopNav ariaLabel="Navigation sticky" />
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 lg:hidden">
               <Link
                 href="/"
@@ -149,7 +199,6 @@ export function SiteNav() {
           </div>
         </div>
 
-        {/* Drawer mobile */}
         <div
           id="mobile-nav-drawer"
           style={{ zIndex: 10060 }}
@@ -189,29 +238,74 @@ export function SiteNav() {
               </button>
             </div>
             <nav
-              className="flex flex-col gap-5 text-white"
+              className="flex flex-col gap-6 text-white"
               aria-label="Navigation mobile"
               style={{ color: "#fff" }}
             >
-              {links.map((link, i) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  tabIndex={open ? 0 : -1}
-                  className={`font-display text-2xl tracking-[0.12em] text-white no-underline transition-all duration-300 hover:text-accent ${
-                    open
-                      ? "translate-x-0 opacity-100"
-                      : "translate-x-3 opacity-0"
-                  }`}
-                  style={{
-                    color: "#fff",
-                    transitionDelay: open ? `${80 + i * 40}ms` : "0ms",
-                  }}
-                  onClick={close}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <Link
+                href={homeLink.href}
+                tabIndex={open ? 0 : -1}
+                className="font-display text-2xl tracking-[0.12em] text-accent no-underline transition-all duration-300 hover:text-accent-deep"
+                style={{
+                  color: "var(--color-accent)",
+                  transitionDelay: open ? "80ms" : "0ms",
+                  opacity: open ? 1 : 0,
+                  transform: open ? "translateX(0)" : "translateX(0.75rem)",
+                }}
+                onClick={close}
+              >
+                {homeLink.label}
+              </Link>
+
+              <div className="border-t border-white/15 pt-5">
+                <p className="font-display mb-3 text-[0.7rem] tracking-[0.16em] text-white/45">
+                  Rubriques
+                </p>
+                <div className="flex flex-col gap-4">
+                  {rubriqueLinks.map((link, i) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      tabIndex={open ? 0 : -1}
+                      className="font-display text-xl tracking-[0.12em] text-white no-underline transition-all duration-300 hover:text-accent"
+                      style={{
+                        color: "#fff",
+                        transitionDelay: open ? `${120 + i * 35}ms` : "0ms",
+                        opacity: open ? 1 : 0,
+                        transform: open
+                          ? "translateX(0)"
+                          : "translateX(0.75rem)",
+                      }}
+                      onClick={close}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-white/15 pt-5">
+                <div className="flex flex-col gap-3">
+                  {utilityLinks.map((link, i) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      tabIndex={open ? 0 : -1}
+                      className="font-display inline-flex w-fit border border-accent/50 px-3 py-2 text-sm tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink"
+                      style={{
+                        transitionDelay: open ? `${280 + i * 40}ms` : "0ms",
+                        opacity: open ? 1 : 0,
+                        transform: open
+                          ? "translateX(0)"
+                          : "translateX(0.75rem)",
+                      }}
+                      onClick={close}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </nav>
           </div>
         </div>
@@ -221,19 +315,8 @@ export function SiteNav() {
 
   return (
     <>
-      {/* Desktop : menu centré */}
-      <nav
-        className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-7 gap-y-2 px-4 py-4 lg:flex lg:px-6"
-        aria-label="Navigation principale"
-      >
-        {links.map((link) => (
-          <Link key={link.href} href={link.href} className={navLinkClass}>
-            {link.label}
-          </Link>
-        ))}
-      </nav>
+      <DesktopNav ariaLabel="Navigation principale" />
 
-      {/* Mobile / tablette : hamburger en tête de page */}
       <div className="mx-auto flex w-full max-w-6xl items-center justify-end px-4 py-3 lg:hidden">
         <MenuButton open={open} onToggle={toggle} />
       </div>
