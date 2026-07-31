@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,17 +18,34 @@ const utilityLinks = [
   { href: "/nous-soutenir", label: "Nous soutenir" },
 ] as const;
 
+function BrandWordmark({ className = "" }: { className?: string }) {
+  return (
+    <Image
+      src="/logo-wordmark.png"
+      alt="Le Rempart"
+      width={791}
+      height={127}
+      className={`h-auto w-[9.5rem] ${className}`}
+      priority
+    />
+  );
+}
+
 function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
   return (
     <nav
       className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-5 px-4 py-4 lg:flex lg:px-6"
       aria-label={ariaLabel}
     >
-      {/* Accueil — mis en avant */}
+      {/* Accueil — encadré comme Contact / Nous soutenir + live-dot */}
       <Link
         href={homeLink.href}
-        className="font-display shrink-0 text-[1.22rem] tracking-[0.12em] text-accent no-underline underline-offset-4 transition-colors hover:text-accent-deep hover:underline hover:no-underline"
+        className="group font-display inline-flex shrink-0 items-center gap-2.5 border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
       >
+        <span
+          className="live-dot shrink-0 group-hover:!bg-ink group-hover:!shadow-none"
+          aria-hidden
+        />
         {homeLink.label}
       </Link>
 
@@ -189,9 +207,10 @@ export function SiteNav() {
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 lg:hidden">
               <Link
                 href="/"
-                className="font-display text-[0.95rem] tracking-[0.16em] text-accent no-underline hover:no-underline"
+                className="inline-flex items-center no-underline hover:no-underline"
+                aria-label="Le Rempart"
               >
-                Le Rempart
+                <BrandWordmark className="w-[8.5rem]" />
               </Link>
               <MenuButton open={open} onToggle={toggle} className="h-10 w-10" />
             </div>
@@ -224,14 +243,12 @@ export function SiteNav() {
               open ? "translate-x-0" : "translate-x-full"
             }`}
           >
-            <div className="mb-10 flex items-center justify-between">
-              <p className="font-display text-lg tracking-[0.16em] text-accent">
-                Le Rempart
-              </p>
+            <div className="mb-10 flex items-center justify-between gap-3">
+              <BrandWordmark className="w-[10rem]" />
               <button
                 type="button"
                 tabIndex={open ? 0 : -1}
-                className="font-display text-sm tracking-[0.14em] text-white/80 transition-colors hover:text-accent"
+                className="font-display shrink-0 text-sm tracking-[0.14em] text-white/80 transition-colors hover:text-accent"
                 onClick={close}
               >
                 Fermer
@@ -245,15 +262,15 @@ export function SiteNav() {
               <Link
                 href={homeLink.href}
                 tabIndex={open ? 0 : -1}
-                className="font-display text-2xl tracking-[0.12em] text-accent no-underline transition-all duration-300 hover:text-accent-deep"
+                className="font-display inline-flex w-fit items-center gap-2.5 border border-accent/50 px-3 py-2 text-lg tracking-[0.12em] text-accent no-underline transition-all duration-300 hover:border-accent hover:bg-accent hover:text-ink"
                 style={{
-                  color: "var(--color-accent)",
                   transitionDelay: open ? "80ms" : "0ms",
                   opacity: open ? 1 : 0,
                   transform: open ? "translateX(0)" : "translateX(0.75rem)",
                 }}
                 onClick={close}
               >
+                <span className="live-dot shrink-0" aria-hidden />
                 {homeLink.label}
               </Link>
 

@@ -238,6 +238,10 @@ body {
   color: var(--color-accent);
 }
 
+.ticker-track span.ticker-white {
+  color: #fff;
+}
+
 .media-frame {
   position: relative;
   overflow: hidden;
