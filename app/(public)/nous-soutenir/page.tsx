@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DonateForm } from "@/components/DonateForm";
-import { isStripeConfigured } from "@/lib/stripe";
+import { getStripePublishableKey, isStripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +43,11 @@ export default async function NousSoutenirPage({ searchParams }: Props) {
         est sécurisé via Stripe.
       </p>
 
-      <DonateForm configured={isStripeConfigured()} status={status} />
+      <DonateForm
+        configured={isStripeConfigured()}
+        publishableKey={getStripePublishableKey()}
+        status={status}
+      />
     </article>
   );
 }

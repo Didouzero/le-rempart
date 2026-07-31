@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  loadStripe,
+  type PaymentRequest,
+  type PaymentRequestPaymentMethodEvent,
+  type Stripe,
+} from "@stripe/stripe-js";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   DONATION_AMOUNTS,
   type DonationAmount,
@@ -43,7 +49,6 @@ function CardIcon() {
 }
 
 function PayPalIcon() {
-  // Monogramme PayPal (double P) — Simple Icons, currentColor
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden fill="currentColor">
       <path d="M15.607 4.653H8.941L6.645 19.251H1.82L4.862 0h7.995c3.754 0 6.375 2.294 6.473 5.513-.648-.478-2.105-.86-3.722-.86m6.57 5.546c0 3.41-3.01 6.853-6.958 6.853h-2.493L11.595 24H6.74l1.845-11.538h3.592c4.208 0 7.346-3.634 7.153-6.949a5.24 5.24 0 0 1 2.848 4.686M9.653 5.546h6.408c.907 0 1.942.222 2.363.541-.195 2.741-2.655 5.483-6.441 5.483H8.714Z" />
@@ -59,19 +64,163 @@ function MethodIcon({ id }: { id: DonationMethod }) {
 
 type DonateFormProps = {
   configured: boolean;
+  publishableKey: string | null;
   status?: "success" | "canceled" | null;
 };
 
-export function DonateForm({ configured, status = null }: DonateFormProps) {
+export function DonateForm({
+  configured,
+  publishableKey,
+  status = null,
+}: DonateFormProps) {
   const [amount, setAmount] = useState<DonationAmount>(5);
   const [method, setMethod] = useState<DonationMethod>("card");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [applePayReady, setApplePayReady] = useState(false);
+
+  const stripeRef = useRef<Stripe | null>(null);
+  const paymentRequestRef = useRef<PaymentRequest | null>(null);
+  const amountRef = useRef(amount);
+  amountRef.current = amount;
 
   const ctaLabel = useMemo(() => {
-    if (loading) return "Redirection…";
+    if (loading) {
+      return method === "apple_pay" ? "Ouverture d’Apple Pay…" : "Redirection…";
+    }
     return `Faire un don de ${amount} €`;
-  }, [amount, loading]);
+  }, [amount, loading, method]);
+
+  useEffect(() => {
+    if (!configured || !publishableKey || method !== "apple_pay") {
+      setApplePayReady(false);
+      paymentRequestRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const stripe =
+        stripeRef.current ?? (await loadStripe(publishableKey));
+      if (!stripe || cancelled) return;
+      stripeRef.current = stripe;
+
+      const pr = stripe.paymentRequest({
+        country: "FR",
+        currency: "eur",
+        total: {
+          label: "Don — Le Rempart",
+          amount: amount * 100,
+        },
+        requestPayerEmail: true,
+      });
+
+      const canPay = await pr.canMakePayment();
+      if (cancelled) return;
+
+      paymentRequestRef.current = pr;
+      setApplePayReady(Boolean(canPay?.applePay));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [amount, configured, method, publishableKey]);
+
+  async function startCheckout() {
+    const res = await fetch("/api/donate/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, method }),
+    });
+    const data = (await res.json()) as { url?: string; error?: string };
+    if (!res.ok || !data.url) {
+      throw new Error(data.error || "Impossible de démarrer le paiement.");
+    }
+    window.location.href = data.url;
+  }
+
+  function startApplePay() {
+    const stripe = stripeRef.current;
+    const paymentRequest = paymentRequestRef.current;
+
+    if (!stripe || !paymentRequest || !applePayReady) {
+      throw new Error(
+        "Apple Pay n’est pas disponible sur cet appareil ou navigateur. Choisissez la carte ou PayPal.",
+      );
+    }
+
+    // Pas d’await avant show() — requis pour conserver le geste utilisateur (Safari)
+    paymentRequest.update({
+      total: {
+        label: "Don — Le Rempart",
+        amount: amount * 100,
+      },
+    });
+
+    const onCancel = () => {
+      setLoading(false);
+    };
+
+    const onPaymentMethod = async (ev: PaymentRequestPaymentMethodEvent) => {
+      paymentRequest.off("cancel", onCancel);
+      try {
+        const res = await fetch("/api/donate/payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: amountRef.current }),
+        });
+        const data = (await res.json()) as {
+          clientSecret?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.clientSecret) {
+          throw new Error(data.error || "Impossible de créer le paiement.");
+        }
+
+        const { error: confirmError, paymentIntent } =
+          await stripe.confirmCardPayment(
+            data.clientSecret,
+            { payment_method: ev.paymentMethod.id },
+            { handleActions: false },
+          );
+
+        if (confirmError) {
+          ev.complete("fail");
+          setError(
+            confirmError.message ||
+              "Le paiement Apple Pay a échoué. Réessayez ou choisissez un autre moyen.",
+          );
+          setLoading(false);
+          return;
+        }
+
+        ev.complete("success");
+
+        if (paymentIntent?.status === "requires_action") {
+          const { error: actionError } = await stripe.confirmCardPayment(
+            data.clientSecret,
+          );
+          if (actionError) {
+            setError(actionError.message || "Authentification du paiement échouée.");
+            setLoading(false);
+            return;
+          }
+        }
+
+        window.location.href = "/nous-soutenir?success=1";
+      } catch (err) {
+        ev.complete("fail");
+        setError(err instanceof Error ? err.message : "Erreur de paiement.");
+        setLoading(false);
+      }
+    };
+
+    paymentRequest.once("cancel", onCancel);
+    paymentRequest.once("paymentmethod", onPaymentMethod);
+    paymentRequest.show();
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -79,16 +228,11 @@ export function DonateForm({ configured, status = null }: DonateFormProps) {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/donate/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, method }),
-      });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || "Impossible de démarrer le paiement.");
+      if (method === "apple_pay") {
+        startApplePay();
+        return;
       }
-      window.location.href = data.url;
+      await startCheckout();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de paiement.");
       setLoading(false);
@@ -185,8 +329,11 @@ export function DonateForm({ configured, status = null }: DonateFormProps) {
         </div>
         {method === "apple_pay" ? (
           <p className="mt-3 text-xs text-muted">
-            Apple Pay s’affiche sur Checkout si votre appareil et le domaine
-            sont compatibles ; sinon la carte bancaire reste disponible.
+            {publishableKey
+              ? applePayReady
+                ? "Le bouton ouvre directement votre wallet Apple Pay, sans page Stripe."
+                : "Apple Pay n’est pas disponible ici (Safari / iPhone / Mac avec carte, et domaine vérifié chez Stripe)."
+              : "Ajoutez NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY sur Vercel pour activer Apple Pay natif."}
           </p>
         ) : null}
       </fieldset>

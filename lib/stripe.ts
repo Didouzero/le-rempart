@@ -17,6 +17,11 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
+export function getStripePublishableKey(): string | null {
+  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
+  return key || null;
+}
+
 export const DONATION_AMOUNTS = [1, 2, 5, 10, 20, 50] as const;
 export type DonationAmount = (typeof DONATION_AMOUNTS)[number];
 
