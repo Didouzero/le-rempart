@@ -31,13 +31,25 @@ export function Header({ compact = false }: HeaderProps) {
           <div className="animate-fade-in relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-9 pt-16 text-center sm:px-6 sm:pb-12 sm:pt-14">
             <Link
               href="/nous-soutenir"
-              className="absolute right-4 top-4 z-10 inline-flex max-w-[9.5rem] flex-col items-center border border-accent/70 bg-accent px-3 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:bg-accent-deep hover:no-underline sm:right-6 sm:top-6 sm:max-w-[11rem] sm:px-4 sm:py-3"
+              className="group absolute right-3 top-3 z-10 inline-flex w-fit max-w-[11.5rem] items-center gap-2.5 rounded-sm border border-accent/50 bg-accent px-3 py-2 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)] sm:right-6 sm:top-6 sm:max-w-none sm:gap-3 sm:px-4 sm:py-2.5"
             >
-              <span className="font-display text-[0.72rem] tracking-[0.14em] sm:text-[0.8rem]">
-                Nous soutenir
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-accent">
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
               </span>
-              <span className="mt-1 text-[0.65rem] leading-snug text-ink/80 sm:text-xs">
-                Faire un don
+              <span className="flex flex-col leading-tight text-left">
+                <span className="font-display text-[0.8rem] tracking-[0.12em] sm:text-[0.95rem]">
+                  Nous soutenir
+                </span>
+                <span className="text-[0.65rem] text-ink/75 sm:text-xs">
+                  Aidez Le Rempart
+                </span>
               </span>
             </Link>
 
