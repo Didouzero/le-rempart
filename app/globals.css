@@ -169,6 +169,16 @@ a:hover {
   box-shadow: var(--shadow-soft);
 }
 
+.prose-article .video-embed--x {
+  aspect-ratio: auto;
+  max-width: 550px;
+  height: min(78vh, 720px);
+  margin-left: auto;
+  margin-right: auto;
+  background: #f5f8fa;
+  overflow: auto;
+}
+
 .prose-article .video-embed iframe {
   position: absolute;
   inset: 0;

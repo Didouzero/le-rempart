@@ -21,10 +21,10 @@ function autolinkBareUrls(markdown: string): string {
   );
 }
 
-/** URL YouTube/Vimeo seule sur une ligne → marqueur [video](url) pour embed. */
+/** URL YouTube/Vimeo/X seule sur une ligne → marqueur [video](url) pour embed. */
 function markStandaloneVideos(markdown: string): string {
   return markdown.replace(
-    /^(https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?[^\s]*v=[\w-]+|embed\/[\w-]+|shorts\/[\w-]+)|youtu\.be\/[\w-]+|vimeo\.com\/\d+)[^\s]*)\s*$/gim,
+    /^(https?:\/\/(?:www\.|m(?:obile)?\.)?(?:youtube\.com\/(?:watch\?[^\s]*v=[\w-]+|embed\/[\w-]+|shorts\/[\w-]+)|youtu\.be\/[\w-]+|vimeo\.com\/\d+|x\.com\/[^\s]+\/status(?:es)?\/\d+|twitter\.com\/[^\s]+\/status(?:es)?\/\d+)[^\s]*)\s*$/gim,
     (_m, url: string) => `[video](${url.trim()})`,
   );
 }
@@ -62,13 +62,40 @@ function vimeoId(url: string): string | null {
   }
 }
 
-function embedFromHref(href?: string): { src: string; title: string } | null {
+/** ID numérique d'un post X / Twitter (x.com|twitter.com/.../status/ID). */
+function xStatusId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (
+      host !== "x.com" &&
+      host !== "twitter.com" &&
+      host !== "mobile.twitter.com" &&
+      host !== "mobile.x.com"
+    ) {
+      return null;
+    }
+    const match = u.pathname.match(/\/(?:[^/]+\/)?status(?:es)?\/(\d+)/);
+    return match?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
+type EmbedInfo = {
+  src: string;
+  title: string;
+  provider: "youtube" | "vimeo" | "x";
+};
+
+function embedFromHref(href?: string): EmbedInfo | null {
   if (!href) return null;
   const yt = youtubeId(href);
   if (yt) {
     return {
       src: `https://www.youtube-nocookie.com/embed/${yt}`,
       title: "Vidéo YouTube",
+      provider: "youtube",
     };
   }
   const vim = vimeoId(href);
@@ -76,6 +103,15 @@ function embedFromHref(href?: string): { src: string; title: string } | null {
     return {
       src: `https://player.vimeo.com/video/${vim}`,
       title: "Vidéo Vimeo",
+      provider: "vimeo",
+    };
+  }
+  const xid = xStatusId(href);
+  if (xid) {
+    return {
+      src: `https://platform.twitter.com/embed/Tweet.html?id=${xid}&dnt=true`,
+      title: "Post X",
+      provider: "x",
     };
   }
   return null;
@@ -91,9 +127,21 @@ function textOf(children: ReactNode): string {
   return "";
 }
 
-function VideoEmbed({ src, title }: { src: string; title: string }) {
+function VideoEmbed({
+  src,
+  title,
+  provider,
+}: {
+  src: string;
+  title: string;
+  provider: EmbedInfo["provider"];
+}) {
   return (
-    <div className="video-embed">
+    <div
+      className={
+        provider === "x" ? "video-embed video-embed--x" : "video-embed"
+      }
+    >
       <iframe
         src={src}
         title={title}
@@ -121,7 +169,13 @@ export function ArticleBody({ content }: ArticleBodyProps) {
                 ? embedFromHref(href)
                 : null;
             if (embed) {
-              return <VideoEmbed src={embed.src} title={embed.title} />;
+              return (
+                <VideoEmbed
+                  src={embed.src}
+                  title={embed.title}
+                  provider={embed.provider}
+                />
+              );
             }
 
             const external = Boolean(href && /^https?:\/\//i.test(href));
