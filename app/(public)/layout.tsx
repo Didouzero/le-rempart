@@ -1,3 +1,4 @@
+import { AdSlot } from "@/components/AdSlot";
 import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
 
@@ -9,9 +10,31 @@ export default function PublicLayout({
   return (
     <div className="site-shell flex min-h-screen flex-col">
       <Header />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12">
-        {children}
-      </main>
+      <div className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 gap-0 xl:grid-cols-[180px_minmax(0,72rem)_180px] xl:gap-5 xl:px-4">
+        <aside
+          className="hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
+          aria-label="Publicité gauche"
+        >
+          <AdSlot
+            slot="sidebar-left"
+            className="my-0 min-h-[600px] flex-col"
+          />
+        </aside>
+
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12 xl:max-w-none xl:px-2">
+          {children}
+        </main>
+
+        <aside
+          className="hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
+          aria-label="Publicité droite"
+        >
+          <AdSlot
+            slot="sidebar-right"
+            className="my-0 min-h-[600px] flex-col"
+          />
+        </aside>
+      </div>
       <SiteFooter />
     </div>
   );

@@ -10,7 +10,15 @@ export function AdSlot({ slot, className = "" }: AdSlotProps) {
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 
   if (!client) {
-    return null;
+    // Emplacements visibles même sans AdSense (prépare la DA latérale)
+    return (
+      <aside
+        className={`my-8 flex min-h-[90px] items-center justify-center border border-dashed border-rule bg-white/40 text-xs text-muted ${className}`}
+        aria-label="Emplacement publicité"
+      >
+        Publicité
+      </aside>
+    );
   }
 
   return (

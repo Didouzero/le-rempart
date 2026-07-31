@@ -1,48 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
+import { SiteNav } from "@/components/SiteNav";
 
 type HeaderProps = {
   compact?: boolean;
 };
 
-const navLinkClass =
-  "font-display text-[0.85rem] tracking-[0.12em] text-white/90 no-underline transition-colors hover:text-accent hover:no-underline sm:text-[0.9rem]";
-
 export function Header({ compact = false }: HeaderProps) {
   return (
     <header className="marble-band text-paper">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        <nav
-          className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-5"
-          aria-label="Navigation principale"
-        >
-          <Link href="/" className={navLinkClass}>
-            Actualités
-          </Link>
-          {ARTICLE_CATEGORIES.map((key) => (
-            <Link
-              key={key}
-              href={`/rubriques/${CATEGORY_META[key].slug}`}
-              className={navLinkClass}
-            >
-              {CATEGORY_META[key].short}
-            </Link>
-          ))}
-          <Link href="/contact" className={navLinkClass}>
-            Contact
-          </Link>
-          <Link href="/nous-soutenir" className={navLinkClass}>
-            Soutenir
-          </Link>
-        </nav>
-        <span className="hidden items-center gap-2 sm:inline-flex">
-          <span className="live-dot" aria-hidden />
-          <span className="font-display text-[0.8rem] tracking-[0.18em] text-accent">
-            En direct
-          </span>
-        </span>
-      </div>
+      <SiteNav />
 
       <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
 
@@ -61,7 +28,19 @@ export function Header({ compact = false }: HeaderProps) {
 
       {!compact && (
         <div className="border-t border-white/10">
-          <div className="animate-fade-in mx-auto flex max-w-6xl flex-col items-center px-4 py-9 text-center sm:px-6 sm:py-12">
+          <div className="animate-fade-in relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-9 pt-16 text-center sm:px-6 sm:pb-12 sm:pt-14">
+            <Link
+              href="/nous-soutenir"
+              className="absolute right-4 top-4 z-10 inline-flex max-w-[9.5rem] flex-col items-center border border-accent/70 bg-accent px-3 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:bg-accent-deep hover:no-underline sm:right-6 sm:top-6 sm:max-w-[11rem] sm:px-4 sm:py-3"
+            >
+              <span className="font-display text-[0.72rem] tracking-[0.14em] sm:text-[0.8rem]">
+                Nous soutenir
+              </span>
+              <span className="mt-1 text-[0.65rem] leading-snug text-ink/80 sm:text-xs">
+                Faire un don
+              </span>
+            </Link>
+
             <Link
               href="/"
               className="no-underline hover:no-underline"

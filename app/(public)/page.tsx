@@ -1,10 +1,22 @@
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleCard } from "@/components/ArticleCard";
+import { CategoryTiles } from "@/components/CategoryTiles";
+import { Pagination } from "@/components/Pagination";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+const PAGE_SIZE = 10;
+
+type Props = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function HomePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const requested = Math.max(1, Number.parseInt(params.page || "1", 10) || 1);
+
+  let total = 0;
   let articles: Array<{
     id: string;
     publicId: number;
@@ -16,10 +28,23 @@ export default async function HomePage() {
   }> = [];
 
   try {
+    total = await withDbTimeout(
+      prisma.article.count({ where: { status: "published" } }),
+    );
+  } catch {
+    total = 0;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE) || 1);
+  const page = Math.min(requested, totalPages);
+
+  try {
     articles = await withDbTimeout(
       prisma.article.findMany({
         where: { status: "published" },
         orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
         select: {
           id: true,
           publicId: true,
@@ -35,7 +60,8 @@ export default async function HomePage() {
     articles = [];
   }
 
-  const [featured, ...rest] = articles;
+  const featured = page === 1 ? articles[0] : null;
+  const list = page === 1 ? articles.slice(1) : articles;
 
   return (
     <div>
@@ -74,11 +100,13 @@ export default async function HomePage() {
             />
           ) : null}
 
-          {rest.length > 0 ? (
+          {list.length > 0 ? (
             <div>
-              <p className="section-kicker mb-2">Dernières publications</p>
+              <p className="section-kicker mb-2">
+                {page === 1 ? "Dernières publications" : `Page ${page}`}
+              </p>
               <div className="gold-rule mb-2 max-w-[12rem]" />
-              {rest.map((article, index) => (
+              {list.map((article, index) => (
                 <ArticleCard
                   key={article.id}
                   id={article.id}
@@ -94,8 +122,12 @@ export default async function HomePage() {
               ))}
             </div>
           ) : null}
+
+          <Pagination page={page} totalPages={totalPages} />
         </div>
       )}
+
+      <CategoryTiles />
     </div>
   );
 }
