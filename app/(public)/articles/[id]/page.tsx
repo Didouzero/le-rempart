@@ -12,6 +12,7 @@ import {
   type ArticleCategory,
 } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
+import { findRelatedArticles } from "@/lib/related-articles";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -50,22 +51,6 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
         updatedAt: true,
         coverImageUrl: true,
         category: true,
-      },
-    }),
-  );
-}
-
-async function findRelated(excludeId: string) {
-  return withDbTimeout(
-    prisma.article.findMany({
-      where: { status: "published", NOT: { id: excludeId } },
-      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-      take: 3,
-      select: {
-        publicId: true,
-        title: true,
-        excerpt: true,
-        coverImageUrl: true,
       },
     }),
   );
@@ -157,9 +142,14 @@ export default async function ArticlePage({ params }: Props) {
 
   if (!article) notFound();
 
-  let related: Awaited<ReturnType<typeof findRelated>> = [];
+  let related: Awaited<ReturnType<typeof findRelatedArticles>> = [];
   try {
-    related = await findRelated(article.id);
+    related = await findRelatedArticles({
+      excludeId: article.id,
+      category: article.category,
+      title: article.title,
+      excerpt: article.excerpt,
+    });
   } catch {
     related = [];
   }
