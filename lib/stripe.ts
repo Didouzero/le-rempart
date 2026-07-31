@@ -17,7 +17,7 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
-export const DONATION_AMOUNTS = [1, 2, 5, 10, 50] as const;
+export const DONATION_AMOUNTS = [1, 2, 5, 10, 20, 50] as const;
 export type DonationAmount = (typeof DONATION_AMOUNTS)[number];
 
 export const DONATION_METHODS = ["apple_pay", "card", "paypal"] as const;
