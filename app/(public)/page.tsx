@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleCard } from "@/components/ArticleCard";
 import { CategoryTiles } from "@/components/CategoryTiles";
 import { Pagination } from "@/components/Pagination";
 import { prisma, withDbTimeout } from "@/lib/prisma";
+import { SITE_DESCRIPTION } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,32 @@ const PAGE_SIZE = 10;
 type Props = {
   searchParams: Promise<{ page?: string }>;
 };
+
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const params = await searchParams;
+  const page = Math.max(1, Number.parseInt(params.page || "1", 10) || 1);
+  const isPaged = page > 1;
+
+  return {
+    title: isPaged ? `Dernières news — page ${page}` : "Dernières news",
+    description: SITE_DESCRIPTION,
+    alternates: {
+      canonical: isPaged ? `/?page=${page}` : "/",
+    },
+    openGraph: {
+      title: isPaged
+        ? `Dernières news — page ${page} — Le Rempart`
+        : "Dernières news — Le Rempart",
+      description: SITE_DESCRIPTION,
+      url: isPaged
+        ? `https://www.le-rempart.org/?page=${page}`
+        : "https://www.le-rempart.org/",
+      type: "website",
+    },
+  };
+}
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams;
@@ -73,7 +101,7 @@ export default async function HomePage({ searchParams }: Props) {
           Fil d&apos;actualité
         </p>
         <h1 className="font-display mt-2 text-4xl tracking-[0.08em] sm:text-5xl">
-          Actualités
+          Dernières news
         </h1>
         <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
       </div>

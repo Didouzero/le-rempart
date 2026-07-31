@@ -162,6 +162,8 @@ export function ArticleBody({ content }: ArticleBodyProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          // Évite un second h1 qui concurrence le titre de page
+          h1: ({ children }) => <h2>{children}</h2>,
           a: ({ href, children }) => {
             const label = textOf(children).trim().toLowerCase();
             const embed =

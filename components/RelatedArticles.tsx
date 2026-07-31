@@ -44,7 +44,7 @@ export function RelatedArticles({ articles }: RelatedArticlesProps) {
                 {item.coverImageUrl ? (
                   <div className="media-frame aspect-[16/10] w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.coverImageUrl} alt="" />
+                    <img src={item.coverImageUrl} alt={item.title} />
                   </div>
                 ) : (
                   <div className="flex aspect-[16/10] w-full items-end bg-ink p-3">

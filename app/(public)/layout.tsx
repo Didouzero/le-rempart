@@ -1,7 +1,9 @@
 import { AdSlot } from "@/components/AdSlot";
 import { BackToTop } from "@/components/BackToTop";
 import { Header } from "@/components/Header";
+import { JsonLd } from "@/components/JsonLd";
 import { SiteFooter } from "@/components/SiteFooter";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 export default function PublicLayout({
   children,
@@ -10,6 +12,8 @@ export default function PublicLayout({
 }) {
   return (
     <div className="site-shell flex min-h-screen flex-col">
+      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={websiteJsonLd()} />
       <Header />
       <div className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 gap-0 xl:grid-cols-[180px_minmax(0,72rem)_180px] xl:gap-5 xl:px-4">
         <aside

@@ -55,7 +55,7 @@ export function ArticleCard({
           {src ? (
             <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)] sm:aspect-[21/9]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" />
+              <img src={src} alt={title} />
             </div>
           ) : (
             <div className="flex aspect-[21/9] w-full items-end bg-ink p-6 sm:p-10">
@@ -106,7 +106,7 @@ export function ArticleCard({
         <Link href={href} className="block no-underline hover:no-underline">
           <div className="media-frame aspect-[16/10] w-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt="" />
+            <img src={src} alt={title} />
           </div>
         </Link>
       ) : (

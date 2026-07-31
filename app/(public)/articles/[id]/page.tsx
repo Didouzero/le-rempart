@@ -3,14 +3,20 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
+import { JsonLd } from "@/components/JsonLd";
 import { RelatedArticles } from "@/components/RelatedArticles";
-import { articlePublicPath } from "@/lib/article-url";
+import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
 import {
   categoryLabel,
   categoryPath,
   type ArticleCategory,
 } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  newsArticleJsonLd,
+} from "@/lib/seo";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -25,6 +31,7 @@ type ArticleRow = {
   excerpt: string;
   content: string;
   publishedAt: Date | null;
+  updatedAt: Date;
   coverImageUrl: string | null;
   category: ArticleCategory;
 };
@@ -40,6 +47,7 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
         excerpt: true,
         content: true,
         publishedAt: true,
+        updatedAt: true,
         coverImageUrl: true,
         category: true,
       },
@@ -73,15 +81,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const article = await findByPublicId(asNumber);
     if (!article) return { title: "Article introuvable" };
 
-    const url = `https://www.le-rempart.org/articles/${article.publicId}`;
-    // Photo d'article en priorité — sinon favicon carré (évite le crop grotesque du logo large)
-    const imageUrl =
-      article.coverImageUrl || "https://www.le-rempart.org/favicon.png";
+    const url = articlePublicUrl(article.publicId);
+    const imageUrl = article.coverImageUrl || absoluteUrl("/favicon.png");
+    const section = categoryLabel(article.category);
 
     return {
       title: article.title,
       description: article.excerpt,
       alternates: { canonical: url },
+      authors: [{ name: "Rédaction Le Rempart" }],
       openGraph: {
         title: article.title,
         description: article.excerpt,
@@ -89,6 +97,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         url,
         siteName: "Le Rempart",
         locale: "fr_FR",
+        publishedTime: article.publishedAt?.toISOString(),
+        modifiedTime: article.updatedAt?.toISOString(),
+        section,
+        authors: ["Rédaction Le Rempart"],
         images: [
           {
             url: imageUrl,
@@ -121,7 +133,6 @@ export default async function ArticlePage({ params }: Props) {
   const { id } = await params;
   const asNumber = Number(id);
 
-  // Anciennes URLs slug → redirect
   if (!Number.isInteger(asNumber) || asNumber <= 0) {
     try {
       const bySlug = await withDbTimeout(
@@ -153,8 +164,31 @@ export default async function ArticlePage({ params }: Props) {
     related = [];
   }
 
+  const url = articlePublicUrl(article.publicId);
+  const section = categoryLabel(article.category);
+  const rubriquePath = categoryPath(article.category);
+
   return (
     <article className="animate-fade-up">
+      <JsonLd
+        data={newsArticleJsonLd({
+          title: article.title,
+          excerpt: article.excerpt,
+          url,
+          imageUrl: article.coverImageUrl,
+          publishedAt: article.publishedAt,
+          updatedAt: article.updatedAt,
+          section,
+        })}
+      />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Dernières news", path: "/" },
+          { name: section, path: rubriquePath },
+          { name: article.title, path: articlePublicPath(article.publicId) },
+        ])}
+      />
+
       <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
@@ -162,7 +196,18 @@ export default async function ArticlePage({ params }: Props) {
               href="/"
               className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
             >
-              Actualités
+              Dernières news
+            </Link>
+          </li>
+          <li aria-hidden className="text-accent">
+            /
+          </li>
+          <li>
+            <Link
+              href={rubriquePath}
+              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+            >
+              {section}
             </Link>
           </li>
           <li aria-hidden className="text-accent">
@@ -178,10 +223,10 @@ export default async function ArticlePage({ params }: Props) {
         <p className="section-kicker">
           <span className="live-dot" aria-hidden />
           <Link
-            href={categoryPath(article.category)}
+            href={rubriquePath}
             className="text-inherit no-underline hover:underline"
           >
-            {categoryLabel(article.category)}
+            {section}
           </Link>
         </p>
         <time
@@ -193,8 +238,13 @@ export default async function ArticlePage({ params }: Props) {
         <h1 className="font-display mt-3 text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
           {article.title}
         </h1>
+        <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
+          Par la rédaction Le Rempart
+        </p>
         <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-        <p className="mt-5 max-w-2xl text-lg italic text-black">{article.excerpt}</p>
+        <p className="mt-5 max-w-2xl text-lg italic text-black">
+          {article.excerpt}
+        </p>
       </header>
 
       {article.coverImageUrl ? (
@@ -202,7 +252,7 @@ export default async function ArticlePage({ params }: Props) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={article.coverImageUrl}
-            alt=""
+            alt={article.title}
             className="max-h-[32rem] w-full object-cover"
           />
         </div>

@@ -18,9 +18,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (!isArticleCategory(slug)) return { title: "Rubrique" };
   const meta = CATEGORY_META[slug];
+  const path = `/rubriques/${meta.slug}`;
   return {
     title: meta.label,
     description: meta.description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: `${meta.label} — Le Rempart`,
+      description: meta.description,
+      type: "website",
+      url: `https://www.le-rempart.org${path}`,
+      locale: "fr_FR",
+      siteName: "Le Rempart",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${meta.label} — Le Rempart`,
+      description: meta.description,
+    },
   };
 }
 

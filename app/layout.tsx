@@ -22,31 +22,47 @@ const sourceSans = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: {
-    default: "Le Rempart",
+    default: "Le Rempart — Actualité & analyses",
     template: "%s — Le Rempart",
   },
-  description: "Le Rempart — Le média de droite radicale.",
+  description:
+    "Actualité, enquêtes et analyses. Immigration, justice, économie, patrimoine — Le Rempart, média indépendant.",
   metadataBase: new URL("https://www.le-rempart.org"),
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
     locale: "fr_FR",
     siteName: "Le Rempart",
-    title: "Le Rempart",
-    description: "Le Rempart — Le média de droite radicale.",
+    title: "Le Rempart — Actualité & analyses",
+    description:
+      "Actualité, enquêtes et analyses. Immigration, justice, économie, patrimoine — Le Rempart, média indépendant.",
+    url: "https://www.le-rempart.org",
     images: [
       {
-        url: "/favicon.png",
-        width: 512,
-        height: 512,
+        url: "/logo-wordmark.png",
+        width: 791,
+        height: 127,
         alt: "Le Rempart",
       },
     ],
   },
   twitter: {
-    card: "summary",
-    title: "Le Rempart",
-    description: "Le Rempart — Le média de droite radicale.",
-    images: ["/favicon.png"],
+    card: "summary_large_image",
+    title: "Le Rempart — Actualité & analyses",
+    description:
+      "Actualité, enquêtes et analyses. Le Rempart, média indépendant.",
+    images: ["/logo-wordmark.png"],
   },
   icons: {
     icon: "/favicon.png",
