@@ -74,12 +74,16 @@ function fold(text: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/** Priorité : immigration > justice > économie > patrimoine > insolite */
+/**
+ * Classification auto à la publication (surchargeable dans l'admin).
+ * Priorité : immigration > (politique/insolite incendies) > justice > économie > patrimoine > insolite
+ */
 export function classifyArticleCategory(input: {
   title: string;
   excerpt?: string;
   content?: string;
 }): ArticleCategory {
+  const title = fold(input.title || "");
   const blob = fold(
     [input.title, input.excerpt || "", (input.content || "").slice(0, 1200)].join(
       " ",
@@ -98,11 +102,30 @@ export function classifyArticleCategory(input: {
     return "immigration";
   }
 
-  // 2) Justice
-  if (
-    /\b(justice|tribunal|procureur|procureure|juge|audience|condamne|condamnation|requis|requisitoire|prison|incarcer|garde a vue|interpell|arrestation|mis en examen|cour d.assises|comparution|peine|mois de prison|ans de prison|relaxe|acquitte|instruction|parquet|homicide|meurtre|assassinat|viol\b|agression|agresse|poignard|stabbing|coupable)\b/.test(
+  // 1bis) Politique / déconnexion / incendies "société" → insolite
+  // (évite que « a jugé bon/urgent » ou « peine à » classent en justice)
+  const politicalFireOrDisconnect =
+    /\b(incendie|incendies|feux? de (foret|brousse)|france brule|gironde)\b/.test(
       blob,
-    )
+    ) &&
+    /\b(ministre|ministere|elysee|macron|deconnect|polemique|vacances|villa|caravane|tour de france|visioconference|sainte[- ]maxime)\b/.test(
+      blob,
+    );
+  const purePoliticalSatire =
+    /\b(ministre|presidente de l.assemblee|depute|elysee)\b/.test(title) &&
+    /\b(vacances|villa|caravane|tour de france|polemique|deconnect|ras le bol)\b/.test(
+      blob,
+    );
+  if (politicalFireOrDisconnect || purePoliticalSatire) {
+    return "insolite";
+  }
+
+  // 2) Justice — termes JUDICIAIRES (pas le verbe « juger » / « peiner »)
+  if (
+    /\b(justice|tribunal|procureur|procureure|audience|condamne|condamnation|requisitoire|prison|incarcer|garde a vue|interpell|arrestation|mis en examen|cour d.assises|comparution|mois de prison|ans de prison|peine de|peines? de prison|relaxe|acquitte|juge d.instruction|parquet|homicide|meurtre|assassinat|viol\b|agression|agresse|poignard|stabbing|coupable)\b/.test(
+      blob,
+    ) ||
+    /\b(le|la|les|du|au)\s+juges?\b/.test(blob)
   ) {
     return "justice";
   }
