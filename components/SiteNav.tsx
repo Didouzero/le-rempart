@@ -40,6 +40,29 @@ function HamburgerIcon({ open }: { open: boolean }) {
   );
 }
 
+function MenuButton({
+  open,
+  onToggle,
+  className = "",
+}: {
+  open: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`inline-flex h-11 w-11 items-center justify-center border border-white/25 text-white transition-colors duration-300 hover:border-accent/60 ${className}`}
+      aria-expanded={open}
+      aria-controls="mobile-nav-drawer"
+      aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+      onClick={onToggle}
+    >
+      <HamburgerIcon open={open} />
+    </button>
+  );
+}
+
 export function SiteNav() {
   const [open, setOpen] = useState(false);
   const [stickyVisible, setStickyVisible] = useState(false);
@@ -74,10 +97,8 @@ export function SiteNav() {
       if (!pastHero) {
         setStickyVisible(false);
       } else if (delta < -8) {
-        // Remonte → affiche le mega menu
         setStickyVisible(true);
       } else if (delta > 8) {
-        // Descend → range le menu
         setStickyVisible(false);
       }
 
@@ -88,68 +109,108 @@ export function SiteNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const toggle = () => setOpen((v) => !v);
   const close = () => setOpen(false);
 
-  const mobileOverlay =
+  const chrome =
     mounted &&
     createPortal(
-      <div
-        id="mobile-nav"
-        className={`fixed inset-0 z-[300] lg:hidden ${
-          open ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-        role="dialog"
-        aria-modal={open}
-        aria-hidden={!open}
-        aria-label="Menu"
-      >
-        <button
-          type="button"
-          tabIndex={open ? 0 : -1}
-          aria-label="Fermer le menu"
-          className={`absolute inset-0 bg-ink/90 transition-opacity duration-300 ease-out ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={close}
-        />
+      <>
+        {/* Mega menu sticky — au-dessus des images / contenu */}
         <div
-          className={`absolute inset-y-0 right-0 flex w-[min(100%,22rem)] flex-col bg-ink px-6 py-8 shadow-[-12px_0_40px_rgba(0,0,0,0.45)] transition-transform duration-300 ease-out ${
-            open ? "translate-x-0" : "translate-x-full"
+          style={{ zIndex: 10040 }}
+          className={`fixed inset-x-0 top-0 border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
+            stickyVisible && !open
+              ? "translate-y-0"
+              : "pointer-events-none -translate-y-full"
           }`}
         >
-          <div className="mb-10 flex items-center justify-between">
-            <p className="font-display text-lg tracking-[0.16em] text-accent">
-              Le Rempart
-            </p>
-            <button
-              type="button"
-              tabIndex={open ? 0 : -1}
-              className="font-display text-sm tracking-[0.14em] text-white/80 transition-colors hover:text-accent"
-              onClick={close}
+          <div className="marble-band text-paper">
+            <nav
+              className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-7 gap-y-2 px-4 py-3.5 lg:flex lg:px-6"
+              aria-label="Navigation sticky"
             >
-              Fermer
-            </button>
-          </div>
-          <nav className="flex flex-col gap-5" aria-label="Navigation mobile">
-            {links.map((link, i) => (
+              {links.map((link) => (
+                <Link key={link.href} href={link.href} className={navLinkClass}>
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 lg:hidden">
               <Link
-                key={link.href}
-                href={link.href}
+                href="/"
+                className="font-display text-[0.95rem] tracking-[0.16em] text-accent no-underline hover:no-underline"
+              >
+                Le Rempart
+              </Link>
+              <MenuButton open={open} onToggle={toggle} className="h-10 w-10" />
+            </div>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
+          </div>
+        </div>
+
+        {/* Drawer mobile */}
+        <div
+          id="mobile-nav-drawer"
+          style={{ zIndex: 10060 }}
+          className={`fixed inset-0 lg:hidden ${
+            open ? "pointer-events-auto" : "pointer-events-none"
+          }`}
+          role="dialog"
+          aria-modal={open}
+          aria-hidden={!open}
+          aria-label="Menu"
+        >
+          <button
+            type="button"
+            tabIndex={open ? 0 : -1}
+            aria-label="Fermer le menu"
+            className={`absolute inset-0 bg-ink/92 transition-opacity duration-300 ease-out ${
+              open ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={close}
+          />
+          <div
+            className={`absolute inset-y-0 right-0 flex w-[min(100%,22rem)] flex-col bg-ink px-6 py-8 shadow-[-12px_0_40px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-out ${
+              open ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
+            <div className="mb-10 flex items-center justify-between">
+              <p className="font-display text-lg tracking-[0.16em] text-accent">
+                Le Rempart
+              </p>
+              <button
+                type="button"
                 tabIndex={open ? 0 : -1}
-                className={`font-display text-2xl tracking-[0.12em] text-white no-underline transition-all duration-300 hover:text-accent ${
-                  open
-                    ? "translate-x-0 opacity-100"
-                    : "translate-x-3 opacity-0"
-                }`}
-                style={{ transitionDelay: open ? `${80 + i * 40}ms` : "0ms" }}
+                className="font-display text-sm tracking-[0.14em] text-white/80 transition-colors hover:text-accent"
                 onClick={close}
               >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+                Fermer
+              </button>
+            </div>
+            <nav className="flex flex-col gap-5" aria-label="Navigation mobile">
+              {links.map((link, i) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  tabIndex={open ? 0 : -1}
+                  className={`font-display text-2xl tracking-[0.12em] text-white no-underline transition-all duration-300 hover:text-accent ${
+                    open
+                      ? "translate-x-0 opacity-100"
+                      : "translate-x-3 opacity-0"
+                  }`}
+                  style={{
+                    transitionDelay: open ? `${80 + i * 40}ms` : "0ms",
+                  }}
+                  onClick={close}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>,
+      </>,
       document.body,
     );
 
@@ -167,62 +228,12 @@ export function SiteNav() {
         ))}
       </nav>
 
-      {/* Mobile / tablette : hamburger seul à droite */}
+      {/* Mobile / tablette : hamburger en tête de page */}
       <div className="mx-auto flex w-full max-w-6xl items-center justify-end px-4 py-3 lg:hidden">
-        <button
-          type="button"
-          className="inline-flex h-11 w-11 items-center justify-center border border-white/25 text-white transition-colors duration-300 hover:border-accent/60"
-          aria-expanded={open}
-          aria-controls="mobile-nav"
-          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <HamburgerIcon open={open} />
-        </button>
+        <MenuButton open={open} onToggle={toggle} />
       </div>
 
-      {/* Mega menu sticky (scroll vers le haut) */}
-      <div
-        className={`fixed inset-x-0 top-0 z-[90] border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
-          stickyVisible && !open
-            ? "translate-y-0"
-            : "-translate-y-full pointer-events-none"
-        }`}
-      >
-        <div className="marble-band text-paper">
-          <nav
-            className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-7 gap-y-2 px-4 py-3.5 lg:flex lg:px-6"
-            aria-label="Navigation sticky"
-          >
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} className={navLinkClass}>
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 lg:hidden">
-            <Link
-              href="/"
-              className="font-display text-[0.95rem] tracking-[0.16em] text-accent no-underline hover:no-underline"
-            >
-              Le Rempart
-            </Link>
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center border border-white/25 text-white transition-colors duration-300 hover:border-accent/60"
-              aria-expanded={open}
-              aria-controls="mobile-nav"
-              aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-              onClick={() => setOpen((v) => !v)}
-            >
-              <HamburgerIcon open={open} />
-            </button>
-          </div>
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
-        </div>
-      </div>
-
-      {mobileOverlay}
+      {chrome}
     </>
   );
 }

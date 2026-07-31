@@ -13,7 +13,7 @@ export default function PublicLayout({
       <Header />
       <div className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 gap-0 xl:grid-cols-[180px_minmax(0,72rem)_180px] xl:gap-5 xl:px-4">
         <aside
-          className="relative z-0 hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
+          className="hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
           aria-label="Publicité gauche"
         >
           <AdSlot
@@ -22,12 +22,12 @@ export default function PublicLayout({
           />
         </aside>
 
-        <main className="relative z-0 mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12 xl:max-w-none xl:px-2">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12 xl:max-w-none xl:px-2">
           {children}
         </main>
 
         <aside
-          className="relative z-0 hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
+          className="hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
           aria-label="Publicité droite"
         >
           <AdSlot
