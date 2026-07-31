@@ -72,7 +72,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
               aria-current={active ? "page" : undefined}
               className={`font-display text-[1.22rem] tracking-[0.12em] transition-colors hover:text-accent ${
                 active
-                  ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                  ? "text-white underline decoration-accent decoration-2 underline-offset-4"
                   : "text-white/90 no-underline hover:no-underline"
               }`}
             >
@@ -303,11 +303,11 @@ export function SiteNav() {
                         aria-current={active ? "page" : undefined}
                         className={`font-display text-xl tracking-[0.12em] no-underline transition-all duration-300 hover:text-accent ${
                           active
-                            ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                            ? "text-white underline decoration-accent decoration-2 underline-offset-4"
                             : "text-white"
                         }`}
                         style={{
-                          color: active ? undefined : "#fff",
+                          color: "#fff",
                           transitionDelay: open ? `${120 + i * 35}ms` : "0ms",
                           opacity: open ? 1 : 0,
                           transform: open

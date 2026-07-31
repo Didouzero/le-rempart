@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { DonateForm } from "@/components/DonateForm";
 import { isStripeConfigured } from "@/lib/stripe";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Nous soutenir",
   description: "Soutenir Le Rempart par un don ponctuel.",
