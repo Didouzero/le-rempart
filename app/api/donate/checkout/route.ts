@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
   if (!isDonationAmount(amountRaw)) {
     return NextResponse.json(
-      { error: "Montant invalide. Choisis 1, 2, 5, 10 ou 50 €." },
+      { error: "Montant invalide. Choisis 1, 2, 5, 10, 20 ou 50 €." },
       { status: 400 },
     );
   }
