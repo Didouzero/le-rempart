@@ -142,12 +142,18 @@ export function DonateForm({
   }
 
   function startApplePay() {
+    if (!publishableKey) {
+      throw new Error(
+        "Clé Stripe publishable manquante (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY sur Vercel).",
+      );
+    }
+
     const stripe = stripeRef.current;
     const paymentRequest = paymentRequestRef.current;
 
     if (!stripe || !paymentRequest || !applePayReady) {
       throw new Error(
-        "Apple Pay n’est pas disponible sur cet appareil ou navigateur. Choisissez la carte ou PayPal.",
+        "Apple Pay n’est pas prêt ici. Vérifiez que le domaine www.le-rempart.org est enregistré dans Stripe → Payment method domains, puis réessayez en Safari.",
       );
     }
 
