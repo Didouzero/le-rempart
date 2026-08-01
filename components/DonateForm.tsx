@@ -92,7 +92,7 @@ export function DonateForm({
   }, [amount, loading, method]);
 
   useEffect(() => {
-    if (!configured || !publishableKey || method !== "apple_pay") {
+    if (!configured || !publishableKey) {
       setApplePayReady(false);
       paymentRequestRef.current = null;
       return;
@@ -106,6 +106,19 @@ export function DonateForm({
       if (!stripe || cancelled) return;
       stripeRef.current = stripe;
 
+      const existing = paymentRequestRef.current;
+      if (existing) {
+        existing.update({
+          total: {
+            label: "Don — Le Rempart",
+            amount: amount * 100,
+          },
+        });
+        const canPay = await existing.canMakePayment();
+        if (!cancelled) setApplePayReady(Boolean(canPay?.applePay));
+        return;
+      }
+
       const pr = stripe.paymentRequest({
         country: "FR",
         currency: "eur",
@@ -116,23 +129,26 @@ export function DonateForm({
         requestPayerEmail: true,
       });
 
+      // Toujours garder le PaymentRequest : canMakePayment() peut renvoyer null
+      // si Safari a désactivé « Autoriser les sites à vérifier Apple Pay »,
+      // alors que show() fonctionne encore.
+      paymentRequestRef.current = pr;
+
       const canPay = await pr.canMakePayment();
       if (cancelled) return;
-
-      paymentRequestRef.current = pr;
       setApplePayReady(Boolean(canPay?.applePay));
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [amount, configured, method, publishableKey]);
+  }, [amount, configured, publishableKey]);
 
-  async function startCheckout() {
+  async function startCheckout(overrideMethod?: DonationMethod) {
     const res = await fetch("/api/donate/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, method }),
+      body: JSON.stringify({ amount, method: overrideMethod ?? method }),
     });
     const data = (await res.json()) as { url?: string; error?: string };
     if (!res.ok || !data.url) {
@@ -151,10 +167,10 @@ export function DonateForm({
     const stripe = stripeRef.current;
     const paymentRequest = paymentRequestRef.current;
 
-    if (!stripe || !paymentRequest || !applePayReady) {
-      throw new Error(
-        "Apple Pay n’est pas prêt ici. Vérifiez que le domaine www.le-rempart.org est enregistré dans Stripe → Payment method domains, puis réessayez en Safari.",
-      );
+    if (!stripe || !paymentRequest) {
+      // Pas encore initialisé → fallback Checkout (Apple Pay y apparaît aussi)
+      void startCheckout("apple_pay");
+      return;
     }
 
     // Pas d’await avant show() — requis pour conserver le geste utilisateur (Safari)
@@ -165,8 +181,10 @@ export function DonateForm({
       },
     });
 
+    let completed = false;
+
     const onCancel = () => {
-      setLoading(false);
+      if (!completed) setLoading(false);
     };
 
     const onPaymentMethod = async (ev: PaymentRequestPaymentMethodEvent) => {
@@ -202,6 +220,7 @@ export function DonateForm({
           return;
         }
 
+        completed = true;
         ev.complete("success");
 
         if (paymentIntent?.status === "requires_action") {
@@ -225,7 +244,14 @@ export function DonateForm({
 
     paymentRequest.once("cancel", onCancel);
     paymentRequest.once("paymentmethod", onPaymentMethod);
-    paymentRequest.show();
+
+    try {
+      paymentRequest.show();
+    } catch {
+      paymentRequest.off("cancel", onCancel);
+      paymentRequest.off("paymentmethod", onPaymentMethod);
+      void startCheckout("apple_pay");
+    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -338,7 +364,7 @@ export function DonateForm({
             {publishableKey
               ? applePayReady
                 ? "Le bouton ouvre directement votre wallet Apple Pay, sans page Stripe."
-                : "Apple Pay n’est pas disponible ici (Safari / iPhone / Mac avec carte, et domaine vérifié chez Stripe)."
+                : "Safari peut masquer la détection Apple Pay (Réglages → Sites web → Apple Pay). Le bouton tentera quand même d’ouvrir le wallet."
               : "Ajoutez NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY sur Vercel pour activer Apple Pay natif."}
           </p>
         ) : null}
