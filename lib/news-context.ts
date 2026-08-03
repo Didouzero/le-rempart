@@ -69,6 +69,19 @@ export function buildNewsSearchQueries(headline: string): string[] {
   if (/assemblee nationale/.test(folded) && /braun|presidente/.test(folded)) {
     queries.push("présidente Assemblée nationale");
   }
+  if (
+    /mineur|detention|détention|vide juridique|liber[eé]|prison|viol|meurtre|sequestration|séquestration/.test(
+      folded,
+    )
+  ) {
+    queries.push(
+      "mineurs détention provisoire vide juridique",
+      "Conseil constitutionnel justice pénale mineurs",
+    );
+  }
+  if (/conseil constitutionnel|censure|code de la justice penale/.test(folded)) {
+    queries.push("Conseil constitutionnel Code justice pénale mineurs");
+  }
 
   // Noms propres approximatifs (mots capitalisés / séquences)
   const proper = h.match(
@@ -84,7 +97,7 @@ export function buildNewsSearchQueries(headline: string): string[] {
 
   return [...new Set(queries.map((q) => q.trim()).filter((q) => q.length >= 4))].slice(
     0,
-    4,
+    5,
   );
 }
 
@@ -159,15 +172,16 @@ export async function fetchNewsContextBriefing(
       seen.add(key);
       const meta = [hit.source, hit.published].filter(Boolean).join(" · ");
       lines.push(meta ? `- ${hit.title} (${meta})` : `- ${hit.title}`);
-      if (lines.length >= 10) break;
+      if (lines.length >= 12) break;
     }
-    if (lines.length >= 10) break;
+    if (lines.length >= 12) break;
   }
 
   if (lines.length === 0) return "";
 
   return [
-    "Briefing presse récente (Google News FR). Ancre le contexte national sur CES faits, pas sur une autre crise inventée :",
+    "Briefing presse récente (Google News FR). Ancre le contexte national sur CES faits, pas sur une autre crise inventée.",
+    "IMPORTANT : les titres ci-dessous contiennent déjà des précisions (durées, actes, institutions). Extrais-les et intègre-les dans l'article :",
     ...lines,
   ].join("\n");
 }
