@@ -31,41 +31,111 @@ function candidatePersonQueries(query: string): string[] {
   return [...new Set(out.filter((q) => q.length >= 3))];
 }
 
+async function wikipediaSummaryByTitle(
+  pageTitle: string,
+): Promise<WebCover | null> {
+  const url = `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+    pageTitle.replace(/ /g, "_"),
+  )}`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news)",
+      Accept: "application/json",
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    title?: string;
+    originalimage?: { source?: string; width?: number; height?: number };
+    thumbnail?: { source?: string; width?: number; height?: number };
+    type?: string;
+  };
+  if (data.type === "disambiguation") return null;
+  const img = data.originalimage?.source || data.thumbnail?.source;
+  if (!img) return null;
+  return { url: img, source: "wikipedia", title: data.title };
+}
+
+/** Recherche la bonne page Wikipedia FR (ex. "Attal" → "Gabriel Attal"). */
+async function searchWikipediaTitle(query: string): Promise<string | null> {
+  const q = query.trim().slice(0, 80);
+  if (!q) return null;
+  const searchUrl = new URL("https://fr.wikipedia.org/w/api.php");
+  searchUrl.searchParams.set("action", "query");
+  searchUrl.searchParams.set("list", "search");
+  searchUrl.searchParams.set("srsearch", q);
+  searchUrl.searchParams.set("srlimit", "5");
+  searchUrl.searchParams.set("format", "json");
+  searchUrl.searchParams.set("origin", "*");
+
+  const res = await fetch(searchUrl, {
+    headers: {
+      "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news)",
+      Accept: "application/json",
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    query?: { search?: Array<{ title?: string }> };
+  };
+  const hits = data.query?.search || [];
+  const last = q.split(/\s+/).pop()?.toLowerCase() || "";
+  for (const hit of hits) {
+    const title = hit.title || "";
+    if (!title) continue;
+    if (last.length >= 3 && !title.toLowerCase().includes(last)) continue;
+    // Évite les pages "Liste de…" / "Affaire…"
+    if (/^liste |^affaire |^gouvernement /i.test(title)) continue;
+    return title;
+  }
+  return hits[0]?.title || null;
+}
+
+/**
+ * Photo d'une personnalité (portrait OK) via Wikipedia FR.
+ * C'est LA bonne source pour Attal, Macron, Bardella, etc.
+ */
+export async function findWikipediaPersonPhoto(
+  person: string,
+): Promise<WebCover | null> {
+  const q = person.trim();
+  if (!q) return null;
+
+  // 1) Titre exact / variantes
+  for (const candidate of candidatePersonQueries(q)) {
+    try {
+      const direct = await wikipediaSummaryByTitle(candidate);
+      if (direct) {
+        const pageTitle = (direct.title || "").toLowerCase();
+        const lastName = candidate.split(/\s+/).pop()?.toLowerCase() || "";
+        if (lastName.length >= 3 && !pageTitle.includes(lastName)) continue;
+        return direct;
+      }
+    } catch (err) {
+      console.error("wikipedia person direct failed", candidate, err);
+    }
+  }
+
+  // 2) Recherche Wikipedia puis summary
+  try {
+    const found = await searchWikipediaTitle(q);
+    if (found) {
+      const cover = await wikipediaSummaryByTitle(found);
+      if (cover) return cover;
+    }
+  } catch (err) {
+    console.error("wikipedia person search failed", q, err);
+  }
+  return null;
+}
+
 export async function findWikipediaCover(
   query: string,
 ): Promise<WebCover | null> {
-  const candidates = candidatePersonQueries(query);
-  for (const q of candidates) {
-    const url = `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q.replace(/ /g, "_"))}`;
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "LeRempartBot/1.0 (https://le-rempart.org; news)",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(10000),
-      });
-      if (!res.ok) continue;
-      const data = (await res.json()) as {
-        title?: string;
-        originalimage?: { source?: string };
-        thumbnail?: { source?: string };
-        type?: string;
-      };
-      if (data.type === "disambiguation") continue;
-      const pageTitle = (data.title || "").toLowerCase();
-      const lastName = q.split(/\s+/).pop()?.toLowerCase() || "";
-      // Évite les faux positifs (ex. "Macron À" → page hors sujet)
-      if (lastName.length >= 3 && !pageTitle.includes(lastName)) continue;
-      const img = data.originalimage?.source || data.thumbnail?.source;
-      if (img) {
-        return { url: img, source: "wikipedia", title: data.title };
-      }
-    } catch (err) {
-      console.error("wikipedia cover failed", q, err);
-    }
-  }
-  return null;
+  // Portrait accepté (comportement historique pour créatives / perso)
+  return findWikipediaPersonPhoto(query);
 }
 
 function pickLargestThumb(info: {

@@ -1,7 +1,7 @@
 /**
  * Recherche d'illustration pertinente.
- * Personnalité → photo PAYSAGE où la personne apparaît (pas un portrait wiki serré).
- * Sinon → scène thématique paysage, requêtes Kimi + fallbacks, anti-répétition.
+ * Personnalité politique → Wikipedia FR (portrait OK : Attal, Macron…).
+ * Sinon → scène thématique (Pexels/Pixabay/Commons…), anti-répétition.
  */
 
 import { extractPersonCandidates } from "@/lib/person-names";
@@ -231,30 +231,32 @@ export async function findOpenverseCoverUrls(
   return pool.slice(0, limit).map((x) => x.h.url);
 }
 
-async function findLandscapePersonPhoto(
+async function findPersonPhoto(
   person: string,
   exclude?: Set<string>,
 ): Promise<string | null> {
-  const queries = [
-    `${person}`,
-    `${person} portrait`,
-    `${person} france`,
-    `${person} ministre`,
-  ];
-
-  for (const q of queries) {
-    try {
-      const url = await findOpenverseCoverUrl(q, {
-        landscapeOnly: true,
-        person,
-        exclude,
-      });
-      if (url) return url;
-    } catch (err) {
-      console.error("openverse person failed", q, err);
-    }
+  // 1) Wikipedia FR — vraie photo de la personne (portrait accepté)
+  try {
+    const { findWikipediaPersonPhoto } = await import("@/lib/wikimedia");
+    const wiki = await findWikipediaPersonPhoto(person);
+    if (wiki?.url && !exclude?.has(wiki.url)) return wiki.url;
+  } catch (err) {
+    console.error("wikipedia person photo failed", person, err);
   }
 
+  // 2) Wikimedia Commons (toute orientation)
+  try {
+    const { findWikimediaCover } = await import("@/lib/wikimedia");
+    for (const q of [person, `${person} portrait`, `${person} France`]) {
+      const commons = await findWikimediaCover(q);
+      if (commons?.url && !exclude?.has(commons.url)) return commons.url;
+    }
+  } catch (err) {
+    console.error("commons person failed", person, err);
+  }
+
+  // 3) Banques stock en secours (rarement utiles pour les politiques FR)
+  const queries = [`${person}`, `${person} portrait`, `${person} france`];
   try {
     const { findUnsplashCoverUrls } = await import("@/lib/unsplash");
     for (const q of queries) {
@@ -265,22 +267,18 @@ async function findLandscapePersonPhoto(
     // ignore
   }
 
-  try {
-    const { findWikimediaLandscapeCover } = await import("@/lib/wikimedia");
-    for (const q of [person, `${person} portrait`]) {
-      const commons = await findWikimediaLandscapeCover(q);
-      if (commons?.url && !exclude?.has(commons.url)) return commons.url;
+  for (const q of queries) {
+    try {
+      const url = await findOpenverseCoverUrl(q, {
+        landscapeOnly: false,
+        person,
+        exclude,
+      });
+      if (url) return url;
+    } catch (err) {
+      console.error("openverse person failed", q, err);
+      break;
     }
-  } catch (err) {
-    console.error("commons landscape person failed", person, err);
-  }
-
-  try {
-    const { findWikipediaLandscapeCover } = await import("@/lib/wikimedia");
-    const wiki = await findWikipediaLandscapeCover(person);
-    if (wiki?.url && !exclude?.has(wiki.url)) return wiki.url;
-  } catch (err) {
-    console.error("wikipedia landscape person failed", person, err);
   }
 
   return null;
@@ -294,7 +292,7 @@ async function findPersonCoverUrl(
   if (candidates.length === 0) return null;
 
   for (const person of candidates) {
-    const url = await findLandscapePersonPhoto(person, exclude);
+    const url = await findPersonPhoto(person, exclude);
     if (url) return url;
   }
   return null;
@@ -342,8 +340,11 @@ async function firstFromBanks(
       // ignore
     }
 
-    // 3) Wikimedia Commons
+    // 3) Wikimedia Commons — documentaire (campements, villes…), pas seulement paysage
     try {
+      const { findWikimediaCover } = await import("@/lib/wikimedia");
+      const commonsAny = await findWikimediaCover(q);
+      if (commonsAny?.url && !exclude?.has(commonsAny.url)) return commonsAny.url;
       const commons = await findWikimediaLandscapeCover(q);
       if (commons?.url && !exclude?.has(commons.url)) return commons.url;
     } catch {
@@ -385,10 +386,17 @@ export async function resolveRelevantCoverUrl(input: {
   const sceneFirst = isSceneFirstTopic(input.title);
   const qSlice = queries.slice(0, 8);
 
+  const namedPeople = extractPersonCandidates(input.title);
+
   const tryPerson = async (
     usedExclude?: Set<string>,
   ): Promise<string | null> => {
-    if (isSceneFirstTopic(input.title) && isCrimeOrArrestTopic(input.title)) {
+    // Si un politique est nommé, on veut SA photo — même sur un fait divers
+    if (
+      namedPeople.length === 0 &&
+      isSceneFirstTopic(input.title) &&
+      isCrimeOrArrestTopic(input.title)
+    ) {
       if (/interpell|arrestation|fusillade|attentat/.test(input.title.toLowerCase())) {
         return null;
       }
@@ -396,22 +404,26 @@ export async function resolveRelevantCoverUrl(input: {
     try {
       return await findPersonCoverUrl(input.title, usedExclude);
     } catch (err) {
-      console.error("person landscape cover failed", err);
+      console.error("person cover failed", err);
       return null;
     }
   };
 
-  // Passe 1 : strict + anti-répétition
-  if (sceneFirst) {
-    const thematic = await firstFromBanks(qSlice, input.title, exclude);
-    if (thematic) return thematic;
+  // Personnalité citée → Wikipedia d'abord (Attal, Macron…), pas du stock générique
+  if (namedPeople.length > 0) {
     const person = await tryPerson(exclude);
     if (person) return person;
-  } else {
-    const person = await tryPerson(exclude);
-    if (person) return person;
+  }
+
+  // Passe thématique
+  if (sceneFirst || namedPeople.length === 0) {
     const thematic = await firstFromBanks(qSlice, input.title, exclude);
     if (thematic) return thematic;
+  }
+
+  if (namedPeople.length === 0) {
+    const person = await tryPerson(exclude);
+    if (person) return person;
   }
 
   // Passe 2 : mêmes banques, sans exclusion (mieux une image déjà vue que rien)

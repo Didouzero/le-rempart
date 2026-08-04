@@ -173,12 +173,42 @@ function isParticle(word: string): boolean {
 }
 
 /**
+ * Personnalités FR fréquentes → titre Wikipedia canonique.
+ * Permet de matcher même un nom seul (« ATTAL », « Macron »).
+ */
+const KNOWN_POLITICIANS: Array<{ re: RegExp; wiki: string }> = [
+  { re: /\bgabriel\s+attal\b|\battal\b/i, wiki: "Gabriel Attal" },
+  { re: /\bemmanuel\s+macron\b|\bmacron\b/i, wiki: "Emmanuel Macron" },
+  { re: /\bjordan\s+bardella\b|\bbardella\b/i, wiki: "Jordan Bardella" },
+  { re: /\bmarine\s+le\s+pen\b|\ble\s+pen\b/i, wiki: "Marine Le Pen" },
+  { re: /\bjean[- ]luc\s+m[eé]lenchon\b|\bm[eé]lenchon\b/i, wiki: "Jean-Luc Mélenchon" },
+  { re: /\bbruno\s+retailleau\b|\bretailleau\b/i, wiki: "Bruno Retailleau" },
+  { re: /\bg[eé]rald\s+darmanin\b|\bdarmanin\b/i, wiki: "Gérald Darmanin" },
+  { re: /\b[eé]ric\s+ciotti\b|\bciotti\b/i, wiki: "Éric Ciotti" },
+  { re: /\blaure?nt\s+wauquiez\b|\bwauquiez\b/i, wiki: "Laurent Wauquiez" },
+  { re: /\b[eé]douard\s+philippe\b/i, wiki: "Édouard Philippe" },
+  { re: /\bfran[cç]ois\s+bayrou\b|\bbayrou\b/i, wiki: "François Bayrou" },
+  { re: /\bya[eë]l\s+braun[- ]?pivet\b|\bbraun[- ]?pivet\b/i, wiki: "Yaël Braun-Pivet" },
+  { re: /\b[eé]ric\s+zemmour\b|\bzemmour\b/i, wiki: "Éric Zemmour" },
+  { re: /\bmarion\s+mar[eé]chal\b/i, wiki: "Marion Maréchal" },
+  { re: /\bmanuel\s+valls\b|\bvalls\b/i, wiki: "Manuel Valls" },
+  { re: /\bmichel\s+barnier\b|\bbarnier\b/i, wiki: "Michel Barnier" },
+  { re: /\bolivier\s+faure\b/i, wiki: "Olivier Faure" },
+  { re: /\brapha[eë]l\s+glucksmann\b|\bglucksmann\b/i, wiki: "Raphaël Glucksmann" },
+];
+
+/**
  * Retourne des candidats "Prénom Nom" / "Prénom Le Nom" (Bruno Le Maire).
  */
 export function extractPersonCandidates(title: string): string[] {
+  const known: string[] = [];
+  for (const p of KNOWN_POLITICIANS) {
+    if (p.re.test(title)) known.push(p.wiki);
+  }
+
   const normalized = normalizeTitleCasing(title);
   const words = normalized.split(/\s+/).filter(Boolean);
-  const out: string[] = [];
+  const out: string[] = [...known];
 
   for (let i = 0; i < words.length; i += 1) {
     const a = words[i];
@@ -219,8 +249,9 @@ export function extractPersonCandidates(title: string): string[] {
     }
   }
 
-  // Priorité aux formes à 3 mots (Bruno Le Maire avant Bruno Maire)
-  out.sort((x, y) => y.split(" ").length - x.split(" ").length);
+  // Connus d'abord, puis formes les plus longues (Bruno Le Maire avant Bruno Maire)
+  const rest = out.filter((x) => !known.includes(x));
+  rest.sort((x, y) => y.split(" ").length - x.split(" ").length);
 
-  return [...new Set(out)].slice(0, 6);
+  return [...new Set([...known, ...rest])].slice(0, 6);
 }
