@@ -101,19 +101,22 @@ export async function publishArticleFromCreative(input: {
     };
   }
 
-  const [generated, coverImageUrl] = await Promise.all([
-    generateArticleFromSource({
-      title: caption.slice(0, 200),
+  // D'abord le texte (titre final), puis l'illustration calée sur ce titre
+  // (évite les requêtes trop vagues basées sur la seule accroche Canva).
+  const generated = await generateArticleFromSource({
+    title: caption.slice(0, 200),
+  });
+  const coverImageUrl = await withTimeout(
+    resolveRelevantCoverUrl({
+      title: generated.title || caption,
+      excerpt: generated.excerpt || caption,
     }),
-    withTimeout(
-      resolveRelevantCoverUrl({ title: caption, excerpt: caption }),
-      12_000,
-      "Timeout illustration",
-    ).catch((err) => {
-      console.error(err);
-      return null;
-    }),
-  ]);
+    28_000,
+    "Timeout illustration",
+  ).catch((err) => {
+    console.error(err);
+    return null;
+  });
 
   const slug = await makeUniqueSlug(generated.title);
   const creativeMime = input.image

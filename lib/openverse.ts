@@ -1,16 +1,17 @@
 /**
  * Recherche d'illustration pertinente.
  * Personnalité → photo PAYSAGE où la personne apparaît (pas un portrait wiki serré).
- * Sinon → scène thématique paysage.
+ * Sinon → scène thématique paysage, requêtes Kimi + fallbacks, anti-répétition.
  */
 
 import { extractPersonCandidates } from "@/lib/person-names";
+import { prisma } from "@/lib/prisma";
 import {
-  fallbackVisualQueries,
   hitIsGloballyBanned,
   hitMatchesTopic,
   isCrimeOrArrestTopic,
   isSceneFirstTopic,
+  suggestVisualSearchQueries,
   topicImageKeywords,
 } from "@/lib/visual-queries";
 
@@ -50,9 +51,33 @@ type OpenverseHit = {
   creator?: string;
 };
 
+async function recentlyUsedCoverUrls(limit = 50): Promise<Set<string>> {
+  try {
+    const rows = await prisma.article.findMany({
+      where: { coverImageUrl: { not: null } },
+      orderBy: { publishedAt: "desc" },
+      take: limit,
+      select: { coverImageUrl: true },
+    });
+    return new Set(
+      rows
+        .map((r) => r.coverImageUrl)
+        .filter((u): u is string => Boolean(u)),
+    );
+  } catch (err) {
+    console.error("recentlyUsedCoverUrls failed", err);
+    return new Set();
+  }
+}
+
 export async function findOpenverseCoverUrl(
   query: string,
-  opts?: { landscapeOnly?: boolean; person?: string; topic?: string },
+  opts?: {
+    landscapeOnly?: boolean;
+    person?: string;
+    topic?: string;
+    exclude?: Set<string>;
+  },
 ): Promise<string | null> {
   const urls = await findOpenverseCoverUrls(query, { ...opts, limit: 1 });
   return urls[0] || null;
@@ -64,18 +89,20 @@ export async function findOpenverseCoverUrls(
     landscapeOnly?: boolean;
     person?: string;
     limit?: number;
-    /** Titre / sujet article — pour filtrer la pertinence (pas la requête EN). */
     topic?: string;
+    exclude?: Set<string>;
   },
 ): Promise<string[]> {
   const q = query.trim().slice(0, 120);
   if (!q) return [];
   const limit = Math.max(1, Math.min(opts?.limit ?? 8, 20));
   const topicBlob = `${opts?.topic || ""} ${q}`.trim();
+  const page = 1 + Math.floor(Math.random() * 2);
 
   const url = new URL("https://api.openverse.org/v1/images/");
   url.searchParams.set("q", q);
-  url.searchParams.set("page_size", "20");
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("page_size", "24");
   url.searchParams.set("license_type", "commercial,modification");
   url.searchParams.set("category", "photograph");
   if (opts?.landscapeOnly !== false) {
@@ -111,10 +138,12 @@ export async function findOpenverseCoverUrls(
   for (const r of data.results || []) {
     const img = r.url || r.thumbnail;
     if (!img || !/^https?:\/\//.test(img)) continue;
+    if (opts?.exclude?.has(img)) continue;
     if (opts?.landscapeOnly !== false) {
       if (r.width && r.height && !isLandscape(r.width, r.height)) continue;
     }
-    // Préférer jpeg/png dans l'URL si possible
+    // Évite les miniatures trop petites
+    if ((r.width || 0) > 0 && (r.width || 0) < 900) continue;
     hits.push({
       url: img,
       width: r.width,
@@ -128,10 +157,15 @@ export async function findOpenverseCoverUrls(
     const matched = hits.filter((h) =>
       textMentionsPerson(`${h.title || ""} ${h.creator || ""}`, opts.person!),
     );
-    if (matched.length) return matched.slice(0, limit).map((h) => h.url);
+    if (matched.length) {
+      matched.sort(
+        (a, b) =>
+          (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0),
+      );
+      return matched.slice(0, limit).map((h) => h.url);
+    }
   }
 
-  // Filtre sur le SUJET article (+ requête), pas seulement la query EN
   const keywords = topicImageKeywords(topicBlob);
   const scored = hits
     .map((h) => {
@@ -142,23 +176,33 @@ export async function findOpenverseCoverUrls(
         : /\.webp(\?|$)/i.test(h.url)
           ? 1
           : 2;
-      return { h, blob, relevant, fmt };
+      const area = (h.width || 1200) * (h.height || 800);
+      return { h, blob, relevant, fmt, area };
     })
     .filter((x) => {
       if (hitIsGloballyBanned(x.blob)) return false;
-      // Si on a des must-keywords, jeter les hors-sujet (dirigeable, sketch…)
       if (keywords.must.length > 0 && !x.relevant) return false;
       return true;
     })
     .sort((a, b) => {
       if (a.relevant !== b.relevant) return a.relevant ? -1 : 1;
-      return a.fmt - b.fmt;
+      if (a.fmt !== b.fmt) return a.fmt - b.fmt;
+      return b.area - a.area;
     });
 
-  return scored.slice(0, limit).map((x) => x.h.url);
+  // Parmi le top, tire au sort pour casser les boucles
+  const pool = scored.slice(0, Math.min(scored.length, limit + 4));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, limit).map((x) => x.h.url);
 }
 
-async function findLandscapePersonPhoto(person: string): Promise<string | null> {
+async function findLandscapePersonPhoto(
+  person: string,
+  exclude?: Set<string>,
+): Promise<string | null> {
   const queries = [
     `${person}`,
     `${person} portrait`,
@@ -166,12 +210,12 @@ async function findLandscapePersonPhoto(person: string): Promise<string | null> 
     `${person} ministre`,
   ];
 
-  // 1) Openverse paysage libre de droits (Flickr etc.)
   for (const q of queries) {
     try {
       const url = await findOpenverseCoverUrl(q, {
         landscapeOnly: true,
         person,
+        exclude,
       });
       if (url) return url;
     } catch (err) {
@@ -179,33 +223,30 @@ async function findLandscapePersonPhoto(person: string): Promise<string | null> 
     }
   }
 
-  // 2) Unsplash paysage
   try {
-    const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
+    const { findUnsplashCoverUrls } = await import("@/lib/unsplash");
     for (const q of queries) {
-      const u = await findUnsplashCoverUrl(q);
-      if (u) return u;
+      const urls = await findUnsplashCoverUrls(q, { limit: 4, exclude });
+      if (urls[0]) return urls[0];
     }
   } catch {
     // ignore
   }
 
-  // 3) Wikimedia Commons paysage uniquement
   try {
     const { findWikimediaLandscapeCover } = await import("@/lib/wikimedia");
     for (const q of [person, `${person} portrait`]) {
       const commons = await findWikimediaLandscapeCover(q);
-      if (commons?.url) return commons.url;
+      if (commons?.url && !exclude?.has(commons.url)) return commons.url;
     }
   } catch (err) {
     console.error("commons landscape person failed", person, err);
   }
 
-  // 4) Wikipedia SEULEMENT si déjà paysage (pas les portraits serrés)
   try {
     const { findWikipediaLandscapeCover } = await import("@/lib/wikimedia");
     const wiki = await findWikipediaLandscapeCover(person);
-    if (wiki?.url) return wiki.url;
+    if (wiki?.url && !exclude?.has(wiki.url)) return wiki.url;
   } catch (err) {
     console.error("wikipedia landscape person failed", person, err);
   }
@@ -213,12 +254,15 @@ async function findLandscapePersonPhoto(person: string): Promise<string | null> 
   return null;
 }
 
-async function findPersonCoverUrl(title: string): Promise<string | null> {
+async function findPersonCoverUrl(
+  title: string,
+  exclude?: Set<string>,
+): Promise<string | null> {
   const candidates = extractPersonCandidates(title);
   if (candidates.length === 0) return null;
 
   for (const person of candidates) {
-    const url = await findLandscapePersonPhoto(person);
+    const url = await findLandscapePersonPhoto(person, exclude);
     if (url) return url;
   }
   return null;
@@ -228,33 +272,37 @@ export async function resolveRelevantCoverUrl(input: {
   title: string;
   excerpt?: string;
 }): Promise<string | null> {
-  const blob = `${input.title} ${input.excerpt || ""}`;
-  const queries = fallbackVisualQueries(blob);
+  const exclude = await recentlyUsedCoverUrls(60);
+  const queries = await suggestVisualSearchQueries({
+    title: input.title,
+    excerpt: input.excerpt,
+  });
   const sceneFirst = isSceneFirstTopic(input.title);
 
   const tryThematic = async (): Promise<string | null> => {
-    for (const q of queries.slice(0, 6)) {
+    for (const q of queries.slice(0, 8)) {
       try {
         const urls = await findOpenverseCoverUrls(q, {
           landscapeOnly: true,
           limit: 8,
           topic: input.title,
+          exclude,
         });
         for (const u of urls) {
-          if (u) return u;
+          if (u && !exclude.has(u)) return u;
         }
       } catch (err) {
         console.error("openverse failed", q, err);
       }
     }
-    // Unsplash : uniquement avec une requête visuelle EN, jamais le titre FR brut
-    // (sinon « Allah » → hymnes / partitions)
     try {
-      const { findUnsplashCoverUrl } = await import("@/lib/unsplash");
-      for (const q of queries.slice(0, 3)) {
+      const { findUnsplashCoverUrls } = await import("@/lib/unsplash");
+      for (const q of queries.slice(0, 5)) {
         if (!q || /allah|dieu|god|jesus/i.test(q)) continue;
-        const u = await findUnsplashCoverUrl(q);
-        if (u) return u;
+        const urls = await findUnsplashCoverUrls(q, { limit: 6, exclude });
+        for (const u of urls) {
+          if (u && !exclude.has(u)) return u;
+        }
       }
     } catch {
       // ignore
@@ -263,19 +311,20 @@ export async function resolveRelevantCoverUrl(input: {
   };
 
   const tryPerson = async (): Promise<string | null> => {
-    // Jamais de « portrait » sur faits divers (Allah, migrant anonyme…)
     if (isSceneFirstTopic(input.title) && isCrimeOrArrestTopic(input.title)) {
-      return null;
+      // Faits divers : scène / lieu d'abord ; portrait seulement si pas d'arrestation explicite
+      if (/interpell|arrestation|fusillade|attentat/.test(input.title.toLowerCase())) {
+        return null;
+      }
     }
     try {
-      return await findPersonCoverUrl(input.title);
+      return await findPersonCoverUrl(input.title, exclude);
     } catch (err) {
       console.error("person landscape cover failed", err);
       return null;
     }
   };
 
-  // Incendies / émeutes / faits de rue : la SCÈNE d'abord (pas un portrait foireux)
   if (sceneFirst) {
     const thematic = await tryThematic();
     if (thematic) return thematic;
