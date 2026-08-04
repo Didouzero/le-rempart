@@ -12,7 +12,7 @@ const articleSchema = z.object({
   sourceText: z.string().nullable().optional(),
   sourceUrl: z.string().nullable().optional(),
   category: z
-    .enum(["immigration", "justice", "economie", "patrimoine", "insolite"])
+    .enum(["immigration", "justice", "economie", "politique", "insolite"])
     .optional(),
   status: z.enum(["draft", "published"]),
 });

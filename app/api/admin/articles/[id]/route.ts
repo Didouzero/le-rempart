@@ -17,7 +17,7 @@ const articleSchema = z.object({
     .union([z.string().url(), z.literal(""), z.null()])
     .optional(),
   category: z
-    .enum(["immigration", "justice", "economie", "patrimoine", "insolite"])
+    .enum(["immigration", "justice", "economie", "politique", "insolite"])
     .optional(),
   status: z.enum(["draft", "published"]),
 });

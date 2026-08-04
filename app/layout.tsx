@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s — Le Rempart",
   },
   description:
-    "Actualité, enquêtes et analyses. Immigration, justice, économie, patrimoine — Le Rempart, média indépendant.",
+    "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.",
   metadataBase: new URL("https://www.le-rempart.org"),
   alternates: { canonical: "/" },
   robots: {
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     siteName: "Le Rempart",
     title: "Le Rempart — Actualité & analyses",
     description:
-      "Actualité, enquêtes et analyses. Immigration, justice, économie, patrimoine — Le Rempart, média indépendant.",
+      "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.",
     url: "https://www.le-rempart.org",
     images: [
       {

@@ -13,8 +13,8 @@ const TILE_IMAGES: Record<ArticleCategory, string> = {
     "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&h=800&fit=crop&q=80",
   economie:
     "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&h=800&fit=crop&q=80",
-  patrimoine:
-    "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=800&fit=crop&q=80",
+  politique:
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&h=800&fit=crop&q=80",
   insolite:
     "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=800&fit=crop&q=80",
 };

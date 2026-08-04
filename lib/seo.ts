@@ -3,7 +3,7 @@ import { siteUrlBase } from "@/lib/article-url";
 export const SITE_NAME = "Le Rempart";
 export const SITE_TAGLINE = "Le média de droite radicale";
 export const SITE_DESCRIPTION =
-  "Actualité, enquêtes et analyses. Immigration, justice, économie, patrimoine — Le Rempart, média indépendant.";
+  "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.";
 
 export function absoluteUrl(path = "/"): string {
   const base = siteUrlBase().replace(/\/$/, "");

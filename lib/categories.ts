@@ -6,7 +6,7 @@ export const ARTICLE_CATEGORIES = [
   "immigration",
   "justice",
   "economie",
-  "patrimoine",
+  "politique",
   "insolite",
 ] as const;
 
@@ -37,12 +37,12 @@ export const CATEGORY_META: Record<
     description:
       "Argent public, fraudes, impôts, escroqueries et gabegie administrative.",
   },
-  patrimoine: {
-    slug: "patrimoine",
-    label: "Patrimoine",
-    short: "Patrimoine",
+  politique: {
+    slug: "politique",
+    label: "Politique",
+    short: "Politique",
     description:
-      "Identité, culture, monuments, traditions et héritage français.",
+      "Partis, élections, sondages, candidatures et petite musique politicienne.",
   },
   insolite: {
     slug: "insolite",
@@ -76,7 +76,7 @@ function fold(text: string): string {
 
 /**
  * Classification auto à la publication (surchargeable dans l'admin).
- * Priorité : immigration > (politique/insolite incendies) > justice > économie > patrimoine > insolite
+ * Priorité : immigration > satire absurde → insolite > justice > politique > économie > insolite
  */
 export function classifyArticleCategory(input: {
   title: string;
@@ -102,8 +102,7 @@ export function classifyArticleCategory(input: {
     return "immigration";
   }
 
-  // 1bis) Politique / déconnexion / incendies "société" → insolite
-  // (évite que « a jugé bon/urgent » ou « peine à » classent en justice)
+  // 1bis) Absurde / déconnexion (incendies, vacances) → insolite, pas « politique »
   const politicalFireOrDisconnect =
     /\b(incendie|incendies|feux? de (foret|brousse)|france brule|gironde)\b/.test(
       blob,
@@ -130,22 +129,31 @@ export function classifyArticleCategory(input: {
     return "justice";
   }
 
-  // 3) Économie / argent public / fraude
+  // 3) Politique politicienne — avant économie (évite « Attal est une fraude » → économie)
   if (
-    /\b(economie|economique|escroquerie|escroc|fraude|frauduleux|detourne|detournement|corruption|pot[- ]de[- ]vin|blanchiment|impot|impots|fiscal|contribuable|budget|deficit|subvention|allocs?\b|caf\b|rsa\b|argent public|gabegie|maire.{0,60}(vole|volait|detourn|escroq)|milliards? d.euros|millions? d.euros)\b/.test(
+    /\b(politicien|politicienne|parti\b|partis\b|election|elections|presidentielle|legislatives|municipales|europeennes|sondage|sondages|candidat|candidate|candidature|investiture|primaire|congres du parti|quitte (le|son) parti|rejoint (le|la|les)|rallie|dissidence|motion de censure|assemblee nationale|senat\b|premier ministre|matignon|campagne electorale|bulletin de vote|urnes?\b|scrutin)\b/.test(
+      blob,
+    ) ||
+    /\b(rassemblement national|\brn\b|la france insoumise|\blfi\b|les republicains|\blr\b|renaissance|horizons|modem|parti socialiste|\bnfp\b|nouveau front populaire)\b/.test(
+      blob,
+    ) ||
+    (/\b(macron|attal|bardella|melenchon|le pen|retailleau|darmanin|ciotti|wauquiez|philippe\b|bayrou|glucksmann|rousseau\b|autain|corbieres|panot|braun[- ]?pivet|yael braun|castets|barnier|valls|zemmour|philippot|marion marechal)\b/.test(
+      blob,
+    ) &&
+      /\b(parti|election|sondage|candidat|candidature|investiture|quitte|rejoint|fraude|imposture|rival|rivalite|succession|presidentielle|legislatives|congres|campagne|allege|attaque|vise|en tete|cote)\b/.test(
+        blob,
+      ))
+  ) {
+    return "politique";
+  }
+
+  // 4) Économie / argent public / fraude financière (pas « fraude » au sens politicien)
+  if (
+    /\b(economie|economique|escroquerie|escroc|fraude (fiscale|sociale|aux? alloc|a la caf|documentaire)|frauduleux|detourne|detournement|corruption|pot[- ]de[- ]vin|blanchiment|impot|impots|fiscal|contribuable|budget|deficit|subvention|allocs?\b|caf\b|rsa\b|argent public|gabegie|maire.{0,60}(vole|volait|detourn|escroq)|milliards? d.euros|millions? d.euros)\b/.test(
       blob,
     )
   ) {
     return "economie";
-  }
-
-  // 4) Patrimoine / identité / culture
-  if (
-    /\b(patrimoine|identite|identitaire|culture francaise|tradition|traditions|cathedrale|eglise|statue|monument|heritage|notre[- ]dame|chateau|village francais|francite|souche|racines|histoire de france|langue francaise)\b/.test(
-      blob,
-    )
-  ) {
-    return "patrimoine";
   }
 
   return "insolite";

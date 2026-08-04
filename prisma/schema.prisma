@@ -16,7 +16,7 @@ enum ArticleCategory {
   immigration
   justice
   economie
-  patrimoine
+  politique
   insolite
 }
 

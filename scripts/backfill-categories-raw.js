@@ -36,11 +36,11 @@ function classify(input) {
     return "economie";
   }
   if (
-    /\b(patrimoine|identite|identitaire|culture francaise|tradition|traditions|cathedrale|eglise|statue|monument|heritage|notre[- ]dame|chateau|village francais|francite|souche|racines|histoire de france|langue francaise)\b/.test(
+    /\b(politique|politicien|parti\b|election|sondage|candidat|candidature|investiture|assemblee nationale|elysee|gouvernement|rassemblement national|\brn\b|la france insoumise|\blfi\b|les republicains|\blr\b|renaissance|attal|bardella|melenchon)\b/.test(
       blob,
     )
   ) {
-    return "patrimoine";
+    return "politique";
   }
   return "insolite";
 }
