@@ -26,6 +26,8 @@ import type { ResearchDossier } from "@/lib/research/types";
 
 export type ResearchAgentInput = PipelineSubject & {
   maxPasses?: number;
+  /** Timeouts search/build plus courts (chemin Telegram / Vercel). */
+  fast?: boolean;
 };
 
 export type ResearchAgentResult = {
@@ -57,6 +59,7 @@ export async function runResearchAgent(
     title: researchTitle,
     sourceUrl: input.sourceUrl,
     sourceText: input.sourceText,
+    fast: input.fast,
   });
 
   let dossier = await buildDossierFromDocuments({
@@ -64,6 +67,7 @@ export async function runResearchAgent(
     sourceUrl: input.sourceUrl,
     sources: firstCollect.sources,
     secondaryCaption: input.caption,
+    fast: input.fast,
   });
   dossier.researchPasses = 1;
 
@@ -79,6 +83,7 @@ export async function runResearchAgent(
       sourceUrl: input.sourceUrl,
       extraQueries: quality.nextQueries,
       alreadyHaveUrls: dossier.sources.map((s) => s.url),
+      fast: input.fast,
     });
 
     // Arrêt strict : uniquement des sources fiables (tier ≤ 8, scrapées).
@@ -98,6 +103,7 @@ export async function runResearchAgent(
       focusMissing: quality.missing,
       focusQueries: quality.nextQueries,
       secondaryCaption: input.caption,
+      fast: input.fast,
     });
     patch.researchPasses = 1;
 

@@ -159,7 +159,10 @@ type MoonshotMsg = Record<string, unknown>;
  * Recherche via Moonshot `$web_search` (builtin).
  * kimi-k3 a un bug tokenization au round 2 → on force kimi-k2.6.
  */
-async function searchMoonshotWeb(subject: string): Promise<WebSearchHit[]> {
+async function searchMoonshotWeb(
+  subject: string,
+  opts?: { fast?: boolean },
+): Promise<WebSearchHit[]> {
   const apiKey = process.env.MOONSHOT_API_KEY?.trim();
   if (!apiKey) return [];
 
@@ -168,7 +171,9 @@ async function searchMoonshotWeb(subject: string): Promise<WebSearchHit[]> {
     process.env.KIMI_WEB_SEARCH_MODEL?.trim() ||
     "kimi-k2.6";
 
-  const queries = buildWebSearchQueries(subject).slice(0, 4);
+  const queries = buildWebSearchQueries(subject).slice(0, opts?.fast ? 3 : 4);
+  const roundTimeout = opts?.fast ? 45_000 : 75_000;
+  const maxRounds = opts?.fast ? 3 : 4;
   const messages: MoonshotMsg[] = [
     {
       role: "system",
@@ -193,11 +198,11 @@ async function searchMoonshotWeb(subject: string): Promise<WebSearchHit[]> {
   let rounds = 0;
   let lastContent = "";
 
-  while (rounds < 4) {
+  while (rounds < maxRounds) {
     rounds++;
     const body: Record<string, unknown> = {
       model,
-      max_tokens: 2500,
+      max_tokens: opts?.fast ? 1800 : 2500,
       messages,
       tools: [
         {
@@ -219,7 +224,7 @@ async function searchMoonshotWeb(subject: string): Promise<WebSearchHit[]> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(75_000),
+      signal: AbortSignal.timeout(roundTimeout),
     });
 
     const data = (await res.json()) as {
@@ -276,7 +281,7 @@ async function searchMoonshotWeb(subject: string): Promise<WebSearchHit[]> {
     );
     if (parsed.length > 0) return parsed;
 
-    if (rounds < 4 && finishReason !== "tool_calls") {
+    if (rounds < maxRounds && finishReason !== "tool_calls") {
       messages.push({
         role: "assistant",
         content: lastContent || "",
@@ -637,17 +642,18 @@ function relevanceScore(hit: WebSearchHit, subject: string): number {
 export async function searchWebForSubject(input: {
   subject: string;
   extraQueries?: string[];
+  fast?: boolean;
 }): Promise<WebSearchHit[]> {
   const queries = buildWebSearchQueries(input.subject, input.extraQueries);
   if (queries.length === 0) return [];
 
   const primary = queries[0]!;
-  const secondary = queries.slice(1, 4);
+  const secondary = queries.slice(1, input.fast ? 3 : 4);
 
   // 1) Moonshot d'abord (chemin principal)
   let moonshotHits: WebSearchHit[] = [];
   try {
-    moonshotHits = await searchMoonshotWeb(input.subject);
+    moonshotHits = await searchMoonshotWeb(input.subject, { fast: input.fast });
   } catch (e) {
     console.error("moonshot web search failed", e);
   }
@@ -658,12 +664,20 @@ export async function searchWebForSubject(input: {
     searchBrave(primary).catch(() => [] as WebSearchHit[]),
     searchBingHtml(secondary[0] || primary).catch(() => [] as WebSearchHit[]),
     searchGoogleNews(secondary[0] || primary).catch(() => [] as WebSearchHit[]),
-    searchBingNews(secondary[0] || primary).catch(() => [] as WebSearchHit[]),
-    searchDuckDuckGo(secondary[0] || primary).catch(() => [] as WebSearchHit[]),
-    ...secondary.slice(0, 2).map((q) =>
+    ...(input.fast
+      ? []
+      : [
+          searchBingNews(secondary[0] || primary).catch(
+            () => [] as WebSearchHit[],
+          ),
+          searchDuckDuckGo(secondary[0] || primary).catch(
+            () => [] as WebSearchHit[],
+          ),
+        ]),
+    ...secondary.slice(0, input.fast ? 1 : 2).map((q) =>
       searchGoogleNews(q).catch(() => [] as WebSearchHit[]),
     ),
-    ...secondary.slice(0, 2).map((q) =>
+    ...secondary.slice(0, input.fast ? 1 : 2).map((q) =>
       searchBingHtml(q).catch(() => [] as WebSearchHit[]),
     ),
   ]);
@@ -674,5 +688,5 @@ export async function searchWebForSubject(input: {
       relevanceScore(b, input.subject) - relevanceScore(a, input.subject),
   );
 
-  return merged.slice(0, 12);
+  return merged.slice(0, input.fast ? 8 : 12);
 }

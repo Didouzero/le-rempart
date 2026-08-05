@@ -7,6 +7,7 @@ import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
+import { createHash } from "crypto";
 
 async function makeUniqueSlug(title: string) {
   const base = slugify(title);
@@ -70,6 +71,7 @@ export async function publishArticleFromCreative(input: {
   sourceTitle?: string;
   headline?: string;
   image?: { buffer: Buffer; mime: string };
+  notify?: (text: string) => Promise<void>;
 }): Promise<{
   id: string;
   publicId: number;
@@ -82,6 +84,7 @@ export async function publishArticleFromCreative(input: {
 }> {
   const caption = input.caption?.trim() || "Actualité du jour";
   const sourceUrl = input.sourceUrl?.trim() || undefined;
+  const notify = input.notify || (async () => {});
   // Sujet documentaire : titre source > headline > caption (dernier recours).
   const researchTitle = (
     input.sourceTitle?.trim() ||
@@ -117,17 +120,64 @@ export async function publishArticleFromCreative(input: {
     };
   }
 
-  // Veille : sourceUrl → Knowledge Builder ; caption = secondaire.
-  const pipeline = await generateArticlePipeline({
-    title: researchTitle,
-    sourceUrl,
-    caption,
+  // Anti double-envoi Telegram pendant qu'une génération tourne (~8 min).
+  const lockKey = `publish:lock:${createHash("sha1")
+    .update(researchTitle.toLowerCase())
+    .digest("hex")
+    .slice(0, 16)}`;
+  const lockExisting = await prisma.appSetting.findUnique({
+    where: { key: lockKey },
   });
-  const generated = pipeline.artifacts.article;
-  if (!generated) {
-    throw new Error("Pipeline éditorial : aucun article produit");
+  if (lockExisting) {
+    const started = Number(lockExisting.value) || 0;
+    if (Date.now() - started < 8 * 60 * 1000) {
+      throw new Error(
+        "Publication déjà en cours pour ce titre (renvoi Telegram ignoré).",
+      );
+    }
+  }
+  await prisma.appSetting.upsert({
+    where: { key: lockKey },
+    create: { key: lockKey, value: String(Date.now()) },
+    update: { value: String(Date.now()) },
+  });
+
+  let generated: {
+    title: string;
+    excerpt: string;
+    content: string;
+  };
+  let pipelineDossier: Awaited<
+    ReturnType<typeof generateArticlePipeline>
+  >["dossier"] = null;
+
+  try {
+    // Budget serré pour rester sous maxDuration Vercel (300s) + FB après.
+    const pipeline = await generateArticlePipeline(
+      {
+        title: researchTitle,
+        sourceUrl,
+        caption,
+      },
+      {
+        fast: true,
+        maxResearchPasses: 1,
+        researchTimeoutMs: 140_000,
+        writingTimeoutMs: 75_000,
+        onProgress: (msg) => notify(msg),
+      },
+    );
+    pipelineDossier = pipeline.dossier;
+    const article = pipeline.artifacts.article;
+    if (!article) {
+      throw new Error("Pipeline éditorial : aucun article produit");
+    }
+    generated = article;
+  } finally {
+    await prisma.appSetting.delete({ where: { key: lockKey } }).catch(() => {});
   }
 
+  await notify("Recherche d'illustration site…");
   const coverImageUrl = await withTimeout(
     resolveRelevantCoverUrl({
       title: generated.title || researchTitle,
@@ -164,9 +214,9 @@ export async function publishArticleFromCreative(input: {
       content: generated.content,
       sourceText: caption,
       sourceUrl: sourceUrl || null,
-      researchDossier: pipeline.dossier
+      researchDossier: pipelineDossier
         ? (dossierForPersistence(
-            pipeline.dossier,
+            pipelineDossier,
           ) as unknown as Prisma.InputJsonValue)
         : undefined,
       slug,

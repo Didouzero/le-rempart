@@ -37,8 +37,8 @@ export async function publishCreativePipeline(input: {
 
   await notify(
     input.sourceUrl
-      ? "Recherche documentaire (source veille) + rédaction…"
-      : "Rédaction de l'article…",
+      ? "Recherche documentaire (source veille) + rédaction…\n(peut prendre 2–4 min)"
+      : "Recherche web + rédaction de l'article…\n(peut prendre 2–4 min, ne renvoie pas la créative)",
   );
   const article = await publishArticleFromCreative({
     caption: input.caption,
@@ -46,6 +46,7 @@ export async function publishCreativePipeline(input: {
     sourceTitle: input.sourceTitle,
     headline: input.headline,
     image: input.image,
+    notify,
   });
 
   const coverLine = article.coverImageUrl

@@ -106,6 +106,7 @@ export async function discoverSourceCandidates(input: {
   title: string;
   sourceUrl?: string;
   extraQueries?: string[];
+  fast?: boolean;
 }): Promise<SourceCandidate[]> {
   const candidates: SourceCandidate[] = [];
 
@@ -121,6 +122,7 @@ export async function discoverSourceCandidates(input: {
     const hits = await searchWebForSubject({
       subject: input.title,
       extraQueries: input.extraQueries,
+      fast: input.fast,
     });
     candidates.push(...hits.map(hitToCandidate));
   } catch (err) {
@@ -221,6 +223,7 @@ export async function collectDeepSources(input: {
   sourceText?: string;
   extraQueries?: string[];
   alreadyHaveUrls?: string[];
+  fast?: boolean;
 }): Promise<{ sources: SourceDocument[]; seedNotes?: string }> {
   const have = new Set(
     (input.alreadyHaveUrls || []).map((u) => u.split("?")[0]!),
@@ -229,13 +232,14 @@ export async function collectDeepSources(input: {
     (c) => !have.has(c.url.split("?")[0]!),
   );
 
-  const selected = candidates.slice(0, MAX_DEEP_SOURCES + 2);
+  const maxDeep = input.fast ? 3 : MAX_DEEP_SOURCES;
+  const selected = candidates.slice(0, maxDeep + 2);
   const docs: SourceDocument[] = [];
 
   for (const c of selected) {
     const doc = await scrapeCandidate(c);
     if (doc) docs.push(doc);
-    if (docs.length >= MAX_DEEP_SOURCES) break;
+    if (docs.length >= maxDeep) break;
   }
 
   const seed = input.sourceText?.trim() || "";
@@ -276,7 +280,7 @@ export async function collectDeepSources(input: {
   });
 
   return {
-    sources: ranked.slice(0, MAX_DEEP_SOURCES + 1),
+    sources: ranked.slice(0, maxDeep + 1),
     seedNotes: undefined,
   };
 }

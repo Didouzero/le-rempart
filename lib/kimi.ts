@@ -12,7 +12,10 @@ export {
   type GeneratedArticle,
 } from "@/lib/kimi-legacy";
 
-import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
+import {
+  runEditorialPipeline,
+  type RunEditorialPipelineOptions,
+} from "@/lib/pipeline/run-editorial-pipeline";
 import type { GeneratedArticle } from "@/lib/kimi-legacy";
 
 /**
@@ -36,11 +39,14 @@ export async function generateArticleFromSource(input: {
 /**
  * Variante qui expose le résultat complet (dossier + qualité + article).
  */
-export async function generateArticlePipeline(input: {
-  title: string;
-  sourceText?: string;
-  sourceUrl?: string;
-  caption?: string;
-}) {
-  return runEditorialPipeline(input);
+export async function generateArticlePipeline(
+  input: {
+    title: string;
+    sourceText?: string;
+    sourceUrl?: string;
+    caption?: string;
+  },
+  opts?: RunEditorialPipelineOptions,
+) {
+  return runEditorialPipeline(input, opts);
 }

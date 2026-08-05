@@ -133,6 +133,8 @@ export async function buildDossierFromDocuments(input: {
   focusQueries?: string[];
   /** Accroche Canva — information secondaire, jamais une source de faits. */
   secondaryCaption?: string;
+  /** Timeouts plus courts (chemin Telegram / Vercel). */
+  fast?: boolean;
 }): Promise<ResearchDossier> {
   const base = emptyResearchDossier(input.subject, input.sourceUrl);
   base.sources = input.sources;
@@ -191,11 +193,17 @@ export async function buildDossierFromDocuments(input: {
     .filter(Boolean)
     .join("\n\n");
 
-  // k2.6 plus fiable/rapide pour JSON long ; k3 en secours.
-  const models = [
-    process.env.KIMI_RESEARCH_MODEL?.trim() || "kimi-k2.6",
-    getKimiTextModel(),
-  ].filter((m, i, arr) => arr.indexOf(m) === i);
+  // k2.6 plus fiable/rapide pour JSON long ; k3 en secours (sauf mode fast).
+  const models = (
+    input.fast
+      ? [process.env.KIMI_RESEARCH_MODEL?.trim() || "kimi-k2.6"]
+      : [
+          process.env.KIMI_RESEARCH_MODEL?.trim() || "kimi-k2.6",
+          getKimiTextModel(),
+        ]
+  ).filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i);
+
+  const buildTimeoutMs = input.fast ? 90_000 : 180_000;
 
   let lastErr: unknown;
   for (let attempt = 0; attempt < models.length; attempt += 1) {
@@ -203,8 +211,8 @@ export async function buildDossierFromDocuments(input: {
     try {
       const raw = await moonshotChat({
         model,
-        maxTokens: attempt === 0 ? 5000 : 4500,
-        timeoutMs: 180_000,
+        maxTokens: attempt === 0 ? (input.fast ? 4000 : 5000) : 4500,
+        timeoutMs: buildTimeoutMs,
         reasoningEffort: "low",
         messages: [
           { role: "system", content: BUILD_SYSTEM },

@@ -13,6 +13,8 @@ import type { WritingAgentResult } from "@/lib/writing/types";
 export type WritingAgentInput = {
   dossier: ResearchDossier;
   subjectTitle: string;
+  /** Moins de retries / timeouts plus courts (Telegram / Vercel). */
+  fast?: boolean;
 };
 
 export type { WritingAgentResult };
@@ -157,11 +159,17 @@ export async function runWritingAgent(
     .filter(Boolean)
     .join("\n\n");
 
-  const attempts: Array<{ timeoutMs: number; maxTokens: number; model?: string }> = [
-    { timeoutMs: 90_000, maxTokens: 6500 },
-    { timeoutMs: 95_000, maxTokens: 7000 },
-    { timeoutMs: 80_000, maxTokens: 5500, model: "kimi-k2.6" },
-  ];
+  const attempts: Array<{ timeoutMs: number; maxTokens: number; model?: string }> =
+    input.fast
+      ? [
+          { timeoutMs: 70_000, maxTokens: 5500, model: "kimi-k2.6" },
+          { timeoutMs: 65_000, maxTokens: 5000 },
+        ]
+      : [
+          { timeoutMs: 90_000, maxTokens: 6500 },
+          { timeoutMs: 95_000, maxTokens: 7000 },
+          { timeoutMs: 80_000, maxTokens: 5500, model: "kimi-k2.6" },
+        ];
 
   let lastErr: unknown;
   let lengthHint = "";

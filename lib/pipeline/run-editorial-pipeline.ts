@@ -12,10 +12,20 @@ import type {
 } from "@/lib/pipeline/types";
 import { runResearchAgent } from "@/lib/research/agent";
 import { runWritingAgent } from "@/lib/writing/agent";
+import { withTimeout } from "@/lib/with-timeout";
 
 export type RunEditorialPipelineOptions = {
   /** Inclure le dossier complet dans observability (dev / eval). */
   includeDossierInObservability?: boolean;
+  /** Passe research (défaut 2). Telegram/publish : 1 pour tenir sous maxDuration Vercel. */
+  maxResearchPasses?: number;
+  /** Budget research (ms). Au-delà → fallback legacy. */
+  researchTimeoutMs?: number;
+  /** Budget writing (ms). Au-delà → fallback legacy ancré sur dossier. */
+  writingTimeoutMs?: number;
+  /** Mode rapide : timeouts Moonshot/search plus courts. */
+  fast?: boolean;
+  onProgress?: (message: string) => void | Promise<void>;
 };
 
 /**
@@ -35,21 +45,41 @@ export async function runEditorialPipeline(
   const startedAtMs = Date.now();
   const timer = new StageTimer();
   beginTokenMeter("research");
+  const progress = opts?.onProgress || (async () => {});
+  const researchTimeoutMs = opts?.researchTimeoutMs ?? 150_000;
+  const writingTimeoutMs = opts?.writingTimeoutMs ?? 80_000;
 
   try {
     timer.start("research");
     setTokenMeterStage("research");
-    const { dossier, quality } = await runResearchAgent(subject);
+    await progress("Recherche web + construction du dossier…");
+    const { dossier, quality } = await withTimeout(
+      runResearchAgent({
+        ...subject,
+        maxPasses: opts?.maxResearchPasses,
+        fast: opts?.fast,
+      }),
+      researchTimeoutMs,
+      "Timeout research",
+    );
     timer.end("research");
     stagesRun.push("research", "quality_gate");
+    await progress(
+      `Dossier prêt (${dossier.sources?.length || 0} sources, ${dossier.keyFacts?.length || 0} faits). Rédaction…`,
+    );
 
     try {
       timer.start("writing");
       setTokenMeterStage("writing");
-      const written = await runWritingAgent({
-        dossier,
-        subjectTitle: subject.title,
-      });
+      const written = await withTimeout(
+        runWritingAgent({
+          dossier,
+          subjectTitle: subject.title,
+          fast: opts?.fast,
+        }),
+        writingTimeoutMs,
+        "Timeout writing",
+      );
       timer.end("writing");
       stagesRun.push("writing");
 
