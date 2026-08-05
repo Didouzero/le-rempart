@@ -10,7 +10,10 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "eval:ab": "npx tsx scripts/eval-ab.ts",
+    "eval:ab:sample": "npx tsx scripts/eval-ab.ts --limit 3 --dossier",
+    "eval:ab:full": "npx tsx scripts/eval-ab.ts --limit 75 --dossier"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",

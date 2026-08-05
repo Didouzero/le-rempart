@@ -1,0 +1,468 @@
+{
+  "description": "Corpus A/B 75 sujets — immigration, justice, sécurité, politique, économie, international, société. Ajouter sourceUrl stables pour tests plus réalistes.",
+  "subjects": [
+    {
+      "id": "immigration-statut-etrangers-vie-publique",
+      "title": "Entrée, séjour, travail, éloignement : le statut des étrangers en France",
+      "category": "immigration",
+      "sourceUrl": "https://www.vie-publique.fr/eclairage/20165-entree-sejour-travail-eloignement-le-statut-des-etrangers-en-france",
+      "sourceTextFile": "lib/eval/fixtures/immigration-statut-etrangers-vie-publique.txt"
+    },
+    {
+      "id": "international-ceuta-migrants-sudouest",
+      "title": "Crise à Ceuta : le nombre de migrants morts en tentant de rejoindre l'enclave espagnole grimpe à 75",
+      "category": "international",
+      "sourceUrl": "https://www.sudouest.fr/international/migrants-et-refugies/crise-a-ceuta-le-nombre-des-migrants-morts-en-ayant-tente-de-rejoindre-l-enclave-espagnole-grimpe-a-75-30164123.php"
+    },
+    {
+      "id": "immigration-oca-expulsion",
+      "title": "Obligation de quitter le territoire français : chiffres et délais en 2026",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-asylum-stats",
+      "title": "Demandes d'asile en France : volume, délais d'instruction et taux d'accord",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-mineurs-isoles",
+      "title": "Mineurs non accompagnés : évaluation de l'âge, hébergement et contentieux",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-frontiere-schengen",
+      "title": "Contrôles aux frontières intérieures Schengen : cadre juridique et pratique française",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-regularisation",
+      "title": "Régularisation des sans-papiers : critères administratifs et circulaires",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-cra",
+      "title": "Centres de rétention administrative : durée de placement et cadre légal",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-dublin",
+      "title": "Règlement Dublin : transfert des demandeurs d'asile entre États européens",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-naturalisation",
+      "title": "Naturalisation française : conditions de résidence, assimilation et délais",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-aide-medicale-etat",
+      "title": "Aide médicale d'État : périmètre, coût et débat politique",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-titre-sejour",
+      "title": "Titres de séjour : principales catégories et délais de renouvellement",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "immigration-nationalite-droit-sol",
+      "title": "Droit du sol en France : règles actuelles et projets de réforme",
+      "category": "immigration",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-mineurs-detention",
+      "title": "Conseil constitutionnel et détention provisoire des mineurs : ce que change la censure",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-aide-juridictionnelle",
+      "title": "Aide juridictionnelle : critères d'accès et débat sur le coût pour l'État",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-garde-a-vue",
+      "title": "Garde à vue : durée maximale, droits du suspect et contrôles du parquet",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-prescription-penale",
+      "title": "Prescription en matière pénale : délais selon les infractions",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-comparution-immediate",
+      "title": "Comparution immédiate : procédure, garanties et critiques",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-cours-assises",
+      "title": "Cour d'assises : composition, jury et recours",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-violence-conjugale",
+      "title": "Violences conjugales : ordonnance de protection et réponse pénale",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-ecoute-telephonique",
+      "title": "Écoutes téléphoniques judiciaires : autorisation, durée et contrôle",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-peines-plancher",
+      "title": "Peines planchers : historique législatif et état du droit actuel",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-prison-surpopulation",
+      "title": "Surpopulation carcérale : chiffres de l'administration pénitentiaire et recours",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "justice-cours-comptes",
+      "title": "Cour des comptes : mission, publications et suites politiques",
+      "category": "justice",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-police-municipale",
+      "title": "Police municipale : compétences, armement et articulation avec la police nationale",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-videosurveillance",
+      "title": "Vidéosurveillance urbaine : cadre légal, CNIL et efficacité débattue",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-trafic-stupefiants",
+      "title": "Trafic de stupéfiants : saisies, points de deal et réponse pénale",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-emeutes-bilan",
+      "title": "Émeutes urbaines : bilans matériels, poursuites et réponses législatives",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-controle-identite",
+      "title": "Contrôles d'identité : bases légales, quotas et contentieux",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-gendarmerie-rural",
+      "title": "Sécurité en zone rurale : moyens de la gendarmerie et délais d'intervention",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-armes-legales",
+      "title": "Détention d'armes légales en France : catégories, permis et contrôles",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-cyberattaque",
+      "title": "Cyberattaques contre collectivités : obligations de signalement et aides de l'État",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-terrorisme-vigipirate",
+      "title": "Plan Vigipirate : niveaux d'alerte et mesures concrètes",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "securite-recidive-stats",
+      "title": "Récidive pénale : mesures statistiques et dispositifs de suivi",
+      "category": "securite",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-motion-censure",
+      "title": "Motion de censure à l'Assemblée : qui peut la déposer et quelles conséquences",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-retraites-reforme",
+      "title": "Réforme des retraites : âge légal, trimestres et contentieux encore ouverts",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-dissolution",
+      "title": "Dissolution de l'Assemblée nationale : règles constitutionnelles et précédents",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-49-3",
+      "title": "Article 49.3 : fonctionnement, limites et usage récent",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-senat-navette",
+      "title": "Navette parlementaire : rôle du Sénat dans l'adoption d'une loi",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-conseil-constitutionnel",
+      "title": "Saisine du Conseil constitutionnel : qui peut saisir et sur quels fondements",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-cumul-mandats",
+      "title": "Cumul des mandats : interdictions en vigueur et débats de réforme",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-referendum",
+      "title": "Référendum en France : articles 11 et 89, seuils et précédents",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-presidentielle-parrainages",
+      "title": "Parrainages présidentiels : nombre requis et règles du Conseil constitutionnel",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-laicite-ecole",
+      "title": "Laïcité à l'école : cadre légal des signes religieux et décisions récentes",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "politique-sondages-regles",
+      "title": "Sondages électoraux : règles de publication et commission des sondages",
+      "category": "politique",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-deficit-budget",
+      "title": "Déficit public français : trajectoire budgétaire et avertissements européens",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-energie-prix",
+      "title": "Prix de l'électricité : bouclier tarifaire, marchés et facture des ménages",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-dette-interets",
+      "title": "Charge de la dette : combien la France paie d'intérêts chaque année",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-impot-societes",
+      "title": "Impôt sur les sociétés en France : taux, assiette et comparaisons européennes",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-chomage-chiffres",
+      "title": "Chômage en France : lecture des derniers chiffres et catégories INSEE",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-smic",
+      "title": "SMIC : mécanisme de revalorisation et pouvoir d'achat",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-inflation",
+      "title": "Inflation en France : mesure IPC et produits les plus touchés",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-logement-social",
+      "title": "Logement social : critères d'attribution et tensions sur la demande",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-fraude-fiscale",
+      "title": "Fraude fiscale : montant estimé, moyens de contrôle et sanctions",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-agriculture-aides",
+      "title": "Aides agricoles PAC : montants, conditionnalité et critiques",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "economie-carburant-taxes",
+      "title": "Taxes sur les carburants : structure de la TIPP/TICPE et part dans le prix",
+      "category": "economie",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-ukraine-aide",
+      "title": "Aide militaire française à l'Ukraine : engagements, montants et cadre OTAN",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-ue-migration-pacte",
+      "title": "Pacte européen sur la migration et l'asile : mécanismes de solidarité",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-francafrique-accords",
+      "title": "Accords de défense franco-africains : révisions récentes et bases militaires",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-gaza-position-france",
+      "title": "Position française sur Gaza : votes ONU, aide humanitaire et reconnaissance d'État",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-chine-commerce",
+      "title": "Relations commerciales France-Chine : déficit, secteurs sensibles et droits de douane",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-otan-budget",
+      "title": "Budget défense OTAN : objectif 2 % du PIB et trajectoire française",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-brexit-peche",
+      "title": "Brexit et pêche : licences, zones et contentieux franco-britanniques",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-sanctions-russie",
+      "title": "Sanctions européennes contre la Russie : périmètre et effets sur l'énergie",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-francophonie",
+      "title": "Organisation internationale de la Francophonie : rôle, budget et influence",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "international-frontieres-mediterranee",
+      "title": "Sauvetages en Méditerranée : responsabilités des États et agences européennes",
+      "category": "international",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-ecole-niveau",
+      "title": "Niveau scolaire en France : indicateurs PISA/DEPP et mesures annoncées",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-hopital-urgences",
+      "title": "Urgences hospitalières : fermetures de services et délais d'attente",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-logement-crise",
+      "title": "Crise du logement : construction, loyers et dispositifs d'aide",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-retraites-minimum",
+      "title": "Minimum vieillesse et ASPA : conditions et montants",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-greves-transports",
+      "title": "Grèves dans les transports : droit de grève, service minimum et impact usagers",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-naissance-denatalite",
+      "title": "Dénatalité en France : indicateurs INSEE et politiques familiales",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-rsa-controle",
+      "title": "RSA : conditions, contrôles et radiations",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-laicite-sport",
+      "title": "Signes religieux dans le sport : règles fédérales et débat public",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-euthanasie-debat",
+      "title": "Fin de vie : état du droit français et projets de loi en discussion",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "societe-violence-ecole",
+      "title": "Violences à l'école : chiffres Éducation nationale et dispositifs de sanction",
+      "category": "societe",
+      "sourceUrl": null
+    },
+    {
+      "id": "insolite-mairie-arrete",
+      "title": "Arrêté municipal contesté : pouvoirs du maire et contrôle du préfet",
+      "category": "societe",
+      "sourceUrl": null
+    }
+  ]
+}

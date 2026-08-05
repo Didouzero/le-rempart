@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { generateArticleFromSource } from "@/lib/kimi";
+import { generateArticlePipeline } from "@/lib/kimi";
 import { fetchSourceText } from "@/lib/fetch-source";
+
+/** Research + écriture : budget temps élargi (Knowledge Builder). */
+export const maxDuration = 300;
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -50,13 +53,44 @@ export async function POST(request: Request) {
       }
     }
 
-    const article = await generateArticleFromSource({
+    const pipeline = await generateArticlePipeline({
       title,
       sourceText,
       sourceUrl: sourceUrl || undefined,
     });
+    const article = pipeline.artifacts.article;
+    if (!article) {
+      return NextResponse.json(
+        { error: "Pipeline éditorial : aucun article produit" },
+        { status: 500 },
+      );
+    }
 
-    return NextResponse.json(article);
+    return NextResponse.json({
+      ...article,
+      researchDossier: pipeline.dossier,
+      writingMetadata: pipeline.writingMetadata,
+      quality: pipeline.quality
+        ? {
+            ready: pipeline.quality.ready,
+            missing: pipeline.quality.missing,
+            nextQueries: pipeline.quality.nextQueries,
+            scores: pipeline.quality.scores,
+            coverage: pipeline.quality.coverage,
+          }
+        : null,
+      pipelineMode: pipeline.mode,
+      observability: {
+        runId: pipeline.observability.runId,
+        mode: pipeline.observability.mode,
+        totalDurationMs: pipeline.observability.totalDurationMs,
+        timings: pipeline.observability.timings,
+        tokensByStage: pipeline.observability.tokensByStage,
+        tokensTotal: pipeline.observability.tokensTotal,
+        coverage: pipeline.observability.coverage,
+        writingMetadata: pipeline.observability.writingMetadata,
+      },
+    });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

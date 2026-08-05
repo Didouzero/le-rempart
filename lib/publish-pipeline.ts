@@ -27,13 +27,24 @@ export type CreativePipelineResult = {
 export async function publishCreativePipeline(input: {
   caption: string;
   image: { buffer: Buffer; mime: string };
+  /** URL source veille — entrée principale du Knowledge Builder. */
+  sourceUrl?: string;
+  sourceTitle?: string;
+  headline?: string;
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
 
-  await notify("Rédaction de l'article…");
+  await notify(
+    input.sourceUrl
+      ? "Recherche documentaire (source veille) + rédaction…"
+      : "Rédaction de l'article…",
+  );
   const article = await publishArticleFromCreative({
     caption: input.caption,
+    sourceUrl: input.sourceUrl,
+    sourceTitle: input.sourceTitle,
+    headline: input.headline,
     image: input.image,
   });
 

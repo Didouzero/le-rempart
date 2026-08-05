@@ -62,6 +62,10 @@ export async function approveVeilleItem(
     const png = Buffer.from(item.creativeImageData);
     const result = await publishCreativePipeline({
       caption: item.canvaTitle,
+      // Entrée principale Knowledge Builder — plus la caption seule.
+      sourceUrl: item.sourceUrl || undefined,
+      sourceTitle: item.sourceTitle || undefined,
+      headline: item.headline,
       image: {
         buffer: png,
         mime: item.creativeImageMime || "image/png",

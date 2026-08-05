@@ -3,6 +3,8 @@
  * Le SDK OpenAI peut ne pas propager correctement `thinking` / `reasoning_effort`.
  */
 
+import { recordTokenUsage } from "@/lib/eval/token-meter";
+
 export type MoonshotMessage =
   | { role: "system" | "user" | "assistant"; content: string }
   | {
@@ -13,14 +15,25 @@ export type MoonshotMessage =
       >;
     };
 
-export async function moonshotChat(input: {
+export type MoonshotUsage = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+};
+
+export type MoonshotChatResult = {
+  content: string;
+  usage?: MoonshotUsage;
+};
+
+export async function moonshotChatDetailed(input: {
   model: string;
   messages: MoonshotMessage[];
   maxTokens?: number;
   timeoutMs?: number;
   /** Pour kimi-k3 : low | high | max */
   reasoningEffort?: "low" | "high" | "max";
-}): Promise<string> {
+}): Promise<MoonshotChatResult> {
   const apiKey = process.env.MOONSHOT_API_KEY;
   if (!apiKey) throw new Error("MOONSHOT_API_KEY is not set");
 
@@ -53,6 +66,7 @@ export async function moonshotChat(input: {
 
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string | null } }>;
+    usage?: MoonshotUsage;
     error?: { message?: string };
   };
 
@@ -62,5 +76,21 @@ export async function moonshotChat(input: {
 
   const content = data.choices?.[0]?.message?.content?.trim();
   if (!content) throw new Error("Réponse Kimi vide");
+
+  if (data.usage) {
+    recordTokenUsage(data.usage);
+  }
+
+  return { content, usage: data.usage };
+}
+
+export async function moonshotChat(input: {
+  model: string;
+  messages: MoonshotMessage[];
+  maxTokens?: number;
+  timeoutMs?: number;
+  reasoningEffort?: "low" | "high" | "max";
+}): Promise<string> {
+  const { content } = await moonshotChatDetailed(input);
   return content;
 }

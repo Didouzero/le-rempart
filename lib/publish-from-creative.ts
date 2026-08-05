@@ -1,6 +1,8 @@
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { classifyArticleCategory } from "@/lib/categories";
-import { generateArticleFromSource } from "@/lib/kimi";
+import { generateArticlePipeline } from "@/lib/kimi";
+import { dossierForPersistence } from "@/lib/research/persist";
+import type { Prisma } from "@prisma/client";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
@@ -63,6 +65,10 @@ function detectImageMime(buffer: Buffer, declared?: string): string {
 
 export async function publishArticleFromCreative(input: {
   caption?: string;
+  /** Entrée principale Knowledge Builder (veille / admin). */
+  sourceUrl?: string;
+  sourceTitle?: string;
+  headline?: string;
   image?: { buffer: Buffer; mime: string };
 }): Promise<{
   id: string;
@@ -75,10 +81,20 @@ export async function publishArticleFromCreative(input: {
   creative?: { buffer: Buffer; mime: string };
 }> {
   const caption = input.caption?.trim() || "Actualité du jour";
+  const sourceUrl = input.sourceUrl?.trim() || undefined;
+  // Sujet documentaire : titre source > headline > caption (dernier recours).
+  const researchTitle = (
+    input.sourceTitle?.trim() ||
+    input.headline?.trim() ||
+    caption
+  ).slice(0, 200);
 
   const recent = await prisma.article.findFirst({
     where: {
-      sourceText: caption,
+      OR: [
+        sourceUrl ? { sourceUrl } : undefined,
+        { sourceText: caption },
+      ].filter(Boolean) as Array<{ sourceUrl?: string; sourceText?: string }>,
       createdAt: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
     },
     orderBy: { createdAt: "desc" },
@@ -101,14 +117,20 @@ export async function publishArticleFromCreative(input: {
     };
   }
 
-  // D'abord le texte (titre final), puis l'illustration calée sur ce titre
-  // (évite les requêtes trop vagues basées sur la seule accroche Canva).
-  const generated = await generateArticleFromSource({
-    title: caption.slice(0, 200),
+  // Veille : sourceUrl → Knowledge Builder ; caption = secondaire.
+  const pipeline = await generateArticlePipeline({
+    title: researchTitle,
+    sourceUrl,
+    caption,
   });
+  const generated = pipeline.artifacts.article;
+  if (!generated) {
+    throw new Error("Pipeline éditorial : aucun article produit");
+  }
+
   const coverImageUrl = await withTimeout(
     resolveRelevantCoverUrl({
-      title: generated.title || caption,
+      title: generated.title || researchTitle,
       excerpt: generated.excerpt || caption,
     }),
     28_000,
@@ -141,6 +163,12 @@ export async function publishArticleFromCreative(input: {
       excerpt: generated.excerpt,
       content: generated.content,
       sourceText: caption,
+      sourceUrl: sourceUrl || null,
+      researchDossier: pipeline.dossier
+        ? (dossierForPersistence(
+            pipeline.dossier,
+          ) as unknown as Prisma.InputJsonValue)
+        : undefined,
       slug,
       category,
       status: "published",

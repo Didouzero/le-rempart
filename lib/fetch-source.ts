@@ -1,9 +1,15 @@
 export async function fetchSourceText(url: string): Promise<string> {
   const response = await fetch(url, {
     headers: {
-      "User-Agent": "LeRempartBot/1.0 (+https://le-rempart.org)",
-      Accept: "text/html,application/xhtml+xml,text/plain",
+      // UA navigateur : beaucoup de sites (Vie publique, presse) bloquent les bots explicites.
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+      "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+      "Cache-Control": "no-cache",
     },
+    redirect: "follow",
     signal: AbortSignal.timeout(15000),
   });
 
@@ -14,11 +20,26 @@ export async function fetchSourceText(url: string): Promise<string> {
   const contentType = response.headers.get("content-type") ?? "";
   const body = await response.text();
 
+  // Challenge JS / cookie wall → quasi vide
+  if (
+    body.length < 800 &&
+    (/requires JS enabled|window\.location\.href\s*=\s*['"]\/redirect_/i.test(
+      body,
+    ) ||
+      /captcha|cf-browser-verification|incapsula/i.test(body))
+  ) {
+    throw new Error("Page protégée anti-bot (JS/cookie wall)");
+  }
+
   if (contentType.includes("text/plain")) {
     return body.slice(0, 12000);
   }
 
-  return htmlToPlainText(body).slice(0, 12000);
+  const text = htmlToPlainText(body).slice(0, 12000);
+  if (text.trim().length < 40) {
+    throw new Error("Page HTML sans contenu texte exploitable");
+  }
+  return text;
 }
 
 function htmlToPlainText(html: string): string {
