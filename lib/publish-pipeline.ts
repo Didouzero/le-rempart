@@ -20,6 +20,123 @@ export type CreativePipelineResult = {
   };
 };
 
+export async function publishFacebookForArticle(input: {
+  articleId: string;
+  title: string;
+  excerpt: string;
+  articleUrl: string;
+  creative: { buffer: Buffer; mime: string };
+  notify: PipelineNotify;
+}): Promise<CreativePipelineResult["facebook"]> {
+  const facebook: CreativePipelineResult["facebook"] = {};
+  const { siteUrl } = await import("@/lib/publish-from-creative");
+  const base = siteUrl().replace(
+    "://le-rempart.org",
+    "://www.le-rempart.org",
+  );
+  const imageUrl = `${base}/api/media/${input.articleId}`;
+  const articleWww = input.articleUrl.replace(
+    "://le-rempart.org",
+    "://www.le-rempart.org",
+  );
+
+  await input.notify("Facebook : rédaction du flash…");
+  let flash: string;
+  try {
+    flash = await buildFlashInfoText({
+      title: input.title,
+      excerpt: input.excerpt,
+      articleUrl: articleWww,
+    });
+  } catch (flashErr) {
+    console.error(flashErr);
+    flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${input.excerpt}`;
+  }
+
+  await input.notify("Facebook : publication du post…");
+
+  try {
+    const feed = await Promise.race([
+      publishFacebookFeedPost({
+        imageUrl,
+        caption: flash,
+        commentLink: articleWww,
+        image: input.creative,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Timeout post Facebook (45s)")),
+          45_000,
+        ),
+      ),
+    ]);
+
+    facebook.postId = feed.postId;
+    await input.notify(`✅ Post Facebook publié.\nID : ${feed.postId}`);
+
+    try {
+      const commented = await commentArticleLinkOnPost({
+        postId: feed.postId,
+        articleUrl: articleWww,
+        token: feed.token,
+      });
+      facebook.commentOk = true;
+      await input.notify(
+        commented.pinned
+          ? `✅ Lien article en commentaire (épinglé).\n${articleWww}`
+          : `✅ Lien article en commentaire.\n${articleWww}`,
+      );
+    } catch (commentErr) {
+      console.error(commentErr);
+      facebook.commentOk = false;
+      await input.notify(
+        `❌ Commentaire lien : échec\n${
+          commentErr instanceof Error ? commentErr.message : "erreur"
+        }`,
+      );
+    }
+
+    await input.notify("Facebook : publication de la story…");
+
+    try {
+      const storyId = await Promise.race([
+        publishFacebookStory({
+          imageUrl,
+          image: input.creative,
+          pageId: feed.pageId,
+          token: feed.token,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout story Facebook (40s)")),
+            40_000,
+          ),
+        ),
+      ]);
+      facebook.storyId = storyId;
+      await input.notify(`✅ Story Facebook publiée.\nID : ${storyId}`);
+    } catch (storyErr) {
+      console.error(storyErr);
+      facebook.storyId = null;
+      await input.notify(
+        `❌ Story Facebook : échec\n${
+          storyErr instanceof Error ? storyErr.message : "erreur"
+        }`,
+      );
+    }
+  } catch (err) {
+    console.error(err);
+    facebook.error = err instanceof Error ? err.message : "erreur";
+    await input.notify(
+      `❌ Post Facebook : échec\n${
+        err instanceof Error ? err.message : "erreur"
+      }`,
+    );
+  }
+
+  return facebook;
+}
+
 /**
  * Pipeline partagé : article site + Facebook (post, commentaire lien, story).
  * Utilisé par le webhook Telegram et la veille auto.
@@ -73,106 +190,16 @@ export async function publishCreativePipeline(input: {
     return { article, facebook };
   }
 
-  await notify("Facebook : rédaction du flash…");
-  let flash: string;
-  try {
-    flash = await buildFlashInfoText({
-      title: article.title,
-      excerpt: article.excerpt,
-      articleUrl: article.url,
-    });
-  } catch (flashErr) {
-    console.error(flashErr);
-    flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${article.excerpt}`;
-  }
+  const fb = await publishFacebookForArticle({
+    articleId: article.id,
+    title: article.title,
+    excerpt: article.excerpt,
+    articleUrl: article.url,
+    creative: article.creative,
+    notify,
+  });
 
-  await notify("Facebook : publication du post…");
-
-  try {
-    const { siteUrl } = await import("@/lib/publish-from-creative");
-    const base = siteUrl().replace(
-      "://le-rempart.org",
-      "://www.le-rempart.org",
-    );
-    const imageUrl = `${base}/api/media/${article.id}`;
-    const articleWww = article.url.replace(
-      "://le-rempart.org",
-      "://www.le-rempart.org",
-    );
-
-    const feed = await Promise.race([
-      publishFacebookFeedPost({
-        imageUrl,
-        caption: flash,
-        commentLink: articleWww,
-        image: article.creative,
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Timeout post Facebook (45s)")),
-          45_000,
-        ),
-      ),
-    ]);
-
-    facebook.postId = feed.postId;
-    await notify(`✅ Post Facebook publié.\nID : ${feed.postId}`);
-
-    try {
-      const commented = await commentArticleLinkOnPost({
-        postId: feed.postId,
-        articleUrl: articleWww,
-        token: feed.token,
-      });
-      facebook.commentOk = true;
-      await notify(
-        commented.pinned
-          ? `✅ Lien article en commentaire (épinglé).\n${articleWww}`
-          : `✅ Lien article en commentaire.\n${articleWww}`,
-      );
-    } catch (commentErr) {
-      console.error(commentErr);
-      facebook.commentOk = false;
-      await notify(
-        `❌ Commentaire lien : échec\n${commentErr instanceof Error ? commentErr.message : "erreur"}`,
-      );
-    }
-
-    await notify("Facebook : publication de la story…");
-
-    try {
-      const storyId = await Promise.race([
-        publishFacebookStory({
-          imageUrl,
-          image: article.creative,
-          pageId: feed.pageId,
-          token: feed.token,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Timeout story Facebook (40s)")),
-            40_000,
-          ),
-        ),
-      ]);
-      facebook.storyId = storyId;
-      await notify(`✅ Story Facebook publiée.\nID : ${storyId}`);
-    } catch (storyErr) {
-      console.error(storyErr);
-      facebook.storyId = null;
-      await notify(
-        `❌ Story Facebook : échec\n${storyErr instanceof Error ? storyErr.message : "erreur"}`,
-      );
-    }
-  } catch (err) {
-    console.error(err);
-    facebook.error = err instanceof Error ? err.message : "erreur";
-    await notify(
-      `❌ Post Facebook : échec\n${err instanceof Error ? err.message : "erreur"}`,
-    );
-  }
-
-  return { article, facebook };
+  return { article, facebook: fb };
 }
 
 /** Notifier un chat Telegram (helper pour pipeline). */

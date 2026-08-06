@@ -48,6 +48,8 @@ function commandsHelpText(): string {
     "",
     "── Autres ──",
     "/fb — tester la connexion Facebook",
+    "/fb_retry — republier le dernier article sur Facebook",
+    "/fb_retry 69 — republier l’article #69 sur Facebook",
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
     "",
@@ -212,6 +214,40 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await telegramSendMessage(
           chatId,
           `Facebook KO — ${err instanceof Error ? err.message : "token invalide"}`,
+        );
+      }
+      return;
+    }
+
+    if (
+      cmd === "/fb_retry" ||
+      cmd === "/facebook_retry" ||
+      cmd === "/fbretry"
+    ) {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
+        return;
+      }
+      const parts = text.trim().split(/\s+/);
+      const maybeId = parts[1] ? Number(parts[1]) : NaN;
+      const publicId =
+        Number.isFinite(maybeId) && maybeId > 0 ? Math.floor(maybeId) : undefined;
+
+      try {
+        const { republishArticleToFacebook } = await import(
+          "@/lib/facebook-retry"
+        );
+        await republishArticleToFacebook({
+          publicId,
+          notify: telegramNotifier(chatId),
+        });
+      } catch (err) {
+        await telegramSendMessage(
+          chatId,
+          `❌ /fb_retry : ${err instanceof Error ? err.message : "échec"}`,
         );
       }
       return;
