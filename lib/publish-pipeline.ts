@@ -1,6 +1,7 @@
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   commentArticleLinkOnPost,
+  isFacebookActionBlocked,
   isFacebookConfigured,
   publishFacebookFeedPost,
   publishFacebookStory,
@@ -127,10 +128,13 @@ export async function publishFacebookForArticle(input: {
   } catch (err) {
     console.error(err);
     facebook.error = err instanceof Error ? err.message : "erreur";
+    const blocked = isFacebookActionBlocked(err);
     await input.notify(
-      `❌ Post Facebook : échec\n${
-        err instanceof Error ? err.message : "erreur"
-      }`,
+      blocked
+        ? `❌ Post Facebook : blocage anti-spam API (pas la Page).\nMeta freine les pubs automatiques un moment.\nAttends 1–2 h puis /fb_retry — n'insiste pas.\n\n${err instanceof Error ? err.message : "erreur"}`
+        : `❌ Post Facebook : échec\n${
+            err instanceof Error ? err.message : "erreur"
+          }`,
     );
   }
 

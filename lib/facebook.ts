@@ -12,8 +12,44 @@ export function isFacebookConfigured(): boolean {
 }
 
 type GraphError = {
-  error?: { message?: string; code?: number; type?: string };
+  error?: {
+    message?: string;
+    code?: number;
+    type?: string;
+    error_subcode?: number;
+  };
 };
+
+export class FacebookGraphError extends Error {
+  code?: number;
+  subcode?: number;
+  constructor(message: string, code?: number, subcode?: number) {
+    super(message);
+    this.name = "FacebookGraphError";
+    this.code = code;
+    this.subcode = subcode;
+  }
+}
+
+/** Blocage anti-spam / rate-limit : ne pas enchaîner d'autres tentatives. */
+export function isFacebookActionBlocked(err: unknown): boolean {
+  const code = err instanceof FacebookGraphError ? err.code : undefined;
+  if (
+    code === 368 || // temporarily blocked for policies
+    code === 32 || // page rate limit
+    code === 4 || // app rate limit
+    code === 17 || // user request limit
+    code === 613 || // custom rate limit
+    code === 80001 ||
+    code === 80002
+  ) {
+    return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return /protéger la communauté|protect the community|limiting how often|rate limit|spam|try again later|réessayer plus tard|temporarily blocked|action is blocked|user limit|limitons le nombre/i.test(
+    msg,
+  );
+}
 
 async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -22,8 +58,10 @@ async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
   });
   const data = (await res.json()) as T & GraphError;
   if (!res.ok || data.error) {
-    throw new Error(
+    throw new FacebookGraphError(
       data.error?.message || `Facebook Graph error ${res.status}`,
+      data.error?.code,
+      data.error?.error_subcode,
     );
   }
   return data;
@@ -147,7 +185,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Story = upload photo inédite + photo_stories. Retries si Meta refuse. */
+/** Story = upload photo inédite + photo_stories. Pas de retry si anti-spam. */
 async function publishCreativeAsStory(input: {
   pageId: string;
   token: string;
@@ -171,6 +209,7 @@ async function publishCreativeAsStory(input: {
     } catch (err) {
       lastErr = err;
       console.error(`FB story attempt ${attempt} failed`, err);
+      if (isFacebookActionBlocked(err)) break;
       if (attempt < 2) await sleep(800 * attempt);
     }
   }
@@ -270,6 +309,7 @@ async function publishFeedWithPhoto(input: {
 /**
  * Publie uniquement le post Page (créative + caption).
  * Ordre : photo publiée compressée (1 appel) → unpublished+feed → URL → texte.
+ * Si Meta renvoie un anti-spam / rate-limit : arrêt immédiat (pas de cascade).
  */
 export async function publishFacebookFeedPost(input: {
   imageUrl: string;
@@ -287,6 +327,15 @@ export async function publishFacebookFeedPost(input: {
   if (input.image) {
     prepared = await prepareFacebookImage(input.image);
   }
+
+  const abortIfBlocked = (err: unknown) => {
+    lastErr = err;
+    if (isFacebookActionBlocked(err)) {
+      throw err instanceof Error
+        ? err
+        : new Error("Publication Facebook bloquée (anti-spam API)");
+    }
+  };
 
   // 1) Photo publiée directement (chemin le plus fiable)
   if (prepared && !postId) {
@@ -309,8 +358,8 @@ export async function publishFacebookFeedPost(input: {
       );
       postId = photo.post_id || `${page.pageId}_${photo.id}`;
     } catch (err) {
-      lastErr = err;
       console.error("FB multipart published failed", err);
+      abortIfBlocked(err);
     }
   }
 
@@ -329,8 +378,8 @@ export async function publishFacebookFeedPost(input: {
         photoId,
       });
     } catch (err) {
-      lastErr = err;
       console.error("FB multipart unpublished+feed failed", err);
+      abortIfBlocked(err);
     }
   }
 
@@ -349,8 +398,8 @@ export async function publishFacebookFeedPost(input: {
         photoId,
       });
     } catch (err) {
-      lastErr = err;
       console.error("FB url unpublished+feed failed", err);
+      abortIfBlocked(err);
     }
   }
 
