@@ -6,6 +6,7 @@ import {
   publishFacebookFeedPost,
   publishFacebookStory,
 } from "@/lib/facebook";
+import { isFacebookPublishEnabled } from "@/lib/facebook-settings";
 import { publishArticleFromCreative } from "@/lib/publish-from-creative";
 import { telegramSendMessage } from "@/lib/telegram";
 
@@ -181,6 +182,14 @@ export async function publishCreativePipeline(input: {
   );
 
   const facebook: CreativePipelineResult["facebook"] = {};
+
+  if (!(await isFacebookPublishEnabled())) {
+    await notify(
+      "Facebook API : OFF (pub manuelle).\nArticle site OK — poste la créative toi-même sur la Page.\n(/fb_on pour réactiver l’API plus tard)",
+    );
+    facebook.error = "désactivé";
+    return { article, facebook };
+  }
 
   if (!isFacebookConfigured()) {
     await notify("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");

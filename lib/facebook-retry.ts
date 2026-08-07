@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { isFacebookConfigured } from "@/lib/facebook";
+import { isFacebookPublishEnabled } from "@/lib/facebook-settings";
 import { prisma } from "@/lib/prisma";
 import {
   publishFacebookForArticle,
@@ -29,6 +30,12 @@ export async function republishArticleToFacebook(input: {
   notify?: PipelineNotify;
 }): Promise<FacebookRetryResult> {
   const notify = input.notify || (async () => {});
+
+  if (!(await isFacebookPublishEnabled())) {
+    throw new Error(
+      "Facebook API OFF. Poste à la main, ou /fb_on pour réactiver.",
+    );
+  }
 
   if (!isFacebookConfigured()) {
     throw new Error(

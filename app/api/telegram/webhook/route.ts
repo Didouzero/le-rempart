@@ -34,7 +34,7 @@ function commandsHelpText(): string {
     "📘 COMMANDES LE REMPART",
     "",
     "── Manuel (toujours dispo, veille ON ou OFF) ──",
-    "Envoie une créative PNG/JPG → article site + Facebook",
+    "Envoie une créative PNG/JPG → article site (+ Facebook si API ON)",
     "",
     "── Veille auto ──",
     "/veille_on — active l’agent (7 créneaux/jour, 8h–20h Paris)",
@@ -46,10 +46,13 @@ function commandsHelpText(): string {
     "/veille_non — refuser (nouvelle proposition, max 3/créneau)",
     "Boutons ✅ / ❌ sous la photo = même effet",
     "",
+    "── Facebook ──",
+    "/fb — statut API + test token",
+    "/fb_off — coupe la pub Facebook auto (recommandé si Meta bloque)",
+    "/fb_on — réactive la pub Facebook auto",
+    "/fb_retry [n°] — republier un article via API (si ON)",
+    "",
     "── Autres ──",
-    "/fb — tester la connexion Facebook",
-    "/fb_retry — republier le dernier article sur Facebook",
-    "/fb_retry 69 — republier l’article #69 sur Facebook",
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
     "",
@@ -188,38 +191,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (cmd === "/fb" || cmd === "/facebook") {
-      if (!isTelegramUserAllowed(userId)) {
-        await telegramSendMessage(
-          chatId,
-          `Accès non autorisé.\nTon id : ${userId}`,
-        );
-        return;
-      }
-      if (!isFacebookConfigured()) {
-        await telegramSendMessage(
-          chatId,
-          "Facebook non configuré sur Vercel (FACEBOOK_PAGE_ID + FACEBOOK_PAGE_ACCESS_TOKEN).",
-        );
-        return;
-      }
-      try {
-        const { assertFacebookPageToken } = await import("@/lib/facebook");
-        const page = await assertFacebookPageToken();
-        await telegramSendMessage(
-          chatId,
-          `Facebook OK.\nPage : ${page.name}\nID : ${page.id}`,
-        );
-      } catch (err) {
-        await telegramSendMessage(
-          chatId,
-          `Facebook KO — ${err instanceof Error ? err.message : "token invalide"}`,
-        );
-      }
-      return;
-    }
-
     if (
+      cmd === "/fb" ||
+      cmd === "/facebook" ||
+      cmd === "/fb_on" ||
+      cmd === "/fb_off" ||
       cmd === "/fb_retry" ||
       cmd === "/facebook_retry" ||
       cmd === "/fbretry"
@@ -231,23 +207,94 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         );
         return;
       }
-      const parts = text.trim().split(/\s+/);
-      const maybeId = parts[1] ? Number(parts[1]) : NaN;
-      const publicId =
-        Number.isFinite(maybeId) && maybeId > 0 ? Math.floor(maybeId) : undefined;
 
-      try {
-        const { republishArticleToFacebook } = await import(
-          "@/lib/facebook-retry"
+      const {
+        isFacebookPublishEnabled,
+        setFacebookPublishEnabled,
+      } = await import("@/lib/facebook-settings");
+
+      if (cmd === "/fb_off") {
+        await setFacebookPublishEnabled(false);
+        await telegramSendMessage(
+          chatId,
+          "Facebook API : OFF.\nLes créatives Telegram → article site seulement.\nTu postes FB à la main.",
         );
-        await republishArticleToFacebook({
-          publicId,
-          notify: telegramNotifier(chatId),
-        });
+        return;
+      }
+
+      if (cmd === "/fb_on") {
+        await setFacebookPublishEnabled(true);
+        await telegramSendMessage(
+          chatId,
+          "Facebook API : ON.\nProchaine créative tentera aussi le post Page.\nSi Meta bloque encore → /fb_off.",
+        );
+        return;
+      }
+
+      if (
+        cmd === "/fb_retry" ||
+        cmd === "/facebook_retry" ||
+        cmd === "/fbretry"
+      ) {
+        const parts = text.trim().split(/\s+/);
+        const maybeId = parts[1] ? Number(parts[1]) : NaN;
+        const publicId =
+          Number.isFinite(maybeId) && maybeId > 0
+            ? Math.floor(maybeId)
+            : undefined;
+
+        try {
+          const { republishArticleToFacebook } = await import(
+            "@/lib/facebook-retry"
+          );
+          await republishArticleToFacebook({
+            publicId,
+            notify: telegramNotifier(chatId),
+          });
+        } catch (err) {
+          await telegramSendMessage(
+            chatId,
+            `❌ /fb_retry : ${err instanceof Error ? err.message : "échec"}`,
+          );
+        }
+        return;
+      }
+
+      // /fb — statut
+      const publishOn = await isFacebookPublishEnabled();
+      if (!isFacebookConfigured()) {
+        await telegramSendMessage(
+          chatId,
+          [
+            `Pub API : ${publishOn ? "ON" : "OFF"}`,
+            "Facebook non configuré sur Vercel (FACEBOOK_PAGE_ID + TOKEN).",
+          ].join("\n"),
+        );
+        return;
+      }
+      try {
+        const { assertFacebookPageToken } = await import("@/lib/facebook");
+        const page = await assertFacebookPageToken();
+        await telegramSendMessage(
+          chatId,
+          [
+            `Pub API : ${publishOn ? "ON" : "OFF"}`,
+            `Token : OK`,
+            `Page : ${page.name}`,
+            `ID : ${page.id}`,
+            "",
+            publishOn
+              ? "Les créatives tentent le post FB auto."
+              : "Poste FB à la main. /fb_on pour réactiver l’API.",
+          ].join("\n"),
+        );
       } catch (err) {
         await telegramSendMessage(
           chatId,
-          `❌ /fb_retry : ${err instanceof Error ? err.message : "échec"}`,
+          [
+            `Pub API : ${publishOn ? "ON" : "OFF"}`,
+            `Token : KO — ${err instanceof Error ? err.message : "invalide"}`,
+          ].join("\n"),
         );
       }
       return;
