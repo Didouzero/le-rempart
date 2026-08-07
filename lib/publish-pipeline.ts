@@ -1,10 +1,12 @@
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   commentArticleLinkOnPost,
+  formatFacebookError,
   isFacebookActionBlocked,
   isFacebookConfigured,
   publishFacebookFeedPost,
   publishFacebookStory,
+  FacebookGraphError,
 } from "@/lib/facebook";
 import { publishArticleFromCreative } from "@/lib/publish-from-creative";
 import { telegramSendMessage } from "@/lib/telegram";
@@ -127,14 +129,31 @@ export async function publishFacebookForArticle(input: {
     }
   } catch (err) {
     console.error(err);
-    facebook.error = err instanceof Error ? err.message : "erreur";
+    facebook.error = formatFacebookError(err);
     const blocked = isFacebookActionBlocked(err);
+    const code =
+      err instanceof FacebookGraphError ? err.code : undefined;
+    const sub =
+      err instanceof FacebookGraphError ? err.subcode : undefined;
     await input.notify(
       blocked
-        ? `❌ Post Facebook : blocage anti-spam API (pas la Page).\nMeta freine les pubs automatiques un moment.\nAttends 1–2 h puis /fb_retry — n'insiste pas.\n\n${err instanceof Error ? err.message : "erreur"}`
-        : `❌ Post Facebook : échec\n${
-            err instanceof Error ? err.message : "erreur"
-          }`,
+        ? [
+            "❌ Post Facebook : blocage API Meta (code 368 / anti-spam token).",
+            "Ce n'est PAS un quota mensuel, et PAS un lock de ta Page.",
+            "Le post manuel marche parce qu'il utilise ton compte humain ;",
+            "le bot utilise le token Graph (System User) — c'est LUI qui est freiné.",
+            "",
+            "À faire :",
+            "1) Arrête /fb_retry (chaque essai rallonge le blocage).",
+            "2) Attends 24–48h SANS aucun appel publish API,",
+            "   OU régénère un Page Access Token (nouveau System User) dans Meta Business → mets à jour FACEBOOK_PAGE_ACCESS_TOKEN sur Vercel.",
+            "",
+            `Détail : ${formatFacebookError(err)}`,
+            code != null ? `(code=${code}${sub != null ? ` subcode=${sub}` : ""})` : "",
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : `❌ Post Facebook : échec\n${formatFacebookError(err)}`,
     );
   }
 

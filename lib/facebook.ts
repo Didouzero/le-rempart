@@ -31,11 +31,22 @@ export class FacebookGraphError extends Error {
   }
 }
 
+/** Message Telegram avec code Graph (ex. 368 / subcode 1390008). */
+export function formatFacebookError(err: unknown): string {
+  if (err instanceof FacebookGraphError) {
+    const bits = [err.message];
+    if (err.code != null) bits.push(`code=${err.code}`);
+    if (err.subcode != null) bits.push(`subcode=${err.subcode}`);
+    return bits.join(" | ");
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
 /** Blocage anti-spam / rate-limit : ne pas enchaîner d'autres tentatives. */
 export function isFacebookActionBlocked(err: unknown): boolean {
   const code = err instanceof FacebookGraphError ? err.code : undefined;
   if (
-    code === 368 || // temporarily blocked for policies
+    code === 368 || // temporarily blocked for policies / "going too fast"
     code === 32 || // page rate limit
     code === 4 || // app rate limit
     code === 17 || // user request limit
@@ -46,7 +57,7 @@ export function isFacebookActionBlocked(err: unknown): boolean {
     return true;
   }
   const msg = err instanceof Error ? err.message : String(err);
-  return /protéger la communauté|protect the community|limiting how often|rate limit|spam|try again later|réessayer plus tard|temporarily blocked|action is blocked|user limit|limitons le nombre/i.test(
+  return /protéger la communauté|protect the community|limiting how often|rate limit|spam|try again later|réessayer plus tard|temporarily blocked|action is blocked|user limit|limitons le nombre|going too fast|misusing this feature/i.test(
     msg,
   );
 }
@@ -181,41 +192,24 @@ async function publishPhotoStory(input: {
   return story.post_id || input.photoId;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Story = upload photo inédite + photo_stories. Pas de retry si anti-spam. */
+/** Story = upload photo inédite + photo_stories (1 tentative, pas de retry spam). */
 async function publishCreativeAsStory(input: {
   pageId: string;
   token: string;
   imageUrl: string;
   image?: { buffer: Buffer; mime: string };
 }): Promise<string> {
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const storyPhotoId = await uploadUnpublishedPhoto({
-        pageId: input.pageId,
-        token: input.token,
-        image: input.image,
-        imageUrl: input.image ? undefined : input.imageUrl,
-      });
-      return await publishPhotoStory({
-        pageId: input.pageId,
-        token: input.token,
-        photoId: storyPhotoId,
-      });
-    } catch (err) {
-      lastErr = err;
-      console.error(`FB story attempt ${attempt} failed`, err);
-      if (isFacebookActionBlocked(err)) break;
-      if (attempt < 2) await sleep(800 * attempt);
-    }
-  }
-  throw lastErr instanceof Error
-    ? lastErr
-    : new Error("Story Facebook impossible");
+  const storyPhotoId = await uploadUnpublishedPhoto({
+    pageId: input.pageId,
+    token: input.token,
+    image: input.image,
+    imageUrl: input.image ? undefined : input.imageUrl,
+  });
+  return publishPhotoStory({
+    pageId: input.pageId,
+    token: input.token,
+    photoId: storyPhotoId,
+  });
 }
 
 async function commentAndPin(
@@ -235,41 +229,34 @@ async function commentAndPin(
     },
   );
 
-  const pinAttempts = [
-    async () => {
-      await graphJson(`${GRAPH}/${comment.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          is_pinned: "true",
-          access_token: token,
-        }),
-      });
-    },
-    async () => {
-      await graphJson(
-        `https://graph.facebook.com/v18.0/${comment.id}?is_pinned=true&access_token=${encodeURIComponent(token)}`,
-        { method: "POST" },
-      );
-    },
-  ];
-
-  let lastPinError: string | undefined;
-  for (const attempt of pinAttempts) {
-    try {
-      await attempt();
-      return { commentId: comment.id, pinned: true };
-    } catch (err) {
-      console.error("Facebook pin attempt failed", err);
-      lastPinError = err instanceof Error ? err.message : "pin failed";
-    }
+  // Pin désactivé par défaut : +1/2 appels Graph qui aggravent le code 368.
+  // Opt-in : FACEBOOK_PIN_COMMENT=true
+  const pinOn =
+    process.env.FACEBOOK_PIN_COMMENT?.trim().toLowerCase() === "true" ||
+    process.env.FACEBOOK_PIN_COMMENT?.trim() === "1";
+  if (!pinOn) {
+    return { commentId: comment.id, pinned: false };
   }
 
-  return {
-    commentId: comment.id,
-    pinned: false,
-    pinError: lastPinError,
-  };
+  try {
+    await graphJson(`${GRAPH}/${comment.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        is_pinned: "true",
+        access_token: token,
+      }),
+    });
+    return { commentId: comment.id, pinned: true };
+  } catch (err) {
+    if (isFacebookActionBlocked(err)) throw err;
+    console.error("Facebook pin failed", err);
+    return {
+      commentId: comment.id,
+      pinned: false,
+      pinError: formatFacebookError(err),
+    };
+  }
 }
 
 /** Lien article en 1er commentaire (meilleur pour le reach que dans la légende). */
@@ -307,9 +294,8 @@ async function publishFeedWithPhoto(input: {
 }
 
 /**
- * Publie uniquement le post Page (créative + caption).
- * Ordre : photo publiée compressée (1 appel) → unpublished+feed → URL → texte.
- * Si Meta renvoie un anti-spam / rate-limit : arrêt immédiat (pas de cascade).
+ * Publie le post Page (créative + caption) en UN seul appel Graph.
+ * Pas de cascade multi-méthodes : chaque retry compte pour l'anti-spam Meta (code 368).
  */
 export async function publishFacebookFeedPost(input: {
   imageUrl: string;
@@ -320,113 +306,43 @@ export async function publishFacebookFeedPost(input: {
   const page = await resolvePagePublishToken();
   const { prepareFacebookImage } = await import("@/lib/fb-image");
 
-  let postId: string | null = null;
-  let lastErr: unknown;
-  let prepared = input.image;
-
   if (input.image) {
-    prepared = await prepareFacebookImage(input.image);
+    const prepared = await prepareFacebookImage(input.image);
+    const form = new FormData();
+    form.append(
+      "source",
+      new Blob([new Uint8Array(prepared.buffer)], {
+        type: prepared.mime || "image/jpeg",
+      }),
+      "creative.jpg",
+    );
+    form.append("caption", input.caption);
+    form.append("published", "true");
+    form.append("access_token", page.token);
+
+    const photo = await graphJson<{ id: string; post_id?: string }>(
+      `${GRAPH}/${page.pageId}/photos`,
+      { method: "POST", body: form },
+    );
+    return {
+      postId: photo.post_id || `${page.pageId}_${photo.id}`,
+      pageId: page.pageId,
+      token: page.token,
+    };
   }
 
-  const abortIfBlocked = (err: unknown) => {
-    lastErr = err;
-    if (isFacebookActionBlocked(err)) {
-      throw err instanceof Error
-        ? err
-        : new Error("Publication Facebook bloquée (anti-spam API)");
-    }
-  };
-
-  // 1) Photo publiée directement (chemin le plus fiable)
-  if (prepared && !postId) {
-    try {
-      const form = new FormData();
-      form.append(
-        "source",
-        new Blob([new Uint8Array(prepared.buffer)], {
-          type: prepared.mime || "image/jpeg",
-        }),
-        "creative.jpg",
-      );
-      form.append("caption", input.caption);
-      form.append("published", "true");
-      form.append("access_token", page.token);
-
-      const photo = await graphJson<{ id: string; post_id?: string }>(
-        `${GRAPH}/${page.pageId}/photos`,
-        { method: "POST", body: form },
-      );
-      postId = photo.post_id || `${page.pageId}_${photo.id}`;
-    } catch (err) {
-      console.error("FB multipart published failed", err);
-      abortIfBlocked(err);
-    }
-  }
-
-  // 2) Unpublished + feed
-  if (prepared && !postId) {
-    try {
-      const photoId = await uploadUnpublishedPhoto({
-        pageId: page.pageId,
-        token: page.token,
-        image: prepared,
-      });
-      postId = await publishFeedWithPhoto({
-        pageId: page.pageId,
-        token: page.token,
-        caption: input.caption,
-        photoId,
-      });
-    } catch (err) {
-      console.error("FB multipart unpublished+feed failed", err);
-      abortIfBlocked(err);
-    }
-  }
-
-  // 3) Via URL publique
-  if (!postId) {
-    try {
-      const photoId = await uploadUnpublishedPhoto({
-        pageId: page.pageId,
-        token: page.token,
-        imageUrl: input.imageUrl,
-      });
-      postId = await publishFeedWithPhoto({
-        pageId: page.pageId,
-        token: page.token,
-        caption: input.caption,
-        photoId,
-      });
-    } catch (err) {
-      console.error("FB url unpublished+feed failed", err);
-      abortIfBlocked(err);
-    }
-  }
-
-  // 4) Texte seul
-  if (!postId) {
-    try {
-      const feed = await graphJson<{ id: string }>(
-        `${GRAPH}/${page.pageId}/feed`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            message: input.caption,
-            access_token: page.token,
-          }),
-        },
-      );
-      postId = feed.id;
-    } catch (err) {
-      throw lastErr instanceof Error
-        ? lastErr
-        : err instanceof Error
-          ? err
-          : new Error("Publication Facebook impossible");
-    }
-  }
-
+  // Fallback image absente : URL → unpublished + feed (2 appels max)
+  const photoId = await uploadUnpublishedPhoto({
+    pageId: page.pageId,
+    token: page.token,
+    imageUrl: input.imageUrl,
+  });
+  const postId = await publishFeedWithPhoto({
+    pageId: page.pageId,
+    token: page.token,
+    caption: input.caption,
+    photoId,
+  });
   return { postId, pageId: page.pageId, token: page.token };
 }
 
