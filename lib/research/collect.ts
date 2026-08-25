@@ -5,7 +5,12 @@ import {
   rankingScoreFromTier,
 } from "@/lib/research/source-hierarchy";
 import {
+  extractSubjectEntities,
+  isOnTopicHit,
+  isStrongHit,
+  relevanceScore,
   searchWebForSubject,
+  type SubjectEntities,
   type WebSearchHit,
 } from "@/lib/research/web-search";
 import type { SourceDocument, SourceType } from "@/lib/research/types";
@@ -19,10 +24,12 @@ export type SourceCandidate = {
   snippet?: string;
 };
 
-const MAX_DEEP_SOURCES = 5;
+const MAX_DEEP_SOURCES = 6;
 const MAX_EXCERPT = 9000;
 const MIN_SCRAPE_CHARS = 280;
 const MIN_SNIPPET_CHARS = 80;
+/** Scrapes menés en parallèle : garde le budget temps Vercel raisonnable. */
+const SCRAPE_CONCURRENCY = 3;
 
 function hostOf(url: string): string {
   try {
@@ -39,38 +46,43 @@ export function classifySourceType(url: string, publisher?: string): SourceType 
   return "secondary";
 }
 
-function rankCandidate(c: SourceCandidate): number {
+function candidateToHit(c: SourceCandidate): WebSearchHit {
+  return {
+    title: c.title,
+    url: c.url,
+    snippet: c.snippet || "",
+    publisher: c.publisher,
+    publicationDate: c.publicationDate,
+    discoveredVia: c.discoveredVia,
+  };
+}
+
+/**
+ * Pertinence sujet d'abord, hiérarchie de source ensuite.
+ * Une source hors sujet de tier 1 reste inutile pour l'article.
+ */
+function rankCandidate(
+  c: SourceCandidate,
+  subject: string,
+  entities: SubjectEntities,
+): number {
   const tier = estimateSourceTier({
     url: c.url,
     publisher: c.publisher,
     title: c.title,
   });
-  let score = rankingScoreFromTier(tier);
-  if (c.discoveredVia === "subject.sourceUrl") score += 100;
-  if ((c.snippet || "").length > 120) score += 15;
-  if (c.title.length > 40) score += 5;
-  const hay = `${c.title} ${c.snippet || ""}`.toLowerCase();
-  if (
-    /mise en sc[eè]ne|staging|film[eé]s? en train|rejouer|sur commande|toneel/i.test(
-      hay,
-    )
-  ) {
-    score += 80;
-  }
-  if (/x\.com\/|twitter\.com\//i.test(c.url)) score += 40;
-  try {
-    const path = new URL(c.url).pathname.replace(/\/+$/, "");
-    if (path === "" || /^\/(fr|en|nl|vrtnws\/(fr|en|nl))?$/i.test(path)) {
-      score -= 60;
-    }
-  } catch {
-    /* ignore */
-  }
+  let score = relevanceScore(candidateToHit(c), subject, entities);
+  score += rankingScoreFromTier(tier) * 1.5;
+  if (c.discoveredVia === "subject.sourceUrl") score += 400;
+  if ((c.snippet || "").length > 200) score += 20;
   return score;
 }
 
+const REDIRECTOR_RE = /news\.google\.|bing\.com\/(ck|news)|t\.co\/|goo\.gl\//i;
+
+/** Ne résout que les redirecteurs connus : évite un GET complet inutile. */
 async function resolveFinalUrl(url: string): Promise<string> {
-  // Google News / redirects : suivre, mais borner
+  if (!REDIRECTOR_RE.test(url)) return url;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -107,6 +119,8 @@ export async function discoverSourceCandidates(input: {
   sourceUrl?: string;
   extraQueries?: string[];
   fast?: boolean;
+  /** Ne pas lancer Google/Bing/Moonshot — URL fournie + texte scrapé suffisent. */
+  skipWebSearch?: boolean;
 }): Promise<SourceCandidate[]> {
   const candidates: SourceCandidate[] = [];
 
@@ -118,15 +132,17 @@ export async function discoverSourceCandidates(input: {
     });
   }
 
-  try {
-    const hits = await searchWebForSubject({
-      subject: input.title,
-      extraQueries: input.extraQueries,
-      fast: input.fast,
-    });
-    candidates.push(...hits.map(hitToCandidate));
-  } catch (err) {
-    console.error("web search failed", err);
+  if (!input.skipWebSearch) {
+    try {
+      const hits = await searchWebForSubject({
+        subject: input.title,
+        extraQueries: input.extraQueries,
+        fast: input.fast,
+      });
+      candidates.push(...hits.map(hitToCandidate));
+    } catch (err) {
+      console.error("web search failed", err);
+    }
   }
 
   const seen = new Set<string>();
@@ -137,8 +153,27 @@ export async function discoverSourceCandidates(input: {
     return true;
   });
 
-  unique.sort((a, b) => rankCandidate(b) - rankCandidate(a));
-  return unique.slice(0, 14);
+  const entities = extractSubjectEntities(input.title);
+  unique.sort(
+    (a, b) =>
+      rankCandidate(b, input.title, entities) -
+      rankCandidate(a, input.title, entities),
+  );
+
+  // Pages d'article sur le sujet d'abord : une page d'accueil qui cite
+  // l'entité ne fournit aucune matière au dossier.
+  const strong = unique.filter(
+    (c) =>
+      c.discoveredVia === "subject.sourceUrl" ||
+      isStrongHit(candidateToHit(c), entities),
+  );
+  const onTopic = unique.filter(
+    (c) => !strong.includes(c) && isOnTopicHit(candidateToHit(c), entities),
+  );
+  const rest = unique.filter(
+    (c) => !strong.includes(c) && !onTopic.includes(c),
+  );
+  return [...strong, ...onTopic.slice(0, 4), ...rest.slice(0, 2)].slice(0, 14);
 }
 
 function snippetDocument(candidate: SourceCandidate, resolved: string): SourceDocument {
@@ -224,21 +259,34 @@ export async function collectDeepSources(input: {
   extraQueries?: string[];
   alreadyHaveUrls?: string[];
   fast?: boolean;
+  skipWebSearch?: boolean;
 }): Promise<{ sources: SourceDocument[]; seedNotes?: string }> {
   const have = new Set(
     (input.alreadyHaveUrls || []).map((u) => u.split("?")[0]!),
   );
-  const candidates = (await discoverSourceCandidates(input)).filter(
-    (c) => !have.has(c.url.split("?")[0]!),
-  );
+  const candidates = (
+    await discoverSourceCandidates({
+      title: input.title,
+      sourceUrl: input.sourceUrl,
+      extraQueries: input.extraQueries,
+      fast: input.fast,
+      skipWebSearch: input.skipWebSearch,
+    })
+  ).filter((c) => !have.has(c.url.split("?")[0]!));
 
-  const maxDeep = input.fast ? 3 : MAX_DEEP_SOURCES;
+  const maxDeep = input.fast ? 4 : MAX_DEEP_SOURCES;
   const selected = candidates.slice(0, maxDeep + 2);
   const docs: SourceDocument[] = [];
 
-  for (const c of selected) {
-    const doc = await scrapeCandidate(c);
-    if (doc) docs.push(doc);
+  // Scrape par vagues parallèles : même budget temps, plus de matière.
+  for (let i = 0; i < selected.length; i += SCRAPE_CONCURRENCY) {
+    const wave = selected.slice(i, i + SCRAPE_CONCURRENCY);
+    const results = await Promise.all(
+      wave.map((c) => scrapeCandidate(c).catch(() => null)),
+    );
+    for (const doc of results) {
+      if (doc) docs.push(doc);
+    }
     if (docs.length >= maxDeep) break;
   }
 
@@ -271,12 +319,25 @@ export async function collectDeepSources(input: {
     }
   }
 
+  const entities = extractSubjectEntities(input.title);
+  const docScore = (s: SourceDocument) =>
+    relevanceScore(
+      {
+        title: s.title,
+        url: s.url,
+        snippet: (s.excerpt || "").slice(0, 1500),
+        publisher: s.publisher,
+        discoveredVia: s.notes || "",
+      },
+      input.title,
+      entities,
+    ) +
+    rankingScoreFromTier(estimateSourceTier(s)) * 1.5;
+
   const ranked = [...byUrl.values()].sort((a, b) => {
-    // Scrapés d'abord, puis tier
+    // Scrapés d'abord (matière réelle), puis pertinence + tier
     if (a.scraped !== b.scraped) return a.scraped ? -1 : 1;
-    const ta = a.tier ?? estimateSourceTier(a);
-    const tb = b.tier ?? estimateSourceTier(b);
-    return ta - tb;
+    return docScore(b) - docScore(a);
   });
 
   return {

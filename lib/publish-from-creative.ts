@@ -1,5 +1,6 @@
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { classifyArticleCategory } from "@/lib/categories";
+import { fetchSourceText } from "@/lib/fetch-source";
 import { generateArticlePipeline } from "@/lib/kimi";
 import { dossierForPersistence } from "@/lib/research/persist";
 import type { Prisma } from "@prisma/client";
@@ -66,18 +67,23 @@ function detectImageMime(buffer: Buffer, declared?: string): string {
 
 export async function publishArticleFromCreative(input: {
   caption?: string;
-  /** Entrée principale Knowledge Builder (veille / admin). */
+  /** Entrée principale Knowledge Builder — obligatoire pour le flux manuel Telegram. */
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
+  /** Si true (défaut quand sourceUrl) : scrape obligatoire, pas d'invention hors source. */
+  requireSource?: boolean;
 }): Promise<{
   id: string;
   publicId: number;
   slug: string;
   title: string;
   excerpt: string;
+  content: string;
+  sourceText: string | null;
+  sourceUrl: string | null;
   url: string;
   coverImageUrl: string | null;
   creative?: { buffer: Buffer; mime: string };
@@ -85,12 +91,38 @@ export async function publishArticleFromCreative(input: {
   const caption = input.caption?.trim() || "Actualité du jour";
   const sourceUrl = input.sourceUrl?.trim() || undefined;
   const notify = input.notify || (async () => {});
+  const requireSource = input.requireSource ?? Boolean(sourceUrl);
+
   // Sujet documentaire : titre source > headline > caption (dernier recours).
   const researchTitle = (
     input.sourceTitle?.trim() ||
     input.headline?.trim() ||
     caption
   ).slice(0, 200);
+
+  if (requireSource && !sourceUrl) {
+    throw new Error(
+      "Lien source obligatoire. Envoie l’URL de l’article de référence.",
+    );
+  }
+
+  let scrapedText: string | undefined;
+  if (sourceUrl) {
+    await notify("Lecture de la page source…");
+    try {
+      scrapedText = await fetchSourceText(sourceUrl);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "échec scrape";
+      throw new Error(
+        `Impossible de lire le lien source (${reason}). Renvoie une autre URL, ou vérifie que la page n’est pas derrière un paywall / anti-bot.`,
+      );
+    }
+    if ((scrapedText?.trim().length || 0) < 80) {
+      throw new Error(
+        "La page source ne contient presque pas de texte exploitable. Renvoie une autre URL.",
+      );
+    }
+  }
 
   const recent = await prisma.article.findFirst({
     where: {
@@ -109,6 +141,9 @@ export async function publishArticleFromCreative(input: {
       slug: recent.slug,
       title: recent.title,
       excerpt: recent.excerpt,
+      content: recent.content,
+      sourceText: recent.sourceText,
+      sourceUrl: recent.sourceUrl,
       url: articlePublicUrl(recent.publicId, siteUrl()),
       coverImageUrl: recent.coverImageUrl,
       creative: input.image
@@ -122,7 +157,7 @@ export async function publishArticleFromCreative(input: {
 
   // Anti double-envoi Telegram pendant qu'une génération tourne (~8 min).
   const lockKey = `publish:lock:${createHash("sha1")
-    .update(researchTitle.toLowerCase())
+    .update((sourceUrl || researchTitle).toLowerCase())
     .digest("hex")
     .slice(0, 16)}`;
   const lockExisting = await prisma.appSetting.findUnique({
@@ -132,7 +167,7 @@ export async function publishArticleFromCreative(input: {
     const started = Number(lockExisting.value) || 0;
     if (Date.now() - started < 8 * 60 * 1000) {
       throw new Error(
-        "Publication déjà en cours pour ce titre (renvoi Telegram ignoré).",
+        "Publication déjà en cours pour cette source (renvoi Telegram ignoré).",
       );
     }
   }
@@ -152,18 +187,19 @@ export async function publishArticleFromCreative(input: {
   >["dossier"] = null;
 
   try {
-    // Budget serré pour rester sous maxDuration Vercel (300s) + FB après.
     const pipeline = await generateArticlePipeline(
       {
         title: researchTitle,
         sourceUrl,
+        sourceText: scrapedText,
         caption,
       },
       {
         fast: true,
-        maxResearchPasses: 1,
-        researchTimeoutMs: 140_000,
+        maxResearchPasses: scrapedText && scrapedText.length >= 400 ? 1 : 1,
+        researchTimeoutMs: scrapedText ? 90_000 : 140_000,
         writingTimeoutMs: 75_000,
+        sourceFirst: Boolean(sourceUrl && scrapedText),
         onProgress: (msg) => notify(msg),
       },
     );
@@ -207,12 +243,15 @@ export async function publishArticleFromCreative(input: {
     content: generated.content,
   });
 
+  // sourceText en DB = scrape (matière) ; caption Canva reste dans headline via research
+  const persistedSourceText = scrapedText?.slice(0, 12000) || caption;
+
   const article = await prisma.article.create({
     data: {
       title: generated.title,
       excerpt: generated.excerpt,
       content: generated.content,
-      sourceText: caption,
+      sourceText: persistedSourceText,
       sourceUrl: sourceUrl || null,
       researchDossier: pipelineDossier
         ? (dossierForPersistence(
@@ -235,6 +274,9 @@ export async function publishArticleFromCreative(input: {
     slug: article.slug,
     title: article.title,
     excerpt: article.excerpt,
+    content: article.content,
+    sourceText: article.sourceText,
+    sourceUrl: article.sourceUrl,
     url: articlePublicUrl(article.publicId, siteUrl()),
     coverImageUrl: article.coverImageUrl,
     creative: input.image

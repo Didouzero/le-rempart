@@ -83,3 +83,17 @@ model AppSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+/// Brouillon Telegram : créative reçue, en attente du lien source.
+model PublishDraft {
+  id        String   @id @default(cuid())
+  chatId    BigInt   @unique
+  userId    BigInt
+  headline  String
+  imageMime String
+  imageData Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+}

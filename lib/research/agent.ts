@@ -11,6 +11,11 @@ import {
   type DossierQualityReport,
 } from "@/lib/research/quality";
 import { isReliableSource } from "@/lib/research/source-hierarchy";
+import {
+  buildFocusedEntityQueries,
+  extractSubjectEntities,
+  isOnTopicHit,
+} from "@/lib/research/web-search";
 import type { PipelineSubject } from "@/lib/pipeline/types";
 import type { ResearchDossier } from "@/lib/research/types";
 
@@ -28,6 +33,8 @@ export type ResearchAgentInput = PipelineSubject & {
   maxPasses?: number;
   /** Timeouts search/build plus courts (chemin Telegram / Vercel). */
   fast?: boolean;
+  /** Ancrage URL : skip recherche web si le scrape est déjà riche. */
+  sourceFirst?: boolean;
 };
 
 export type ResearchAgentResult = {
@@ -54,13 +61,59 @@ export async function runResearchAgent(
   const maxPasses = Math.max(1, Math.min(input.maxPasses ?? DEFAULT_MAX_PASSES, 3));
 
   // Caption / titre seuls doivent suffire : recherche web → scrape ou snippets.
+  // Mode sourceFirst : URL scrapée = matière principale, web optionnel.
   const researchTitle = input.title || input.caption || "Actualité";
+  const entities = extractSubjectEntities(researchTitle);
+  const richSeed = (input.sourceText?.trim().length || 0) >= 400;
+  const skipWebSearch = Boolean(input.sourceFirst && richSeed);
+
   const firstCollect = await collectDeepSources({
     title: researchTitle,
     sourceUrl: input.sourceUrl,
     sourceText: input.sourceText,
     fast: input.fast,
+    skipWebSearch,
   });
+
+  // Rattrapage entités : si presque rien ne parle du sujet, on relance
+  // une collecte ciblée sur les noms propres avant de construire le dossier.
+  const onSubject = firstCollect.sources.filter((s) =>
+    isOnTopicHit(
+      {
+        title: s.title,
+        url: s.url,
+        snippet: (s.excerpt || "").slice(0, 1500),
+        publisher: s.publisher,
+        discoveredVia: s.notes || "",
+      },
+      entities,
+    ),
+  );
+
+  if (!skipWebSearch && onSubject.length < 2) {
+    const focusedQueries = buildFocusedEntityQueries(researchTitle);
+    if (focusedQueries.length > 0) {
+      try {
+        const rescue = await collectDeepSources({
+          title: researchTitle,
+          extraQueries: focusedQueries,
+          alreadyHaveUrls: firstCollect.sources.map((s) => s.url),
+          fast: input.fast,
+        });
+        for (const s of rescue.sources) {
+          if (
+            !firstCollect.sources.some(
+              (x) => x.url.split("?")[0] === s.url.split("?")[0],
+            )
+          ) {
+            firstCollect.sources.push(s);
+          }
+        }
+      } catch (err) {
+        console.error("research rescue collect failed", err);
+      }
+    }
+  }
 
   let dossier = await buildDossierFromDocuments({
     subject: researchTitle,
@@ -79,9 +132,13 @@ export async function runResearchAgent(
     if (quality.nextQueries.length === 0 && quality.missing.length === 0) break;
 
     const enrichCollect = await collectDeepSources({
-      title: input.title,
+      title: researchTitle,
       sourceUrl: input.sourceUrl,
-      extraQueries: quality.nextQueries,
+      // Les entités passent avant les requêtes génériques de la quality gate.
+      extraQueries: [
+        ...buildFocusedEntityQueries(researchTitle).slice(0, 3),
+        ...quality.nextQueries,
+      ],
       alreadyHaveUrls: dossier.sources.map((s) => s.url),
       fast: input.fast,
     });
@@ -97,7 +154,7 @@ export async function runResearchAgent(
     }
 
     const patch = await buildDossierFromDocuments({
-      subject: input.title,
+      subject: researchTitle,
       sourceUrl: input.sourceUrl,
       sources: [...dossier.sources, ...reliable],
       focusMissing: quality.missing,

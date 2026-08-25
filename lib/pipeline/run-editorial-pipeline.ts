@@ -25,6 +25,8 @@ export type RunEditorialPipelineOptions = {
   writingTimeoutMs?: number;
   /** Mode rapide : timeouts Moonshot/search plus courts. */
   fast?: boolean;
+  /** URL scrapée = matière principale ; skip web search si corpus riche. */
+  sourceFirst?: boolean;
   onProgress?: (message: string) => void | Promise<void>;
 };
 
@@ -52,12 +54,17 @@ export async function runEditorialPipeline(
   try {
     timer.start("research");
     setTokenMeterStage("research");
-    await progress("Recherche web + construction du dossier…");
+    await progress(
+      opts?.sourceFirst
+        ? "Lecture de la source + construction du dossier…"
+        : "Recherche web + construction du dossier…",
+    );
     const { dossier, quality } = await withTimeout(
       runResearchAgent({
         ...subject,
         maxPasses: opts?.maxResearchPasses,
         fast: opts?.fast,
+        sourceFirst: opts?.sourceFirst,
       }),
       researchTimeoutMs,
       "Timeout research",
@@ -168,6 +175,12 @@ export async function runEditorialPipeline(
     }
   } catch (err) {
     console.error("editorial pipeline research failed — fallback legacy", err);
+    // Mode sourceFirst : pas d'invention hors source — on remonte l'erreur.
+    if (opts?.sourceFirst && subject.sourceText) {
+      throw err instanceof Error
+        ? err
+        : new Error("Échec pipeline ancré sur la source");
+    }
     timer.start("writing_legacy");
     setTokenMeterStage("writing_legacy");
     const article = await generateArticleLegacy(subject);

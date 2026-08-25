@@ -24,6 +24,18 @@ Règles absolues :
 - Construis aussi un graphe simple (nodes + edges) reliant acteurs, événements, documents, réactions.
 - Réponds UNIQUEMENT en JSON valide (pas de markdown autour).
 
+DENSITÉ D'EXTRACTION (le rédacteur ne pourra écrire que ce que tu extrais) :
+- keyFacts : vise 10 à 20 faits atomiques quand le corpus le permet. Un fait = une information vérifiable, chiffrée ou datée si possible.
+- Recopie les MONTANTS exacts (déficit, dette, masse salariale, subventions, nombre de salariés, nombre de logements) tels qu'écrits dans les documents.
+- Nomme les PERSONNES : nom complet + fonction exacte + étiquette politique / affiliation si le document la donne. Jamais un "un dirigeant" quand le nom figure dans le corpus.
+- Nomme les ORGANISATIONS avec leur périmètre exact (fédération, antenne départementale, filiale) : ne confonds pas une structure locale et son réseau national.
+- chronology : reconstitue la séquence datée (alerte, procédure, décision, audience, liquidation), même partielle.
+- citations : recopie les verbatims entre guillemets présents dans les documents, avec auteur et fonction.
+- data.budgets / data.statistics : tous les chiffres financiers et volumétriques du corpus.
+- mediaHistory : indique quel média a révélé quoi et à quelle date (ex. "enquête de X du 13/10/2025").
+- conceptsToExplain : les notions de procédure ou de gestion que le lecteur ne connaît pas (redressement judiciaire, liquidation, mandataire, masse salariale…).
+- Si le corpus parle d'une AUTRE affaire que le sujet demandé, ne l'intègre pas : signale-le dans uncertainties.
+
 Forme JSON :
 {
   "summary": {"who":"","what":"","when":"","where":"","why":"","how":""},
@@ -52,6 +64,36 @@ Forme JSON :
   },
   "extensions": {}
 }`;
+
+/**
+ * Budget de sortie du builder.
+ * Le JSON complet (graphe, glossaire, questions) coûte des milliers de tokens :
+ * en mode rapide on sacrifie l'accessoire, jamais les faits.
+ */
+type BuildProfile = "full" | "compact" | "minimal";
+
+const PROFILE_INSTRUCTIONS: Record<BuildProfile, string> = {
+  full: "",
+  compact: `
+MODE COMPACT (budget de sortie limité — priorité aux faits) :
+- OMETS entièrement : graph, socialMedia, naiveQuestions, articleQuestions, glossary, verification,
+  history.precedents, history.similarCases, data.studies, data.internationalComparisons.
+- GARDE et remplis en priorité : summary, keyFacts (10 à 12), actors (8 max), chronology (8 max),
+  citations (3 max), data.budgets, data.statistics, history.mediaHistory, politicalContext,
+  legalContext.procedures, reactions, importance, uncertainties, missingInformation,
+  conceptsToExplain (3 max).
+- ORDRE DE SORTIE IMPOSÉ (les premières clés sont les plus importantes) :
+  summary, chronology, keyFacts, actors, data, history.mediaHistory, citations, politicalContext,
+  legalContext, reactions, importance, conceptsToExplain, uncertainties, missingInformation.
+- chronology est OBLIGATOIRE : toute date citée dans le corpus devient un jalon daté.
+  Ne range pas les dates uniquement dans keyFacts.
+- Une phrase par entrée, aucune redondance entre sections, pas de reformulation.`,
+  minimal: `
+MODE MINIMAL (budget très serré) :
+- Renvoie UNIQUEMENT ces clés, dans cet ordre : summary, chronology (6 max), keyFacts (8 à 10),
+  actors (6 max), data.budgets, data.statistics, importance, uncertainties, missingInformation.
+- Omets tout le reste. Une phrase par fait, chiffres et noms conservés tels quels.`,
+};
 
 const CONFIDENCE: ConfidenceLevel[] = [
   "confirmed",
@@ -99,7 +141,7 @@ function parseJsonObject(raw: string): Record<string, unknown> {
   }
 }
 
-function documentsBlock(sources: SourceDocument[]): string {
+function documentsBlock(sources: SourceDocument[], perDocChars = 5500): string {
   return sources
     .map((s, i) => {
       const body = (s.excerpt || "").trim();
@@ -114,7 +156,7 @@ function documentsBlock(sources: SourceDocument[]): string {
         `confidence: ${s.confidence}`,
         body
           ? // Cap pour laisser de la place au JSON de sortie (évite troncature).
-            `contenu:\n${body.slice(0, 5500)}`
+            `contenu:\n${body.slice(0, perDocChars)}`
           : "(contenu non scrapé — titre / métadonnées seulement)",
       ].join("\n");
     })
@@ -178,58 +220,107 @@ export async function buildDossierFromDocuments(input: {
         ].join("\n")
       : "";
 
-  const userContent = [
-    `Sujet à documenter : ${input.subject}`,
-    input.sourceUrl ? `URL de départ (entrée principale) : ${input.sourceUrl}` : "",
-    input.secondaryCaption
-      ? `Accroche éditoriale secondaire (NE PAS traiter comme source de faits) : ${input.secondaryCaption}`
-      : "",
-    focus,
-    "Documents / résultats de recherche (corpus unique — n'extrais rien hors de ce corpus).",
-    "Si scraped=false / snippet_only : utiliser titre+extrait avec confidence probable, pas confirmed.",
-    documentsBlock(usable),
-    "Produis le JSON du dossier de connaissances. Sections sans matière fiable = listes vides.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const researchModel = process.env.KIMI_RESEARCH_MODEL?.trim() || "kimi-k2.6";
+  const fallbackModel = getKimiTextModel();
 
-  // k2.6 plus fiable/rapide pour JSON long ; k3 en secours (sauf mode fast).
-  const models = (
-    input.fast
-      ? [process.env.KIMI_RESEARCH_MODEL?.trim() || "kimi-k2.6"]
-      : [
-          process.env.KIMI_RESEARCH_MODEL?.trim() || "kimi-k2.6",
-          getKimiTextModel(),
-        ]
-  ).filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i);
-
-  const buildTimeoutMs = input.fast ? 90_000 : 180_000;
+  /**
+   * Chaque tentative réduit le coût de sortie. En mode rapide, mieux vaut un
+   * dossier compact abouti qu'un JSON riche coupé par le timeout : quand le
+   * builder échoue, le pipeline retombe sur le legacy sans dossier du tout.
+   */
+  const attempts: Array<{
+    model: string;
+    profile: BuildProfile;
+    maxTokens: number;
+    timeoutMs: number;
+    corpusChars: number;
+  }> = input.fast
+    ? [
+        // ~50 tok/s côté Kimi : 3600 tokens de sortie ≈ 75 s. Les budgets
+        // doivent coller à cette réalité, sinon le dossier est perdu.
+        {
+          model: researchModel,
+          profile: "compact",
+          maxTokens: 4200,
+          timeoutMs: 100_000,
+          corpusChars: 13_000,
+        },
+        {
+          model: researchModel,
+          profile: "minimal",
+          maxTokens: 2200,
+          timeoutMs: 60_000,
+          corpusChars: 8_000,
+        },
+      ]
+    : [
+        {
+          model: researchModel,
+          profile: "full",
+          maxTokens: 5500,
+          timeoutMs: 150_000,
+          corpusChars: 26_000,
+        },
+        {
+          model: researchModel,
+          profile: "compact",
+          maxTokens: 4200,
+          timeoutMs: 90_000,
+          corpusChars: 16_000,
+        },
+        {
+          model: fallbackModel || researchModel,
+          profile: "minimal",
+          maxTokens: 2600,
+          timeoutMs: 60_000,
+          corpusChars: 9_000,
+        },
+      ];
 
   let lastErr: unknown;
-  for (let attempt = 0; attempt < models.length; attempt += 1) {
-    const model = models[attempt]!;
+  for (let attempt = 0; attempt < attempts.length; attempt += 1) {
+    const { model, profile, maxTokens, timeoutMs, corpusChars } =
+      attempts[attempt]!;
+    const perDoc = Math.max(1800, Math.floor(corpusChars / usable.length));
+    const userContent = [
+      `Sujet à documenter : ${input.subject}`,
+      input.sourceUrl
+        ? `URL de départ (entrée principale) : ${input.sourceUrl}`
+        : "",
+      input.secondaryCaption
+        ? `Accroche éditoriale secondaire (NE PAS traiter comme source de faits) : ${input.secondaryCaption}`
+        : "",
+      focus,
+      "Documents / résultats de recherche (corpus unique — n'extrais rien hors de ce corpus).",
+      "Si scraped=false / snippet_only : utiliser titre+extrait avec confidence probable, pas confirmed.",
+      documentsBlock(usable, perDoc),
+      "Produis le JSON du dossier de connaissances. Sections sans matière fiable = listes vides.",
+      attempt > 0
+        ? "RETRY : la tentative précédente a échoué (timeout ou JSON incomplet). Sois plus bref, mais garde tous les noms, montants et dates."
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
     try {
       const raw = await moonshotChat({
         model,
-        maxTokens: attempt === 0 ? (input.fast ? 4000 : 5000) : 4500,
-        timeoutMs: buildTimeoutMs,
+        maxTokens,
+        timeoutMs,
         reasoningEffort: "low",
         messages: [
-          { role: "system", content: BUILD_SYSTEM },
           {
-            role: "user",
-            content:
-              attempt === 0
-                ? userContent
-                : `${userContent}\n\nRETRY : ta réponse précédente n'était pas un JSON valide/complet. Renvoie UNIQUEMENT un JSON compact et bien formé (pas de markdown).`,
+            role: "system",
+            content: `${BUILD_SYSTEM}\n${PROFILE_INSTRUCTIONS[profile]}`.trim(),
           },
+          { role: "user", content: userContent },
         ],
       });
       const parsed = parseJsonObject(raw);
       return hydrateDossier(base, parsed);
     } catch (err) {
       lastErr = err;
-      console.error("research build attempt failed", model, err);
+      console.error("research build attempt failed", model, profile, err);
     }
   }
   throw lastErr instanceof Error

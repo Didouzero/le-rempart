@@ -82,6 +82,8 @@ export function parseWritingResponse(
     subjectTitle: string;
     structureVariantId: string;
     minWords: number;
+    /** Dossier vide : brève courte tolérée (2 H2, plancher bas). */
+    cautious?: boolean;
   },
 ): { article: ArticleArtifact; metadata: WritingMetadata } {
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -112,9 +114,12 @@ export function parseWritingResponse(
   }
 
   const words = countWords(content);
-  if (words < ARTICLE_LENGTH.softAcceptMin) {
+  const floor = opts.cautious
+    ? ARTICLE_LENGTH.cautiousMinWords
+    : ARTICLE_LENGTH.softAcceptMin;
+  if (words < floor) {
     throw new Error(
-      `Writing Agent : article trop court (${words} mots, plancher ${ARTICLE_LENGTH.softAcceptMin})`,
+      `Writing Agent : article trop court (${words} mots, plancher ${floor})`,
     );
   }
   if (words > ARTICLE_LENGTH.hardMaxWords) {
@@ -128,7 +133,8 @@ export function parseWritingResponse(
       : null;
 
   const h2Count = (content.match(/^##\s+/gm) || []).length;
-  if (h2Count < 3) {
+  const minH2 = opts.cautious ? 2 : 3;
+  if (h2Count < minH2) {
     throw new Error(`Writing Agent : trop peu de H2 (${h2Count})`);
   }
   if (h2Count > 10) {

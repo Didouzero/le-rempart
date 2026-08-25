@@ -29,6 +29,9 @@ export async function publishFacebookForArticle(input: {
   excerpt: string;
   articleUrl: string;
   creative: { buffer: Buffer; mime: string };
+  /** Matière pour le flash Rempart (scrape / contenu article). */
+  sourceText?: string | null;
+  sourceUrl?: string | null;
   notify: PipelineNotify;
 }): Promise<CreativePipelineResult["facebook"]> {
   const facebook: CreativePipelineResult["facebook"] = {};
@@ -49,6 +52,8 @@ export async function publishFacebookForArticle(input: {
     flash = await buildFlashInfoText({
       title: input.title,
       excerpt: input.excerpt,
+      sourceText: input.sourceText || undefined,
+      sourceUrl: input.sourceUrl || undefined,
       articleUrl: articleWww,
     });
   } catch (flashErr) {
@@ -162,22 +167,24 @@ export async function publishFacebookForArticle(input: {
 
 /**
  * Pipeline partagé : article site + Facebook (post, commentaire lien, story).
- * Utilisé par le webhook Telegram et la veille auto.
+ * Flux manuel Telegram : sourceUrl obligatoire (créative → lien).
  */
 export async function publishCreativePipeline(input: {
   caption: string;
   image: { buffer: Buffer; mime: string };
-  /** URL source veille — entrée principale du Knowledge Builder. */
+  /** URL source — obligatoire pour le flux manuel. */
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
+  requireSource?: boolean;
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
+  const requireSource = input.requireSource ?? Boolean(input.sourceUrl);
 
   await notify(
     input.sourceUrl
-      ? "Recherche documentaire (source veille) + rédaction…\n(peut prendre 2–4 min)"
+      ? "Lecture de la source + rédaction de l'article…\n(peut prendre 2–4 min)"
       : "Recherche web + rédaction de l'article…\n(peut prendre 2–4 min, ne renvoie pas la créative)",
   );
   const article = await publishArticleFromCreative({
@@ -186,6 +193,7 @@ export async function publishCreativePipeline(input: {
     sourceTitle: input.sourceTitle,
     headline: input.headline,
     image: input.image,
+    requireSource,
     notify,
   });
 
@@ -213,12 +221,19 @@ export async function publishCreativePipeline(input: {
     return { article, facebook };
   }
 
+  const flashCorpus = [article.sourceText, article.content, article.excerpt]
+    .filter(Boolean)
+    .join("\n\n")
+    .slice(0, 8000);
+
   const fb = await publishFacebookForArticle({
     articleId: article.id,
     title: article.title,
     excerpt: article.excerpt,
     articleUrl: article.url,
     creative: article.creative,
+    sourceText: flashCorpus,
+    sourceUrl: article.sourceUrl,
     notify,
   });
 

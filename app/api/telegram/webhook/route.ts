@@ -3,6 +3,12 @@ import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { isFacebookConfigured } from "@/lib/facebook";
 import { prisma } from "@/lib/prisma";
 import {
+  deletePublishDraft,
+  extractHttpUrl,
+  getActivePublishDraft,
+  upsertPublishDraft,
+} from "@/lib/publish-draft";
+import {
   publishCreativePipeline,
   telegramNotifier,
 } from "@/lib/publish-pipeline";
@@ -33,8 +39,11 @@ function commandsHelpText(): string {
   return [
     "📘 COMMANDES LE REMPART",
     "",
-    "── Manuel (toujours dispo, veille ON ou OFF) ──",
-    "Envoie une créative PNG/JPG → article site + Facebook",
+    "── Manuel (toujours dispo) ──",
+    "1) Envoie une créative PNG/JPG",
+    "2) Le bot demande le lien de l’article source",
+    "3) Tu envoies l’URL → article site + Facebook",
+    "/cancel — annuler la créative en attente de lien",
     "",
     "── Veille auto ──",
     "/veille_on — active l’agent (7 créneaux/jour, 8h–20h Paris)",
@@ -58,15 +67,27 @@ function commandsHelpText(): string {
   ].join("\n");
 }
 
+type ClaimResult = "claimed" | "duplicate" | "db_down";
+
 /** Claim update_id — si déjà vu, ignore (coupe les retries Telegram). */
-async function claimUpdate(updateId: number): Promise<boolean> {
+async function claimUpdate(updateId: number): Promise<ClaimResult> {
   try {
     await prisma.telegramUpdateLog.create({
       data: { updateId: BigInt(updateId) },
     });
-    return true;
-  } catch {
-    return false;
+    return "claimed";
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const code =
+      err && typeof err === "object" && "code" in err
+        ? String((err as { code?: unknown }).code)
+        : "";
+    // Prisma P2002 = unique constraint → vrai doublon Telegram
+    if (code === "P2002" || /unique constraint/i.test(msg)) {
+      return "duplicate";
+    }
+    console.error("telegram claimUpdate DB error", err);
+    return "db_down";
   }
 }
 
@@ -110,9 +131,12 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "",
           `Ton user id Telegram : ${userId}`,
           "",
-          "Envoie juste ta créative Canva (PNG/JPG).",
-          "Je lis le titre sur l'image, je trouve une photo web pour le site,",
-          "je publie l'article + Facebook (créative).",
+          "Flux manuel :",
+          "1) Envoie ta créative Canva (PNG/JPG)",
+          "2) Envoie le lien de l’article source",
+          "3) Je publie l’article site + Facebook",
+          "",
+          "/cancel pour abandonner une créative en attente.",
         ].join("\n"),
       );
       return;
@@ -120,6 +144,28 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     if (cmd === "/help" || cmd === "/commandes" || cmd === "/cmds") {
       await telegramSendMessage(chatId, commandsHelpText());
+      return;
+    }
+
+    if (
+      cmd === "/cancel" ||
+      cmd === "/annuler" ||
+      text.toLowerCase() === "annuler"
+    ) {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
+        return;
+      }
+      const deleted = await deletePublishDraft(chatId);
+      await telegramSendMessage(
+        chatId,
+        deleted
+          ? "Brouillon annulé. Renvoie une créative quand tu veux."
+          : "Aucun brouillon en attente.",
+      );
       return;
     }
 
@@ -273,32 +319,80 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     const manualCaption = (message.caption || "").trim();
 
-    if (!fileId) {
+    // ── Étape 1 : créative → stocke brouillon, demande le lien ──
+    if (fileId) {
+      await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
+      const image = await telegramDownloadFile(fileId);
+
+      let headline = manualCaption;
+      if (!headline) {
+        headline = await extractHeadlineFromCreative(image);
+        await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
+      }
+
+      await upsertPublishDraft({
+        chatId,
+        userId,
+        headline,
+        image,
+      });
+
       await telegramSendMessage(
         chatId,
-        "Envoie une créative en image (PNG/JPG).",
+        [
+          "Envoie maintenant le lien de l’article source (URL http/https).",
+          "Je m’en sers pour rédiger l’article + le flash Facebook.",
+          "",
+          "/cancel pour annuler.",
+        ].join("\n"),
+      );
+      return;
+    }
+
+    // ── Étape 2 : URL alors qu’un brouillon attend ──
+    const draft = await getActivePublishDraft(chatId);
+    const sourceUrl = text ? extractHttpUrl(text) : null;
+
+    if (draft && sourceUrl) {
+      await telegramSendMessage(
+        chatId,
+        `Lien reçu. Publication en cours…\n${sourceUrl}`,
+      );
+
+      try {
+        await publishCreativePipeline({
+          caption: draft.headline,
+          headline: draft.headline,
+          sourceUrl,
+          image: { buffer: draft.imageData, mime: draft.imageMime },
+          requireSource: true,
+          notify: telegramNotifier(chatId),
+        });
+        await deletePublishDraft(chatId);
+      } catch (err) {
+        // Garde le brouillon pour renvoyer une autre URL
+        throw err;
+      }
+      return;
+    }
+
+    if (draft && !sourceUrl) {
+      await telegramSendMessage(
+        chatId,
+        [
+          "J’attends encore le lien de la source (URL complète http/https).",
+          `Titre en attente : ${draft.headline.slice(0, 120)}`,
+          "",
+          "/cancel pour annuler.",
+        ].join("\n"),
       );
       return;
     }
 
     await telegramSendMessage(
       chatId,
-      "Créative reçue. Lecture du titre + recherche d'illustration…",
+      "Envoie d’abord une créative en image (PNG/JPG), puis le lien source.",
     );
-
-    const image = await telegramDownloadFile(fileId);
-
-    let caption = manualCaption;
-    if (!caption) {
-      caption = await extractHeadlineFromCreative(image);
-      await telegramSendMessage(chatId, `Titre détecté : ${caption}`);
-    }
-
-    await publishCreativePipeline({
-      caption,
-      image,
-      notify: telegramNotifier(chatId),
-    });
   } catch (err) {
     console.error("telegram process error", err);
     try {
@@ -320,10 +414,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const claimed = await claimUpdate(update.update_id);
-  if (claimed) {
-    after(() => processUpdate(update));
+  const claim = await claimUpdate(update.update_id);
+
+  if (claim === "duplicate") {
+    return NextResponse.json({ ok: true });
   }
 
+  if (claim === "db_down") {
+    // Neon/DB down ≠ doublon. 503 → Telegram garde l'update et retentera.
+    console.error("telegram webhook: database unavailable, returning 503");
+    return NextResponse.json(
+      { ok: false, error: "database_unavailable" },
+      { status: 503 },
+    );
+  }
+
+  after(() => processUpdate(update));
   return NextResponse.json({ ok: true });
 }

@@ -44,6 +44,9 @@ export async function republishArticleToFacebook(input: {
           publicId: true,
           title: true,
           excerpt: true,
+          content: true,
+          sourceText: true,
+          sourceUrl: true,
           coverImageData: true,
           coverImageMime: true,
         },
@@ -59,6 +62,9 @@ export async function republishArticleToFacebook(input: {
           publicId: true,
           title: true,
           excerpt: true,
+          content: true,
+          sourceText: true,
+          sourceUrl: true,
           coverImageData: true,
           coverImageMime: true,
         },
@@ -108,6 +114,15 @@ export async function republishArticleToFacebook(input: {
       ].join("\n"),
     );
 
+    const flashCorpus = [
+      article.sourceText,
+      article.content,
+      article.excerpt,
+    ]
+      .filter(Boolean)
+      .join("\n\n")
+      .slice(0, 8000);
+
     const facebook = await publishFacebookForArticle({
       articleId: article.id,
       title: article.title,
@@ -117,6 +132,8 @@ export async function republishArticleToFacebook(input: {
         buffer: Buffer.from(article.coverImageData),
         mime: article.coverImageMime || "image/jpeg",
       },
+      sourceText: flashCorpus,
+      sourceUrl: article.sourceUrl,
       notify,
     });
 
