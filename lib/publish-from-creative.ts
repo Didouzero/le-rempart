@@ -1,13 +1,11 @@
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { classifyArticleCategory } from "@/lib/categories";
 import { fetchSourceText } from "@/lib/fetch-source";
-import { generateArticlePipeline } from "@/lib/kimi";
-import { dossierForPersistence } from "@/lib/research/persist";
-import type { Prisma } from "@prisma/client";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
+import { titleFromCreative, writeArticleSimple } from "@/lib/write-simple";
 import { createHash } from "crypto";
 
 async function makeUniqueSlug(title: string) {
@@ -67,13 +65,11 @@ function detectImageMime(buffer: Buffer, declared?: string): string {
 
 export async function publishArticleFromCreative(input: {
   caption?: string;
-  /** Entrée principale Knowledge Builder — obligatoire pour le flux manuel Telegram. */
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
-  /** Si true (défaut quand sourceUrl) : scrape obligatoire, pas d'invention hors source. */
   requireSource?: boolean;
 }): Promise<{
   id: string;
@@ -93,12 +89,11 @@ export async function publishArticleFromCreative(input: {
   const notify = input.notify || (async () => {});
   const requireSource = input.requireSource ?? Boolean(sourceUrl);
 
-  // Sujet documentaire : titre source > headline > caption (dernier recours).
-  const researchTitle = (
-    input.sourceTitle?.trim() ||
+  const creativeTitle = (
     input.headline?.trim() ||
+    input.sourceTitle?.trim() ||
     caption
-  ).slice(0, 200);
+  ).slice(0, 500);
 
   if (requireSource && !sourceUrl) {
     throw new Error(
@@ -155,9 +150,8 @@ export async function publishArticleFromCreative(input: {
     };
   }
 
-  // Anti double-envoi Telegram pendant qu'une génération tourne (~8 min).
   const lockKey = `publish:lock:${createHash("sha1")
-    .update((sourceUrl || researchTitle).toLowerCase())
+    .update((sourceUrl || creativeTitle).toLowerCase())
     .digest("hex")
     .slice(0, 16)}`;
   const lockExisting = await prisma.appSetting.findUnique({
@@ -177,39 +171,23 @@ export async function publishArticleFromCreative(input: {
     update: { value: String(Date.now()) },
   });
 
-  let generated: {
-    title: string;
-    excerpt: string;
-    content: string;
-  };
-  let pipelineDossier: Awaited<
-    ReturnType<typeof generateArticlePipeline>
-  >["dossier"] = null;
+  let generated: { title: string; excerpt: string; content: string };
 
   try {
-    const pipeline = await generateArticlePipeline(
-      {
-        title: researchTitle,
-        sourceUrl,
-        sourceText: scrapedText,
-        caption,
-      },
-      {
-        fast: true,
-        maxResearchPasses: 1,
-        // Le build Kimi seul peut prendre ~55–75 s : 90 s était trop juste.
-        researchTimeoutMs: scrapedText ? 160_000 : 140_000,
-        writingTimeoutMs: 75_000,
-        sourceFirst: Boolean(sourceUrl && scrapedText),
-        onProgress: (msg) => notify(msg),
-      },
-    );
-    pipelineDossier = pipeline.dossier;
-    const article = pipeline.artifacts.article;
-    if (!article) {
-      throw new Error("Pipeline éditorial : aucun article produit");
+    if (!sourceUrl || !scrapedText) {
+      throw new Error(
+        "Publication manuelle : lien source + texte scrapé requis.",
+      );
     }
-    generated = article;
+
+    generated = await writeArticleSimple({
+      creativeTitle,
+      sourceUrl,
+      sourceText: scrapedText,
+      onProgress: (msg) => notify(msg),
+    });
+    // Sécurité : titre = créative, jamais la sortie modèle
+    generated.title = titleFromCreative(creativeTitle);
   } finally {
     await prisma.appSetting.delete({ where: { key: lockKey } }).catch(() => {});
   }
@@ -217,8 +195,8 @@ export async function publishArticleFromCreative(input: {
   await notify("Recherche d'illustration site…");
   const coverImageUrl = await withTimeout(
     resolveRelevantCoverUrl({
-      title: generated.title || researchTitle,
-      excerpt: generated.excerpt || caption,
+      title: generated.title,
+      excerpt: generated.excerpt,
     }),
     28_000,
     "Timeout illustration",
@@ -232,7 +210,6 @@ export async function publishArticleFromCreative(input: {
     ? detectImageMime(input.image.buffer, input.image.mime)
     : null;
 
-  // Stocker la créative (jusqu'à ~4 Mo) pour /api/media + FB URL fallback
   const storeBlob =
     input.image &&
     input.image.buffer.length > 0 &&
@@ -244,21 +221,14 @@ export async function publishArticleFromCreative(input: {
     content: generated.content,
   });
 
-  // sourceText en DB = scrape (matière) ; caption Canva reste dans headline via research
-  const persistedSourceText = scrapedText?.slice(0, 12000) || caption;
-
   const article = await prisma.article.create({
     data: {
       title: generated.title,
       excerpt: generated.excerpt,
       content: generated.content,
-      sourceText: persistedSourceText,
+      sourceText: scrapedText?.slice(0, 12000) || caption,
       sourceUrl: sourceUrl || null,
-      researchDossier: pipelineDossier
-        ? (dossierForPersistence(
-            pipelineDossier,
-          ) as unknown as Prisma.InputJsonValue)
-        : undefined,
+      researchDossier: undefined,
       slug,
       category,
       status: "published",

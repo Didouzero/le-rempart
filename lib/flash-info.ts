@@ -48,39 +48,41 @@ function ensureParagraphs(text: string): string {
       .filter(Boolean)
       .join("\n\n");
   }
-  // Une phrase par ligne → regrouper en paragraphes courts
   const lines = cleaned
     .split(/\n+/)
     .map((l) => l.trim())
     .filter(Boolean);
-  if (lines.length >= 3) {
-    return lines.join("\n\n");
-  }
+  if (lines.length >= 3) return lines.join("\n\n");
   return cleaned.replace(/\s+/g, " ");
 }
 
-/**
- * Fallback Rempart sans Kimi : titre + chapô + punch léger.
- */
+function wordCount(text: string): number {
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
 function fallbackRempartFlash(input: {
   title: string;
   excerpt: string;
   sourceUrl?: string;
+  articleBody?: string;
 }): string {
-  const title = input.title.replace(/\s+/g, " ").trim();
-  const excerpt = input.excerpt.replace(/\s+/g, " ").trim();
   const parts: string[] = [];
+  if (input.excerpt?.trim()) parts.push(input.excerpt.trim());
+  else parts.push(input.title.trim());
 
-  if (excerpt.length >= 60) {
-    parts.push(excerpt);
-  } else if (title) {
-    parts.push(
-      title.endsWith(".") || title.endsWith("…") ? title : `${title}.`,
-    );
+  const body = (input.articleBody || "")
+    .replace(/^#+\s+/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (body.length > 80) {
+    const cut = body.slice(0, 700);
+    const last = cut.lastIndexOf(".");
+    parts.push(last > 120 ? cut.slice(0, last + 1) : `${cut}…`);
   }
 
   parts.push(
-    "Les faits sont là. Reste à voir combien de temps les médias mainstream mettront à les digérer — ou à les édulcorer.",
+    "Les faits sont là. À chacun d'en tirer les conclusions que les médias mainstream préfèrent souvent esquiver.",
   );
 
   const outlet = outletFromUrl(input.sourceUrl);
@@ -89,50 +91,30 @@ function fallbackRempartFlash(input: {
   return `${PREFIX} ${parts.join("\n\n")}`;
 }
 
-const SYSTEM_PROMPT = `Tu rédiges le texte Facebook (FLASH INFO) pour Le Rempart, média d'actualité français engagé, droit-conservateur, franc et ironique.
+const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart.
 
-MISSION : informer AVEC DU CARACTÈRE. Pas une dépêche AFP plate. Pas un édito creux non plus. Faits denses + jugement Rempart.
+MISSION : un flash dense, informatif, avec la touche Rempart (ironie / jugement en fin), qui reprend les éléments concrets de l'article du site.
 
-FORMAT OBLIGATOIRE :
-- Commence DIRECTEMENT par le corps du flash (SANS le préfixe ‼️🇫🇷 FLASH INFO — : on l'ajoute après)
+CONTRAINTES :
+- 150 à 200 mots MAXIMUM (vise ~170). Compte tes mots.
 - 3 à 5 courts paragraphes séparés par une ligne vide
-- Premier paragraphe : accroche factuelle (qui / quoi / où), ton vivant
-- Puis détails concrets, citations entre guillemets si elles sont dans la source
-- « Pour rappel… » ou mise en perspective quand c'est pertinent
-- Dernier paragraphe : punch / ironie / jugement Rempart (sans vulgarité gratuite)
-- Optionnel en toute fin : (Source : NomDuMédia) si identifiable
-- Français correct, pas d'emojis hors préfixe, pas d'hashtags, pas d'URL
-
-INTERDIT :
-- Flash AFP de 2 phrases plates (« X a dit Y. Cela a provoqué un tollé. »)
-- Formules vides : « tollé transpartisan », « l'ensemble de la classe politique », « suscite de nombreuses réactions »
-- Inventer des faits, chiffres, citations absents de la source / du dossier
-- Hashtags, liens, markdown
-
-EXEMPLES DE BON TON (inspire-toi de la densité et de l'ironie, PAS du sujet) :
-
-Exemple 1 :
-Officiellement candidat à la présidentielle qui arrive, Raphaël Glucksmann a décidé d'entamer sa campagne sur les chapeaux de roue.
-Le candidat socialiste n'a rien trouvé de mieux, comme premier déplacement de campagne, d'aller visiter... un parc éolien, en compagnie de son nouveau grand coéquipier de campagne anciennement écologiste, Yannick Jadot, qui avait réalisé le merveilleux score de 4,63% à l'élection présidentielle de 2022.
-Pour rappel, une large majorité de français s'oppose aux éoliennes et préfère favoriser l'énergie nucléaire. Tout porte à croire que notre ami Raphaël Glucksmann enchaîne les mauvais choix jour après jour, comme s'il s'agissait d'une passion.
-
-Exemple 2 :
-Sur les réseaux sociaux, des influenceuses musulmanes appellent à délaisser la littérature française, jugée « pas compatible » avec leurs valeurs religieuses, au profit d'une littérature « halal ».
-« Ça normalise absolument tout ce qui est contraire à mes valeurs. Ce n'est pas du tout ce que j'ai envie de lire en tant que musulmane », explique l'une d'elles. Boule de Suif de Guy de Maupassant fait notamment partie des œuvres visées.
-En parallèle, la « halal romance » gagne en visibilité : des romans dans lesquels les relations amoureuses respectent un cadre islamique, sans relation charnelle ou romantique avant le mariage.
-Une plateforme d'écriture et de lecture « Muslim-Friendly » a également été lancée.
-Pour Florence Bergeaud-Blackler, ce phénomène illustre une logique de « désintégration et de désassimilation ».
-(Source : Europe 1)
+- Beaucoup de matière : noms, lieux, chiffres, citations, enchaînement des faits — pas un résumé creux
+- Premier paragraphe = accroche factuelle
+- Dernier = punch Rempart (sans vulgarité)
+- Optionnel : (Source : Média) en toute fin
+- SANS le préfixe ‼️🇫🇷 FLASH INFO (ajouté après)
+- Pas d'emojis, hashtags, URL, markdown
+- N'invente rien hors de l'article fourni
+- N'écris JAMAIS que quelque chose « n'est pas sourcé / pas vérifié »
 
 Réponds UNIQUEMENT avec le corps du flash.`;
 
 /**
- * Caption Facebook Rempart : faits + ironie + punch (style éditorial maison).
+ * Flash Facebook Rempart : 150–200 mots, densés depuis l'article.
  */
 export async function buildFlashInfoText(input: {
   title: string;
   excerpt: string;
-  /** Texte source scrapé et/ou contenu article pour la chair du flash. */
   sourceText?: string;
   sourceUrl?: string;
   articleUrl?: string;
@@ -142,36 +124,36 @@ export async function buildFlashInfoText(input: {
       title: input.title,
       excerpt: input.excerpt,
       sourceUrl: input.sourceUrl,
+      articleBody: input.sourceText,
     });
 
-  if (!process.env.MOONSHOT_API_KEY) {
-    return fallback();
-  }
+  if (!process.env.MOONSHOT_API_KEY) return fallback();
 
-  const corpus = (input.sourceText || input.excerpt || "").slice(0, 6000);
+  const corpus = [input.excerpt, input.sourceText]
+    .filter(Boolean)
+    .join("\n\n")
+    .slice(0, 7000);
   const outlet = outletFromUrl(input.sourceUrl);
 
   try {
     const text = await Promise.race([
       moonshotChat({
         model: getKimiTextModel(),
-        maxTokens: 900,
-        timeoutMs: 14_000,
+        maxTokens: 550,
+        timeoutMs: 18_000,
         reasoningEffort: "low",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
             content: [
-              `Titre créative / angle : ${input.title}`,
-              `Chapô / extrait article Rempart : ${input.excerpt}`,
+              `Titre article : ${input.title}`,
               outlet ? `Média source probable : ${outlet}` : null,
-              input.sourceUrl ? `URL source : ${input.sourceUrl}` : null,
               "",
-              "Matière factuelle (source / article) :",
-              corpus || "(matière limitée — reste prudent, ne rien inventer)",
+              "Article Rempart (matière à condenser en flash 150–200 mots) :",
+              corpus,
               "",
-              "Rédige le flash Facebook Rempart maintenant.",
+              "Rédige le flash maintenant.",
             ]
               .filter(Boolean)
               .join("\n"),
@@ -179,22 +161,25 @@ export async function buildFlashInfoText(input: {
         ],
       }),
       new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error("flash kimi timeout")), 15_000),
+        setTimeout(() => reject(new Error("flash kimi timeout")), 20_000),
       ),
     ]);
 
-    const body = ensureParagraphs(stripFlashPrefix(text || ""));
-    if (body.length < 120) {
-      return fallback();
+    let body = ensureParagraphs(stripFlashPrefix(text || ""));
+    if (body.length < 100) return fallback();
+
+    // Coupe si le modèle dépasse ~220 mots
+    const words = body.split(/\s+/);
+    if (words.length > 220) {
+      body = ensureParagraphs(words.slice(0, 200).join(" ") + "…");
     }
 
-    // Si Kimi a oublié la source et qu'on la connaît, on l'ajoute
-    let out = body;
-    if (outlet && !/\(Source\s*:/i.test(out)) {
-      out = `${out}\n\n(Source : ${outlet})`;
+    if (outlet && !/\(Source\s*:/i.test(body)) {
+      body = `${body}\n\n(Source : ${outlet})`;
     }
 
-    return `${PREFIX} ${out}`;
+    console.log("flash word count ~", wordCount(body));
+    return `${PREFIX} ${body}`;
   } catch (err) {
     console.error("flash info kimi skipped", err);
     return fallback();

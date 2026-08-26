@@ -184,8 +184,8 @@ export async function publishCreativePipeline(input: {
 
   await notify(
     input.sourceUrl
-      ? "Lecture de la source + rédaction de l'article…\n(peut prendre 2–4 min)"
-      : "Recherche web + rédaction de l'article…\n(peut prendre 2–4 min, ne renvoie pas la créative)",
+      ? "Lecture source + petite recherche + rédaction…\n(environ 30–60 s)"
+      : "Rédaction…",
   );
   const article = await publishArticleFromCreative({
     caption: input.caption,
