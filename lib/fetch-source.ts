@@ -87,29 +87,28 @@ function cleanText(text: string): string {
 
 /**
  * Purge bandeaux cookies / abonnement / CMP qui polluent scrapes & flash FB.
+ * Patterns volontairement bornés pour ne pas manger le corps de l'article.
  */
 export function scrubBoilerplate(text: string): string {
   let t = text.replace(/\r\n/g, "\n");
 
-  // Blocs multi-lignes typiques Didomi / CMP / paywall soft
   const blockPatterns: RegExp[] = [
-    /s[’']abonner et refuser les cookies[\s\S]{0,2500}?(?=(\n#{1,3}\s|\n[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ][^\n]{20,}|\n\n[A-Z]|$))/gi,
-    /accepter les cookies[\s\S]{0,1200}?(oui|non|refuser|continuer)[\s\S]{0,800}/gi,
-    /un petit geste nous aiderait[\s\S]{0,1500}/gi,
-    /nos\s+\d+\s+journalistes proposent[\s\S]{0,2000}?(?=(\n\n[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ]|$))/gi,
-    /pour soutenir le travail de notre rédaction[\s\S]{0,2000}/gi,
-    /nous et nos\s+\d+\s+partenaires[\s\S]{0,1500}/gi,
-    /gérer mes cookies[\s\S]{0,800}/gi,
-    /continuer sans accepter[\s\S]{0,800}/gi,
-    /en cliquant sur «?\s*accepter[\s\S]{0,1000}/gi,
-    /votre vie privée[\s\S]{0,800}cookies[\s\S]{0,800}/gi,
-    /this site uses cookies[\s\S]{0,1000}/gi,
+    /s[’']abonner et refuser les cookies[^\n]*(?:\n[^\n]+){0,12}/gi,
+    /accepter les cookies\s*:\s*oui\s*non[^\n]*/gi,
+    /accepter les cookies[^\n]{0,200}/gi,
+    /un petit geste nous aiderait[^\n]{0,200}/gi,
+    /nos\s+\d+\s+journalistes proposent[^\n]*(?:\n[^\n]+){0,8}/gi,
+    /pour soutenir le travail de notre rédaction[^\n]*(?:\n[^\n]+){0,8}/gi,
+    /nous et nos\s+\d+\s+partenaires[^\n]*(?:\n[^\n]+){0,6}/gi,
+    /gérer mes cookies[^\n]{0,120}/gi,
+    /continuer sans accepter[^\n]{0,120}/gi,
+    /accéder au contenu gratuit[^\n]{0,200}/gi,
+    /this site uses cookies[^\n]{0,200}/gi,
   ];
   for (const re of blockPatterns) {
     t = t.replace(re, "\n");
   }
 
-  // Paragraphes / lignes isolées
   t = t
     .split(/\n+/)
     .filter((line) => {
@@ -122,15 +121,23 @@ export function scrubBoilerplate(text: string): string {
       ) {
         return false;
       }
+      // Ligne quasi entièrement CMP / cookies
       if (
-        /cookie|didomi|cmp|consentement|partenaires\)|données personnelles|finalités|mesure d.audience/i.test(
+        /^(accepter les cookies|s[’']abonner et refuser|un petit geste|accéder au contenu gratuit)/i.test(
           s,
-        ) &&
-        s.length < 280
+        )
       ) {
         return false;
       }
-      if (/^accéder au contenu gratuit/i.test(s)) return false;
+      if (
+        /cookie|didomi|cmp|consentement|données personnelles|mesure d.audience/i.test(
+          s,
+        ) &&
+        !/\d\s*%|sondage|président|élu|tribunal|condamné|euros?/i.test(s) &&
+        s.length < 220
+      ) {
+        return false;
+      }
       return true;
     })
     .join("\n");
