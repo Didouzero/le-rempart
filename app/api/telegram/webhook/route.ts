@@ -46,7 +46,7 @@ function commandsHelpText(): string {
     "/cancel — annuler la créative en attente de lien",
     "",
     "── Veille auto ──",
-    "/veille_on — active l’agent (7 créneaux/jour, 8h–20h Paris)",
+    "/veille_on — active l’agent (1 créneau/jour ~8h Paris, limite Hobby Vercel)",
     "/veille_off — coupe l’agent (manuel seul)",
     "/veille — statut (+ créative en attente si besoin)",
     "",
@@ -62,7 +62,7 @@ function commandsHelpText(): string {
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
     "",
-    "Créneaux veille : 8h, 10h, 12h, 14h, 16h, 18h, 20h (heure FR).",
+    "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
     "Rien n’est publié en auto sans ton OK.",
   ].join("\n");
 }
@@ -212,9 +212,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           chatId,
           [
             "Veille : ON.",
-            "7 propositions/jour (8h, 10h, 12h, 14h, 16h, 18h, 20h heure FR).",
+            "1 proposition/jour vers 8h (heure FR) — limite plan Hobby Vercel.",
             "Chaque créative attend ton OK (/veille_ok) — max 3 essais si tu refuses.",
-            "Le manuel (envoi PNG/JPG) reste toujours possible.",
+            "Le manuel (créative puis lien source) reste toujours possible.",
           ].join("\n"),
         );
         return;
