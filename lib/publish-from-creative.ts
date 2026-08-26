@@ -196,8 +196,9 @@ export async function publishArticleFromCreative(input: {
       },
       {
         fast: true,
-        maxResearchPasses: scrapedText && scrapedText.length >= 400 ? 1 : 1,
-        researchTimeoutMs: scrapedText ? 90_000 : 140_000,
+        maxResearchPasses: 1,
+        // Le build Kimi seul peut prendre ~55–75 s : 90 s était trop juste.
+        researchTimeoutMs: scrapedText ? 160_000 : 140_000,
         writingTimeoutMs: 75_000,
         sourceFirst: Boolean(sourceUrl && scrapedText),
         onProgress: (msg) => notify(msg),

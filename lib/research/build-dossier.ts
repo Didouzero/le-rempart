@@ -228,7 +228,7 @@ export async function buildDossierFromDocuments(input: {
    * dossier compact abouti qu'un JSON riche coupé par le timeout : quand le
    * builder échoue, le pipeline retombe sur le legacy sans dossier du tout.
    */
-  const attempts: Array<{
+  const   attempts: Array<{
     model: string;
     profile: BuildProfile;
     maxTokens: number;
@@ -236,21 +236,21 @@ export async function buildDossierFromDocuments(input: {
     corpusChars: number;
   }> = input.fast
     ? [
-        // ~50 tok/s côté Kimi : 3600 tokens de sortie ≈ 75 s. Les budgets
-        // doivent coller à cette réalité, sinon le dossier est perdu.
-        {
-          model: researchModel,
-          profile: "compact",
-          maxTokens: 4200,
-          timeoutMs: 100_000,
-          corpusChars: 13_000,
-        },
+        // Source déjà scrapée : viser un dossier compact qui tient sous le
+        // budget research Telegram (~150–160 s) sans double tentative longue.
         {
           model: researchModel,
           profile: "minimal",
-          maxTokens: 2200,
-          timeoutMs: 60_000,
-          corpusChars: 8_000,
+          maxTokens: 2400,
+          timeoutMs: 55_000,
+          corpusChars: 10_000,
+        },
+        {
+          model: researchModel,
+          profile: "compact",
+          maxTokens: 3600,
+          timeoutMs: 75_000,
+          corpusChars: 12_000,
         },
       ]
     : [

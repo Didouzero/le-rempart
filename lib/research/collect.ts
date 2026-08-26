@@ -261,6 +261,28 @@ export async function collectDeepSources(input: {
   fast?: boolean;
   skipWebSearch?: boolean;
 }): Promise<{ sources: SourceDocument[]; seedNotes?: string }> {
+  const seed = input.sourceText?.trim() || "";
+  const isCaptionSeed =
+    /^Accroche éditoriale secondaire/i.test(seed) || seed.length < 80;
+  const richSeed = Boolean(seed && !isCaptionSeed && seed.length >= 400);
+
+  // Déjà scrapé en amont (Telegram) : pas de re-fetch ni de web search.
+  if (input.skipWebSearch && richSeed) {
+    const seedDoc = enrichSourceWithTier({
+      url: input.sourceUrl || "seed:sourceText",
+      title: `Notes / texte source — ${input.title}`.slice(0, 160),
+      publisher: "source fournie",
+      language: "fr",
+      retrievedAt: new Date().toISOString(),
+      type: input.sourceUrl ? classifySourceType(input.sourceUrl) : "primary",
+      scraped: true,
+      confidence: 0,
+      excerpt: seed.slice(0, MAX_EXCERPT),
+      notes: "subject.sourceText",
+    });
+    return { sources: [seedDoc], seedNotes: undefined };
+  }
+
   const have = new Set(
     (input.alreadyHaveUrls || []).map((u) => u.split("?")[0]!),
   );
@@ -290,9 +312,6 @@ export async function collectDeepSources(input: {
     if (docs.length >= maxDeep) break;
   }
 
-  const seed = input.sourceText?.trim() || "";
-  const isCaptionSeed =
-    /^Accroche éditoriale secondaire/i.test(seed) || seed.length < 80;
   if (seed && !isCaptionSeed) {
     docs.unshift(
       enrichSourceWithTier({
