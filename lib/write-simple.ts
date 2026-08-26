@@ -1,6 +1,7 @@
-import { moonshotChat } from "@/lib/moonshot";
 import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { searchWebForSubject } from "@/lib/research/web-search";
+import { scrubBoilerplate } from "@/lib/fetch-source";
+import { moonshotChat } from "@/lib/moonshot";
 
 export type SimpleArticle = {
   title: string;
@@ -131,7 +132,7 @@ export async function writeArticleSimple(input: {
     `URL source : ${input.sourceUrl}`,
     "",
     "TEXTE SOURCE (matière principale) :",
-    input.sourceText.slice(0, 10000),
+    scrubBoilerplate(input.sourceText).slice(0, 10000),
     "",
     "RÉSULTATS WEB COMPLÉMENTAIRES :",
     webBrief || "(aucun)",

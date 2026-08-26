@@ -85,6 +85,74 @@ function cleanText(text: string): string {
     .trim();
 }
 
+/**
+ * Purge bandeaux cookies / abonnement / CMP qui polluent scrapes & flash FB.
+ */
+export function scrubBoilerplate(text: string): string {
+  let t = text.replace(/\r\n/g, "\n");
+
+  // Blocs multi-lignes typiques Didomi / CMP / paywall soft
+  const blockPatterns: RegExp[] = [
+    /s[’']abonner et refuser les cookies[\s\S]{0,2500}?(?=(\n#{1,3}\s|\n[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ][^\n]{20,}|\n\n[A-Z]|$))/gi,
+    /accepter les cookies[\s\S]{0,1200}?(oui|non|refuser|continuer)[\s\S]{0,800}/gi,
+    /un petit geste nous aiderait[\s\S]{0,1500}/gi,
+    /nos\s+\d+\s+journalistes proposent[\s\S]{0,2000}?(?=(\n\n[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ]|$))/gi,
+    /pour soutenir le travail de notre rédaction[\s\S]{0,2000}/gi,
+    /nous et nos\s+\d+\s+partenaires[\s\S]{0,1500}/gi,
+    /gérer mes cookies[\s\S]{0,800}/gi,
+    /continuer sans accepter[\s\S]{0,800}/gi,
+    /en cliquant sur «?\s*accepter[\s\S]{0,1000}/gi,
+    /votre vie privée[\s\S]{0,800}cookies[\s\S]{0,800}/gi,
+    /this site uses cookies[\s\S]{0,1000}/gi,
+  ];
+  for (const re of blockPatterns) {
+    t = t.replace(re, "\n");
+  }
+
+  // Paragraphes / lignes isolées
+  t = t
+    .split(/\n+/)
+    .filter((line) => {
+      const s = line.trim();
+      if (!s) return false;
+      if (
+        /^(oui|non|accepter|refuser|s[’']abonner|se connecter|gérer mes cookies|paramètres des cookies)\.?$/i.test(
+          s,
+        )
+      ) {
+        return false;
+      }
+      if (
+        /cookie|didomi|cmp|consentement|partenaires\)|données personnelles|finalités|mesure d.audience/i.test(
+          s,
+        ) &&
+        s.length < 280
+      ) {
+        return false;
+      }
+      if (/^accéder au contenu gratuit/i.test(s)) return false;
+      return true;
+    })
+    .join("\n");
+
+  return cleanText(t);
+}
+
+/** Retire d'un flash FB les paragraphes cookies / abonnement qui auraient fuité. */
+export function scrubFlashOutput(text: string): string {
+  const parts = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => {
+      if (/cookie|s[’']abonner|didomi|petit geste nous aiderait|accepter\s*:\s*oui|données personnelles|partenaires\)/i.test(p)) {
+        return false;
+      }
+      return true;
+    });
+  return scrubBoilerplate(parts.join("\n\n"));
+}
+
 function extractMeta(html: string, prop: string): string {
   const re = new RegExp(
     `<meta[^>]+(?:property|name)=["']${prop}["'][^>]+content=["']([^"']+)["']`,
@@ -124,7 +192,9 @@ function htmlToPlainText(html: string): string {
     chunks.unshift(ogTitle);
   }
 
-  return cleanText(chunks.filter(Boolean).join("\n\n")).slice(0, 12000);
+  return scrubBoilerplate(
+    cleanText(chunks.filter(Boolean).join("\n\n")),
+  ).slice(0, 12000);
 }
 
 /** Heuristique : scrape quasi vide / paywall / menu. */
@@ -164,7 +234,7 @@ function jinaMarkdownToText(md: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
   const out = [title, cleaned].filter(Boolean).join("\n\n");
-  return cleanText(out).slice(0, 12000);
+  return scrubBoilerplate(cleanText(out)).slice(0, 12000);
 }
 
 async function fetchDirect(url: string): Promise<string> {
@@ -238,9 +308,11 @@ async function fetchViaJina(url: string): Promise<string> {
  * Direct navigateur, sinon (ou d'emblée pour certains titres presse) Jina Reader.
  */
 export async function fetchSourceText(url: string): Promise<string> {
+  const finish = (text: string) => scrubBoilerplate(text).slice(0, 12000);
+
   if (preferJina(url)) {
     try {
-      const viaJina = await fetchViaJina(url);
+      const viaJina = finish(await fetchViaJina(url));
       console.log("fetchSourceText prefer-jina OK", hostOf(url), viaJina.length);
       return viaJina;
     } catch (jinaFirstErr) {
@@ -249,11 +321,11 @@ export async function fetchSourceText(url: string): Promise<string> {
   }
 
   try {
-    return await fetchDirect(url);
+    return finish(await fetchDirect(url));
   } catch (directErr) {
     console.error("fetchSourceText direct failed", url, directErr);
     try {
-      const viaJina = await fetchViaJina(url);
+      const viaJina = finish(await fetchViaJina(url));
       console.log("fetchSourceText via Jina OK", url, viaJina.length);
       return viaJina;
     } catch (jinaErr) {

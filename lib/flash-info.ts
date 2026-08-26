@@ -1,5 +1,6 @@
 import { moonshotChat } from "@/lib/moonshot";
 import { getKimiTextModel } from "@/lib/kimi";
+import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 
@@ -106,6 +107,7 @@ CONTRAINTES :
 - Pas d'emojis, hashtags, URL, markdown
 - N'invente rien hors de l'article fourni
 - N'écris JAMAIS que quelque chose « n'est pas sourcé / pas vérifié »
+- INTERDIT ABSOLU : cookies, « accepter », « s'abonner », Didomi, bandeaux CMP, « un petit geste nous aiderait », tout texte de consentement / pub du site source
 
 Réponds UNIQUEMENT avec le corps du flash.`;
 
@@ -129,10 +131,9 @@ export async function buildFlashInfoText(input: {
 
   if (!process.env.MOONSHOT_API_KEY) return fallback();
 
-  const corpus = [input.excerpt, input.sourceText]
-    .filter(Boolean)
-    .join("\n\n")
-    .slice(0, 7000);
+  const corpus = scrubBoilerplate(
+    [input.excerpt, input.sourceText].filter(Boolean).join("\n\n"),
+  ).slice(0, 7000);
   const outlet = outletFromUrl(input.sourceUrl);
 
   try {
@@ -153,7 +154,7 @@ export async function buildFlashInfoText(input: {
               "Article Rempart (matière à condenser en flash 150–200 mots) :",
               corpus,
               "",
-              "Rédige le flash maintenant.",
+              "Rédige le flash maintenant. Aucun mot sur les cookies.",
             ]
               .filter(Boolean)
               .join("\n"),
@@ -165,7 +166,7 @@ export async function buildFlashInfoText(input: {
       ),
     ]);
 
-    let body = ensureParagraphs(stripFlashPrefix(text || ""));
+    let body = scrubFlashOutput(ensureParagraphs(stripFlashPrefix(text || "")));
     if (body.length < 100) return fallback();
 
     // Coupe si le modèle dépasse ~220 mots
@@ -182,6 +183,6 @@ export async function buildFlashInfoText(input: {
     return `${PREFIX} ${body}`;
   } catch (err) {
     console.error("flash info kimi skipped", err);
-    return fallback();
+    return scrubFlashOutput(fallback());
   }
 }
