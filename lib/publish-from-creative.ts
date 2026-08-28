@@ -5,7 +5,7 @@ import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
-import { titleFromCreative, writeArticleSimple } from "@/lib/write-simple";
+import { writeArticleSimple } from "@/lib/write-simple";
 import { createHash } from "crypto";
 
 async function makeUniqueSlug(title: string) {
@@ -188,8 +188,6 @@ export async function publishArticleFromCreative(input: {
       sourceText: scrapedText,
       onProgress: (msg) => notify(msg),
     });
-    // Sécurité : titre = créative, jamais la sortie modèle
-    generated.title = titleFromCreative(creativeTitle);
   } finally {
     await prisma.appSetting.delete({ where: { key: lockKey } }).catch(() => {});
   }

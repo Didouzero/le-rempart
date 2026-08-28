@@ -9,9 +9,55 @@ export type SimpleArticle = {
   content: string;
 };
 
+const TITLE_STOPWORDS = new Set([
+  "dans",
+  "pour",
+  "avec",
+  "sans",
+  "sous",
+  "chez",
+  "vers",
+  "apres",
+  "avant",
+  "selon",
+  "entre",
+  "contre",
+  "depuis",
+  "pendant",
+  "alors",
+  "aussi",
+  "encore",
+  "tous",
+  "tout",
+  "toute",
+  "toutes",
+  "cette",
+  "cet",
+  "ces",
+  "des",
+  "les",
+  "une",
+  "aux",
+  "dont",
+  "plus",
+  "moins",
+  "tres",
+  "fait",
+  "etre",
+  "avoir",
+  "sont",
+  "etait",
+  "comme",
+  "mais",
+  "donc",
+  "quand",
+  "quoi",
+  "quel",
+  "quelle",
+]);
+
 /**
- * Titre site = titre créative (lisibilité), jamais une réécriture Kimi.
- * Majuscules Canva → casse phrase ; on conserve le sens mot pour mot.
+ * Normalise la casse d'un titre (Canva SCREAMING → phrase).
  */
 export function titleFromCreative(creativeTitle: string): string {
   let t = creativeTitle.replace(/\s+/g, " ").trim();
@@ -28,7 +74,57 @@ export function titleFromCreative(creativeTitle: string): string {
   return t.slice(0, 220);
 }
 
-function parseJsonArticle(raw: string): { excerpt: string; content: string } {
+function foldTitle(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9€\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function significantTitleTokens(text: string): string[] {
+  return foldTitle(text)
+    .split(/\s+/)
+    .filter((w) => w.length >= 4 && !TITLE_STOPWORDS.has(w));
+}
+
+/**
+ * Accepte une reformulation Kimi si elle reste ancrée sur la créative ;
+ * sinon repli = titre créative normalisé.
+ */
+export function pickReformulatedTitle(
+  creativeTitle: string,
+  proposed: string | undefined | null,
+): string {
+  const fallback = titleFromCreative(creativeTitle);
+  const candidate = titleFromCreative(String(proposed || ""));
+  if (candidate.length < 18 || candidate === "Actualité") return fallback;
+
+  const foldFallback = foldTitle(fallback);
+  const foldCandidate = foldTitle(candidate);
+  // Identique (casse près) → on garde la créative (pas de faux « changement »)
+  if (foldCandidate === foldFallback) return fallback;
+
+  const anchors = significantTitleTokens(fallback);
+  if (anchors.length === 0) return candidate;
+
+  const hits = anchors.filter((t) => foldCandidate.includes(t)).length;
+  const need = Math.min(2, anchors.length);
+  if (hits < need) return fallback;
+
+  // Trop long / hors format titre
+  if (candidate.length > 220) return fallback;
+
+  return candidate;
+}
+
+function parseJsonArticle(raw: string): {
+  title: string;
+  excerpt: string;
+  content: string;
+} {
   const cleaned = raw
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
@@ -43,12 +139,14 @@ function parseJsonArticle(raw: string): { excerpt: string; content: string } {
     content?: unknown;
     title?: unknown;
   };
+  const title = String(obj.title || "").trim();
   const excerpt = String(obj.excerpt || "").trim();
   const content = String(obj.content || "").trim();
   if (excerpt.length < 20 || content.length < 200) {
     throw new Error("Réponse rédaction trop courte");
   }
   return {
+    title: title.replace(/\u2014|\u2013/g, ","),
     excerpt: excerpt.replace(/\u2014|\u2013/g, ","),
     content: content.replace(/\u2014|\u2013/g, ","),
   };
@@ -69,13 +167,20 @@ function humanize(text: string): string {
 const SYSTEM = `Tu es journaliste pour Le Rempart, média français ancré à droite, franc, sarcastique quand c'est mérité, mais d'abord INFORMÉ.
 
 Tu reçois :
-1) Le TITRE CRÉATIVE (fait établi par la rédaction — à prendre comme VRAI)
+1) Le TITRE CRÉATIVE (faits établis par la rédaction — à prendre comme VRAIS)
 2) Le texte scrapé de l'article source (matière principale)
 3) Quelques résultats web complémentaires (contexte)
 
-Tu rédiges UNIQUEMENT le chapô (excerpt) et le corps (content). Le titre est imposé ailleurs : ne le réécris pas.
+Tu rédiges : un TITRE DE SITE reformulé, le chapô (excerpt) et le corps (content).
 
-RÈGLES :
+TITRE SITE (champ "title") :
+- Même faits, même angle que le titre créative — GROSSO MODO la même chose.
+- REFORMULE : autre tournure, synonymes, ordre des mots différent. INTERDIT de recopier le titre créative mot pour mot.
+- Garde les noms propres, lieux et chiffres importants s'ils sont dans la créative.
+- Une seule phrase d'accroche presse (pas de point final obligatoire), longueur proche de la créative.
+- Pas de majuscules partout, pas d'emoji, pas de hashtag.
+
+RÈGLES ARTICLE :
 - Le titre créative EST la ligne éditoriale des faits. N'écris JAMAIS « non sourcé », « non vérifié », « selon des informations non confirmées », « impossible de confirmer », « à cette heure rien ne prouve » pour relativiser ce que dit le titre. Si le titre l'affirme, tu l'affirmes.
 - Base-toi surtout sur l'article source. Les résultats web = contexte utile seulement.
 - Ne pas inventer de citations, chiffres ou noms absents des matières fournies. Enrichir avec le web OK si c'est dans les snippets.
@@ -86,7 +191,7 @@ RÈGLES :
 - excerpt = 1–2 phrases d'accroche factuelles (qui / quoi / où), pas un édito.
 
 Réponds UNIQUEMENT avec un JSON valide :
-{"excerpt":"...","content":"..."}`;
+{"title":"...","excerpt":"...","content":"..."}`;
 
 /**
  * Pipeline léger : petite recherche web + 1 appel Kimi.
@@ -98,7 +203,6 @@ export async function writeArticleSimple(input: {
   sourceText: string;
   onProgress?: (msg: string) => void | Promise<void>;
 }): Promise<SimpleArticle> {
-  const title = titleFromCreative(input.creativeTitle);
   const progress = input.onProgress || (async () => {});
 
   await progress("Petite recherche web (contexte)…");
@@ -125,10 +229,8 @@ export async function writeArticleSimple(input: {
   await progress("Rédaction de l'article…");
   const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 6500);
   const userContent = [
-    `TITRE CRÉATIVE (faits établis — titre du site = version lisible de celui-ci) :`,
+    `TITRE CRÉATIVE (faits établis — à reformuler pour le titre site, pas à recopier) :`,
     input.creativeTitle,
-    "",
-    `Titre publié (ne pas modifier) : ${title}`,
     "",
     `URL source : ${input.sourceUrl}`,
     "",
@@ -138,7 +240,7 @@ export async function writeArticleSimple(input: {
     "RÉSULTATS WEB COMPLÉMENTAIRES :",
     webBrief || "(aucun)",
     "",
-    "Rédige excerpt + content maintenant.",
+    "Rédige title (reformulé) + excerpt + content maintenant.",
   ].join("\n");
 
   const attempts: Array<{
@@ -176,7 +278,7 @@ export async function writeArticleSimple(input: {
       });
       const parsed = parseJsonArticle(raw);
       return {
-        title,
+        title: pickReformulatedTitle(input.creativeTitle, parsed.title),
         excerpt: humanize(parsed.excerpt),
         content: humanize(parsed.content),
       };
