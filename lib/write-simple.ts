@@ -123,6 +123,7 @@ export async function writeArticleSimple(input: {
   }
 
   await progress("Rédaction de l'article…");
+  const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 6500);
   const userContent = [
     `TITRE CRÉATIVE (faits établis — titre du site = version lisible de celui-ci) :`,
     input.creativeTitle,
@@ -132,7 +133,7 @@ export async function writeArticleSimple(input: {
     `URL source : ${input.sourceUrl}`,
     "",
     "TEXTE SOURCE (matière principale) :",
-    scrubBoilerplate(input.sourceText).slice(0, 10000),
+    sourceSlice,
     "",
     "RÉSULTATS WEB COMPLÉMENTAIRES :",
     webBrief || "(aucun)",
@@ -140,21 +141,55 @@ export async function writeArticleSimple(input: {
     "Rédige excerpt + content maintenant.",
   ].join("\n");
 
-  const raw = await moonshotChat({
-    model: getKimiTextModel(),
-    maxTokens: 3500,
-    timeoutMs: 45_000,
-    reasoningEffort: "low",
-    messages: [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: userContent },
-    ],
-  });
+  const attempts: Array<{
+    model: string;
+    maxTokens: number;
+    timeoutMs: number;
+    reasoningEffort?: "low" | "high" | "max";
+  }> = [
+    {
+      model: getKimiTextModel(),
+      maxTokens: 2800,
+      timeoutMs: 70_000,
+      reasoningEffort: "low",
+    },
+    // Secours plus court si le 1er timeout
+    {
+      model: "kimi-k2.6",
+      maxTokens: 2200,
+      timeoutMs: 55_000,
+    },
+  ];
 
-  const parsed = parseJsonArticle(raw);
-  return {
-    title,
-    excerpt: humanize(parsed.excerpt),
-    content: humanize(parsed.content),
-  };
+  let lastErr: unknown;
+  for (const attempt of attempts) {
+    try {
+      const raw = await moonshotChat({
+        model: attempt.model,
+        maxTokens: attempt.maxTokens,
+        timeoutMs: attempt.timeoutMs,
+        reasoningEffort: attempt.reasoningEffort,
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: userContent },
+        ],
+      });
+      const parsed = parseJsonArticle(raw);
+      return {
+        title,
+        excerpt: humanize(parsed.excerpt),
+        content: humanize(parsed.content),
+      };
+    } catch (err) {
+      lastErr = err;
+      console.error("writeArticleSimple attempt failed", attempt.model, err);
+      await progress(
+        `Rédaction lente (${attempt.model}) — nouvel essai…`,
+      ).catch(() => {});
+    }
+  }
+
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Échec rédaction article");
 }

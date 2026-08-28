@@ -62,6 +62,19 @@ export async function moonshotChatDetailed(input: {
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
+  }).catch((err: unknown) => {
+    const name = err && typeof err === "object" && "name" in err ? String((err as { name: string }).name) : "";
+    const msg = err instanceof Error ? err.message : String(err);
+    if (
+      name === "TimeoutError" ||
+      name === "AbortError" ||
+      /aborted due to timeout|AbortError|TimeoutError/i.test(msg)
+    ) {
+      throw new Error(
+        `Timeout Kimi (${Math.round(timeoutMs / 1000)}s) — réessaie, ou envoie un autre lien.`,
+      );
+    }
+    throw err instanceof Error ? err : new Error(msg);
   });
 
   const data = (await res.json()) as {

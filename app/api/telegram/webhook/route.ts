@@ -396,10 +396,13 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   } catch (err) {
     console.error("telegram process error", err);
     try {
-      await telegramSendMessage(
-        chatId,
-        `Erreur : ${err instanceof Error ? err.message : "échec publication"}`,
-      );
+      const raw = err instanceof Error ? err.message : "échec publication";
+      const friendly = /aborted due to timeout|AbortError|TimeoutError/i.test(
+        raw,
+      )
+        ? "Timeout (opération trop longue). Renvoie le lien une fois, sans spammer."
+        : raw;
+      await telegramSendMessage(chatId, `Erreur : ${friendly}`);
     } catch {
       // ignore
     }

@@ -252,6 +252,12 @@ async function fetchDirect(url: string): Promise<string> {
     },
     redirect: "follow",
     signal: AbortSignal.timeout(15000),
+  }).catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/aborted due to timeout|AbortError|TimeoutError/i.test(msg)) {
+      throw new Error("Timeout lecture page (15s)");
+    }
+    throw err instanceof Error ? err : new Error(msg);
   });
 
   if (!response.ok) {
@@ -296,6 +302,12 @@ async function fetchViaJina(url: string): Promise<string> {
   const response = await fetch(endpoint, {
     headers,
     signal: AbortSignal.timeout(28000),
+  }).catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/aborted due to timeout|AbortError|TimeoutError/i.test(msg)) {
+      throw new Error("Timeout lecture via proxy (28s)");
+    }
+    throw err instanceof Error ? err : new Error(msg);
   });
 
   if (!response.ok) {
