@@ -183,9 +183,11 @@ export async function writeArticleSimple(input: {
     } catch (err) {
       lastErr = err;
       console.error("writeArticleSimple attempt failed", attempt.model, err);
-      await progress(
-        `Rédaction lente (${attempt.model}) — nouvel essai…`,
-      ).catch(() => {});
+      try {
+        await progress(`Rédaction lente (${attempt.model}) — nouvel essai…`);
+      } catch {
+        // ignore
+      }
     }
   }
 
