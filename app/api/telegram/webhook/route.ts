@@ -6,6 +6,7 @@ import {
   deletePublishDraft,
   extractHttpUrl,
   getActivePublishDraft,
+  setPublishDraftCoverUrl,
   upsertPublishDraft,
 } from "@/lib/publish-draft";
 import {
@@ -41,9 +42,10 @@ function commandsHelpText(): string {
     "",
     "── Manuel (toujours dispo) ──",
     "1) Envoie une créative PNG/JPG",
-    "2) Le bot demande le lien de l’article source",
-    "3) Tu envoies l’URL → article site + Facebook",
-    "/cancel — annuler la créative en attente de lien",
+    "2) Envoie l’URL de l’image d’illustration (site)",
+    "3) Envoie le lien de l’article source",
+    "→ article site + Facebook",
+    "/cancel — annuler la créative en attente",
     "",
     "── Veille auto ──",
     "/veille_on — active l’agent (1 créneau/jour ~8h Paris, limite Hobby Vercel)",
@@ -133,8 +135,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "",
           "Flux manuel :",
           "1) Envoie ta créative Canva (PNG/JPG)",
-          "2) Envoie le lien de l’article source",
-          "3) Je publie l’article site + Facebook",
+          "2) Envoie l’URL de l’image pour l’article",
+          "3) Envoie le lien de l’article source",
+          "4) Je publie l’article site + Facebook",
           "",
           "/cancel pour abandonner une créative en attente.",
         ].join("\n"),
@@ -319,7 +322,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     const manualCaption = (message.caption || "").trim();
 
-    // ── Étape 1 : créative → stocke brouillon, demande le lien ──
+    // ── Étape 1 : créative → demande URL illustration ──
     if (fileId) {
       await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
       const image = await telegramDownloadFile(fileId);
@@ -340,6 +343,27 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(
         chatId,
         [
+          "Envoie maintenant l’URL de l’image à mettre dans l’article (http/https).",
+          "Exemple : lien direct vers un .jpg / .png (Wikimedia, agence, etc.).",
+          "",
+          "Ensuite je te demanderai le lien de l’article source.",
+          "/cancel pour annuler.",
+        ].join("\n"),
+      );
+      return;
+    }
+
+    // ── Étapes 2–3 : URLs alors qu’un brouillon attend ──
+    const draft = await getActivePublishDraft(chatId);
+    const url = text ? extractHttpUrl(text) : null;
+
+    if (draft && url && !draft.coverImageUrl) {
+      await setPublishDraftCoverUrl(chatId, url);
+      await telegramSendMessage(
+        chatId,
+        [
+          "Illustration enregistrée.",
+          "",
           "Envoie maintenant le lien de l’article source (URL http/https).",
           "Je m’en sers pour rédiger l’article + le flash Facebook.",
           "",
@@ -349,38 +373,37 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    // ── Étape 2 : URL alors qu’un brouillon attend ──
-    const draft = await getActivePublishDraft(chatId);
-    const sourceUrl = text ? extractHttpUrl(text) : null;
-
-    if (draft && sourceUrl) {
+    if (draft && url && draft.coverImageUrl) {
       await telegramSendMessage(
         chatId,
-        `Lien reçu. Publication en cours…\n${sourceUrl}`,
+        `Lien source reçu. Publication en cours…\n${url}`,
       );
 
       try {
         await publishCreativePipeline({
           caption: draft.headline,
           headline: draft.headline,
-          sourceUrl,
+          sourceUrl: url,
+          coverImageUrl: draft.coverImageUrl,
           image: { buffer: draft.imageData, mime: draft.imageMime },
           requireSource: true,
           notify: telegramNotifier(chatId),
         });
         await deletePublishDraft(chatId);
       } catch (err) {
-        // Garde le brouillon pour renvoyer une autre URL
+        // Garde le brouillon pour renvoyer une autre URL source
         throw err;
       }
       return;
     }
 
-    if (draft && !sourceUrl) {
+    if (draft && !url) {
       await telegramSendMessage(
         chatId,
         [
-          "J’attends encore le lien de la source (URL complète http/https).",
+          draft.coverImageUrl
+            ? "J’attends encore le lien de la source (URL complète http/https)."
+            : "J’attends encore l’URL de l’image d’illustration (http/https).",
           `Titre en attente : ${draft.headline.slice(0, 120)}`,
           "",
           "/cancel pour annuler.",
@@ -391,7 +414,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     await telegramSendMessage(
       chatId,
-      "Envoie d’abord une créative en image (PNG/JPG), puis le lien source.",
+      "Envoie d’abord une créative (PNG/JPG), puis l’URL image, puis le lien source.",
     );
   } catch (err) {
     console.error("telegram process error", err);

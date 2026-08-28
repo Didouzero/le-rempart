@@ -7,8 +7,7 @@ import {
 
 /** Fonds thématiques (Unsplash) pour les tuiles rubriques. */
 const TILE_IMAGES: Record<ArticleCategory, string> = {
-  immigration:
-    "https://images.unsplash.com/photo-1590073844006-33379778ae09?w=800&h=800&fit=crop&q=80",
+  immigration: "/rubriques/immigration.webp",
   justice:
     "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&h=800&fit=crop&q=80",
   economie:

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-/** Brouillon créative → lien : expire après 30 min. */
+/** Brouillon créative → image → lien : expire après 30 min. */
 export const PUBLISH_DRAFT_TTL_MS = 30 * 60 * 1000;
 
 export type PublishDraftRecord = {
@@ -10,6 +10,7 @@ export type PublishDraftRecord = {
   headline: string;
   imageMime: string;
   imageData: Buffer;
+  coverImageUrl: string | null;
   createdAt: Date;
 };
 
@@ -20,6 +21,7 @@ function toRecord(row: {
   headline: string;
   imageMime: string;
   imageData: Uint8Array | Buffer;
+  coverImageUrl: string | null;
   createdAt: Date;
 }): PublishDraftRecord {
   return {
@@ -29,6 +31,7 @@ function toRecord(row: {
     headline: row.headline,
     imageMime: row.imageMime,
     imageData: Buffer.from(row.imageData),
+    coverImageUrl: row.coverImageUrl,
     createdAt: row.createdAt,
   };
 }
@@ -52,15 +55,32 @@ export async function upsertPublishDraft(input: {
       headline: input.headline.slice(0, 500),
       imageMime: input.image.mime,
       imageData: new Uint8Array(input.image.buffer),
+      coverImageUrl: null,
     },
     update: {
       userId: BigInt(input.userId),
       headline: input.headline.slice(0, 500),
       imageMime: input.image.mime,
       imageData: new Uint8Array(input.image.buffer),
+      coverImageUrl: null,
     },
   });
   return toRecord(row);
+}
+
+export async function setPublishDraftCoverUrl(
+  chatId: number,
+  coverImageUrl: string,
+): Promise<PublishDraftRecord | null> {
+  try {
+    const row = await prisma.publishDraft.update({
+      where: { chatId: BigInt(chatId) },
+      data: { coverImageUrl: coverImageUrl.slice(0, 2000) },
+    });
+    return toRecord(row);
+  } catch {
+    return null;
+  }
 }
 
 /** Draft valide non expiré, ou null (et purge si expiré). */

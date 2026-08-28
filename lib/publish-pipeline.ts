@@ -176,6 +176,8 @@ export async function publishCreativePipeline(input: {
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
+  /** URL illustration site (fournie après la créative). */
+  coverImageUrl?: string;
   requireSource?: boolean;
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
@@ -192,6 +194,7 @@ export async function publishCreativePipeline(input: {
     sourceUrl: input.sourceUrl,
     sourceTitle: input.sourceTitle,
     headline: input.headline,
+    coverImageUrl: input.coverImageUrl,
     image: input.image,
     requireSource,
     notify,

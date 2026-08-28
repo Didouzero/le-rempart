@@ -68,6 +68,8 @@ export async function publishArticleFromCreative(input: {
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
+  /** URL illustration fournie par l'utilisateur (prioritaire). */
+  coverImageUrl?: string;
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
   requireSource?: boolean;
@@ -192,18 +194,25 @@ export async function publishArticleFromCreative(input: {
     await prisma.appSetting.delete({ where: { key: lockKey } }).catch(() => {});
   }
 
-  await notify("Recherche d'illustration site…");
-  const coverImageUrl = await withTimeout(
-    resolveRelevantCoverUrl({
-      title: generated.title,
-      excerpt: generated.excerpt,
-    }),
-    28_000,
-    "Timeout illustration",
-  ).catch((err) => {
-    console.error(err);
-    return null;
-  });
+  await notify(
+    input.coverImageUrl?.trim()
+      ? "Illustration : URL fournie."
+      : "Recherche d'illustration site…",
+  );
+  const providedCover = input.coverImageUrl?.trim() || "";
+  const coverImageUrl = providedCover
+    ? providedCover
+    : await withTimeout(
+        resolveRelevantCoverUrl({
+          title: generated.title,
+          excerpt: generated.excerpt,
+        }),
+        28_000,
+        "Timeout illustration",
+      ).catch((err) => {
+        console.error(err);
+        return null;
+      });
 
   const slug = await makeUniqueSlug(generated.title);
   const creativeMime = input.image
