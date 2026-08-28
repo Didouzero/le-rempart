@@ -16,7 +16,10 @@ import { findRelatedArticles } from "@/lib/related-articles";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
+  buildPageMetadata,
   newsArticleJsonLd,
+  SITE_LOGO_SQUARE,
+  SITE_NAME,
 } from "@/lib/seo";
 
 type Props = {
@@ -60,38 +63,39 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const asNumber = Number(id);
   if (!Number.isInteger(asNumber) || asNumber <= 0) {
-    return { title: "Le Rempart" };
+    return { title: SITE_NAME };
   }
   try {
     const article = await findByPublicId(asNumber);
     if (!article) return { title: "Article introuvable" };
 
+    const path = articlePublicPath(article.publicId);
     const url = articlePublicUrl(article.publicId);
-    const imageUrl = article.coverImageUrl || absoluteUrl("/favicon.png");
+    const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
     const section = categoryLabel(article.category);
 
     return {
-      title: article.title,
-      description: article.excerpt,
-      alternates: { canonical: url },
-      authors: [{ name: "Rédaction Le Rempart" }],
+      ...buildPageMetadata({
+        title: article.title,
+        description: article.excerpt,
+        path,
+        ogType: "article",
+        image: imageUrl,
+        imageAlt: article.title,
+      }),
+      // Le template ajoute déjà « — Le Rempart » ; OG title = titre seul + siteName
       openGraph: {
         title: article.title,
         description: article.excerpt,
         type: "article",
         url,
-        siteName: "Le Rempart",
+        siteName: SITE_NAME,
         locale: "fr_FR",
         publishedTime: article.publishedAt?.toISOString(),
         modifiedTime: article.updatedAt?.toISOString(),
         section,
         authors: ["Rédaction Le Rempart"],
-        images: [
-          {
-            url: imageUrl,
-            alt: article.title,
-          },
-        ],
+        images: [{ url: imageUrl, alt: article.title }],
       },
       twitter: {
         card: "summary_large_image",
@@ -101,7 +105,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch {
-    return { title: "Le Rempart" };
+    return { title: SITE_NAME };
   }
 }
 

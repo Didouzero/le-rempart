@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Mentions légales",
-  description: "Mentions légales du site Le Rempart.",
-};
+  description:
+    "Mentions légales du site Le Rempart (le-rempart.org) — éditeur, hébergeur, propriété intellectuelle.",
+  path: "/mentions-legales",
+});
+
 
 export default function MentionsLegalesPage() {
   return (

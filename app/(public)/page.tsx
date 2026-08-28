@@ -4,7 +4,11 @@ import { ArticleCard } from "@/components/ArticleCard";
 import { CategoryTiles } from "@/components/CategoryTiles";
 import { Pagination } from "@/components/Pagination";
 import { prisma, withDbTimeout } from "@/lib/prisma";
-import { SITE_DESCRIPTION } from "@/lib/seo";
+import {
+  SITE_DEFAULT_TITLE,
+  SITE_DESCRIPTION,
+  buildPageMetadata,
+} from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -21,23 +25,21 @@ export async function generateMetadata({
   const page = Math.max(1, Number.parseInt(params.page || "1", 10) || 1);
   const isPaged = page > 1;
 
-  return {
-    title: isPaged ? `Dernières news — page ${page}` : "Dernières news",
-    description: SITE_DESCRIPTION,
-    alternates: {
-      canonical: isPaged ? `/?page=${page}` : "/",
-    },
-    openGraph: {
-      title: isPaged
-        ? `Dernières news — page ${page} — Le Rempart`
-        : "Dernières news — Le Rempart",
+  if (!isPaged) {
+    // Titre marque en tête = signal fort pour le site name Google (« Le Rempart »)
+    return buildPageMetadata({
+      title: SITE_DEFAULT_TITLE,
       description: SITE_DESCRIPTION,
-      url: isPaged
-        ? `https://www.le-rempart.org/?page=${page}`
-        : "https://www.le-rempart.org/",
-      type: "website",
-    },
-  };
+      path: "/",
+      absoluteTitle: true,
+    });
+  }
+
+  return buildPageMetadata({
+    title: `Dernières news — page ${page}`,
+    description: `${SITE_DESCRIPTION} Page ${page}.`,
+    path: `/?page=${page}`,
+  });
 }
 
 export default async function HomePage({ searchParams }: Props) {

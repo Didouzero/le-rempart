@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Politique de confidentialité",
   description:
     "Politique de confidentialité et protection des données personnelles — Le Rempart.",
-};
+  path: "/confidentialite",
+});
+
 
 export default function ConfidentialitePage() {
   return (

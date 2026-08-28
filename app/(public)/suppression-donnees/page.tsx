@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Suppression des données",
   description:
-    "Instructions de suppression des données liées à l'application Meta Le Rempart.",
-};
+    "Demande de suppression des données liées à l'application Meta / Facebook de Le Rempart.",
+  path: "/suppression-donnees",
+});
+
 
 export default function SuppressionDonneesPage() {
   return (

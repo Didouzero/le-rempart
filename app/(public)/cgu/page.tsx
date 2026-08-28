@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Conditions générales d'utilisation",
-  description: "Conditions générales d'utilisation du site Le Rempart.",
-};
+  description:
+    "Conditions générales d'utilisation du site Le Rempart (le-rempart.org).",
+  path: "/cgu",
+});
+
 
 export default function CguPage() {
   return (

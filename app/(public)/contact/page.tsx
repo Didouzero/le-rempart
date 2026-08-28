@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Nous contacter",
-  description: "Contacter la rédaction du Rempart.",
-};
+    description:
+      "Contacter la rédaction de Le Rempart — droit de réponse, signalement, partenariat.",
+  path: "/contact",
+});
+
 
 export default function ContactPage() {
   return (

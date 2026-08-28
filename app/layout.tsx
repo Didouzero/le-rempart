@@ -1,6 +1,14 @@
 import { Open_Sans, Source_Sans_3 } from "next/font/google";
 import type { Metadata } from "next";
 import Script from "next/script";
+import {
+  SITE_DEFAULT_TITLE,
+  SITE_DESCRIPTION,
+  SITE_LOGO_SQUARE,
+  SITE_LOGO_WORDMARK,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 import "./globals.css";
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() || "GTM-M53Q8GGZ";
@@ -22,12 +30,16 @@ const sourceSans = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: {
-    default: "Le Rempart — Actualité & analyses",
-    template: "%s — Le Rempart",
+    default: SITE_DEFAULT_TITLE,
+    template: `%s — ${SITE_NAME}`,
   },
-  description:
-    "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.",
-  metadataBase: new URL("https://www.le-rempart.org"),
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: "Rédaction Le Rempart", url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "news",
+  metadataBase: new URL(SITE_URL),
   alternates: { canonical: "/" },
   robots: {
     index: true,
@@ -43,30 +55,39 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "Le Rempart",
-    title: "Le Rempart — Actualité & analyses",
-    description:
-      "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.",
-    url: "https://www.le-rempart.org",
+    siteName: SITE_NAME,
+    title: SITE_DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
     images: [
       {
-        url: "/logo-wordmark.png",
+        url: SITE_LOGO_WORDMARK,
         width: 791,
         height: 127,
-        alt: "Le Rempart",
+        alt: SITE_NAME,
+      },
+      {
+        url: SITE_LOGO_SQUARE,
+        width: 512,
+        height: 512,
+        alt: SITE_NAME,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Le Rempart — Actualité & analyses",
-    description:
-      "Actualité, enquêtes et analyses. Le Rempart, média indépendant.",
-    images: ["/logo-wordmark.png"],
+    title: SITE_DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SITE_LOGO_WORDMARK],
   },
   icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
+    icon: [{ url: SITE_LOGO_SQUARE, type: "image/png", sizes: "512x512" }],
+    apple: [{ url: SITE_LOGO_SQUARE, sizes: "512x512", type: "image/png" }],
+    shortcut: SITE_LOGO_SQUARE,
+  },
+  other: {
+    "msapplication-TileColor": "#0c0a09",
+    "msapplication-TileImage": SITE_LOGO_SQUARE,
   },
 };
 

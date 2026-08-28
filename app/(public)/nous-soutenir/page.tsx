@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import { DonateForm } from "@/components/DonateForm";
 import { getStripePublishableKey, isStripeConfigured } from "@/lib/stripe";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Nous soutenir",
-  description: "Soutenir Le Rempart par un don ponctuel.",
-};
+  description:
+    "Soutenez Le Rempart par un don ponctuel. Média indépendant, sans subvention publique.",
+  path: "/nous-soutenir",
+});
+
 
 type Props = {
   searchParams: Promise<{ success?: string; canceled?: string }>;
