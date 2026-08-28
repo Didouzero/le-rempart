@@ -43,7 +43,7 @@ function stripFlashPrefix(text: string): string {
 
 /** Force 3–5 paragraphes lisibles (Facebook). */
 function ensureParagraphs(text: string): string {
-  let cleaned = text.replace(/\r\n/g, "\n").trim();
+  const cleaned = text.replace(/\r\n/g, "\n").trim();
 
   if (/\n\n/.test(cleaned)) {
     return cleaned
