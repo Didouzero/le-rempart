@@ -225,7 +225,7 @@ export async function buildFlashInfoText(input: {
     if (body.length < 80) return fallback();
 
     body = ensureParagraphs(trimToCompleteSentences(body, 180));
-    body = scrubFlashOutput(body);
+    body = ensureParagraphs(scrubFlashOutput(body));
 
     if (outlet && !/\(Source\s*:/i.test(body)) {
       body = `${body}\n\n(Source : ${outlet})`;

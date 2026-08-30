@@ -145,19 +145,25 @@ export function scrubBoilerplate(text: string): string {
   return cleanText(t);
 }
 
-/** Retire d'un flash FB les paragraphes cookies / abonnement qui auraient fuité. */
+/** Retire d'un flash FB les paragraphes cookies / abonnement qui auraient fuité.
+ *  Conserve les sauts de paragraphe (ligne vide entre blocs). */
 export function scrubFlashOutput(text: string): string {
-  const parts = text
+  return text
+    .replace(/\r\n/g, "\n")
     .split(/\n{2,}/)
-    .map((p) => p.trim())
+    .map((p) => p.replace(/[ \t]+/g, " ").trim())
     .filter(Boolean)
     .filter((p) => {
-      if (/cookie|s[’']abonner|didomi|petit geste nous aiderait|accepter\s*:\s*oui|données personnelles|partenaires\)/i.test(p)) {
+      if (
+        /cookie|s[’']abonner|didomi|petit geste nous aiderait|accepter\s*:\s*oui|données personnelles|partenaires\)/i.test(
+          p,
+        )
+      ) {
         return false;
       }
       return true;
-    });
-  return scrubBoilerplate(parts.join("\n\n"));
+    })
+    .join("\n\n");
 }
 
 function extractMeta(html: string, prop: string): string {
