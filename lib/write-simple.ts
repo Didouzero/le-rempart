@@ -157,38 +157,54 @@ function humanize(text: string): string {
     .replace(/\u2014/g, ",")
     .replace(/\u2013/g, ",")
     .replace(
-      /\b(Il convient de noter que|Il est important de (noter|souligner) que|Dans un contexte où|En conclusion,?|Cela étant dit,?)\s*/gi,
+      /\b(Il convient de noter que|Il est important de (noter|souligner) que|Dans un contexte où|En conclusion,?|Cela étant dit,?|On notera (que|également)?|Il faut (bien )?le reconnaître,?|Force est de constater que)\s*/gi,
       "",
     )
+    .replace(
+      /\s*Les Français apprécieront[^.!?]*[.!?]?\s*/gi,
+      " ",
+    )
+    .replace(
+      /\s*(À chacun d'en tirer|Chacun en tirera)[^.!?]*[.!?]?\s*/gi,
+      " ",
+    )
     .replace(/ {2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-const SYSTEM = `Tu es journaliste pour Le Rempart, média français ancré à droite, franc, sarcastique quand c'est mérité, mais d'abord INFORMÉ.
+const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite dure). Tu rédiges un VRAI article d'actualité : densément FACTUEL, pas un édito, pas un billet d'humeur.
 
 Tu reçois :
-1) Le TITRE CRÉATIVE (faits établis par la rédaction — à prendre comme VRAIS)
-2) Le texte scrapé de l'article source (matière principale)
-3) Quelques résultats web complémentaires (contexte)
+1) Le TITRE CRÉATIVE (faits établis — à prendre comme VRAIS)
+2) Le texte scrapé de l'article SOURCE (matière principale — à exploiter à fond)
+3) Des résultats web complémentaires (autres détails, noms, chiffres, réactions)
 
-Tu rédiges : un TITRE DE SITE reformulé, le chapô (excerpt) et le corps (content).
+OBJECTIF : un développement journalistique. Le lecteur doit apprendre des FAITS à chaque paragraphe.
 
 TITRE SITE (champ "title") :
-- Même faits, même angle que le titre créative — GROSSO MODO la même chose.
-- REFORMULE : autre tournure, synonymes, ordre des mots différent. INTERDIT de recopier le titre créative mot pour mot.
-- Garde les noms propres, lieux et chiffres importants s'ils sont dans la créative.
-- Une seule phrase d'accroche presse (pas de point final obligatoire), longueur proche de la créative.
-- Pas de majuscules partout, pas d'emoji, pas de hashtag.
+- Même faits / même angle que la créative, reformulé (pas recopié mot pour mot).
+- Noms, lieux, chiffres conservés. Pas d'emoji / hashtag / MAJUSCULES partout.
 
-RÈGLES ARTICLE :
-- Le titre créative EST la ligne éditoriale des faits. N'écris JAMAIS « non sourcé », « non vérifié », « selon des informations non confirmées », « impossible de confirmer », « à cette heure rien ne prouve » pour relativiser ce que dit le titre. Si le titre l'affirme, tu l'affirmes.
-- Base-toi surtout sur l'article source. Les résultats web = contexte utile seulement.
-- Ne pas inventer de citations, chiffres ou noms absents des matières fournies. Enrichir avec le web OK si c'est dans les snippets.
-- Longueur content : vise 400 à 800 mots. Moins si peu de matière, un peu plus si beaucoup. INTERDIT de broder dans le vide pour faire du volume.
-- Ton Rempart : faits denses d'abord, ironie / jugement ensuite (pas une gueulante sans faits).
-- content en Markdown : 2 ou 3 sous-titres ##, paragraphes humains, un peu de **gras** (pas des phrases entières).
-- Pas de tiret long (—), pas d'emojis, pas de hashtags, pas de style ChatGPT (« Il convient de noter… »).
-- excerpt = 1–2 phrases d'accroche factuelles (qui / quoi / où), pas un édito.
+STRUCTURE DU CORPS (content) — OBLIGATOIRE :
+1) Accroche factuelle (qui / quoi / où / quand).
+2) Déroulé des faits : chronologie, décisions, cadre (loi, tribunal, ministère…), chiffres, citations COURTES attribuées.
+3) Réactions(s) ou élément(s) de contexte NOMÉ(S) si présents dans source ou web.
+4) Optionnel : UNE seule phrase d'angle Rempart en toute fin — pas plus. Souvent inutile si les faits parlent.
+
+RÈGLES DURES :
+- 85 %+ du texte = FAITS tirés de la source et/ou des résultats web. Dates, montants, âges, peines, lieux, fonctions, institutions, citations.
+- EXTRAIS tout ce qui est utile dans la source ET dans le web : ne te contente PAS d'un seul paragraphe de faits puis du remplissage.
+- Si la matière est riche → article dense (vise 500–900 mots). Si pauvre → plus court, mais SANS blabla pour combler.
+- INTERDIT de gonfler avec des banalités / tics Rempart creux :
+  « on notera la sévérité… », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on croit rêver », « scandale absolu » sans fait nouveau, « pendant que… » en refrain, gueulante anti-gouvernement sans élément nouveau.
+- INTERDIT l'article = 1 paragraphe de faits + 4 paragraphes d'opinion / ironie / critique générique du pouvoir.
+- Ne pas inventer noms, chiffres, citations absents des matières. Si ce n'est pas dans source/web : tu ne l'écris pas.
+- Le titre créative fixe les faits centraux : ne les relativise pas (« non sourcé », « non confirmé »…).
+- Ton : presse claire, droite dure dans le CHOIX des faits mis en avant — pas dans le volume de râlerie.
+- content en Markdown : 2 ou 3 ## factuels (pas « Analyse » / « Ce qu'il faut retenir » creux). Peu de **gras**.
+- Pas de tiret long (—), pas d'emojis, pas de hashtags, pas de style ChatGPT.
+- excerpt = 1–2 phrases FACTUELLES (qui / quoi / où), zéro édito.
 
 Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}`;
@@ -205,42 +221,46 @@ export async function writeArticleSimple(input: {
 }): Promise<SimpleArticle> {
   const progress = input.onProgress || (async () => {});
 
-  await progress("Petite recherche web (contexte)…");
+  await progress("Recherche web (faits complémentaires)…");
   let webBrief = "";
   try {
     const hits = await Promise.race([
       searchWebForSubject({ subject: input.creativeTitle, fast: true }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("search timeout")), 12_000),
+        setTimeout(() => reject(new Error("search timeout")), 18_000),
       ),
     ]);
     webBrief = hits
-      .slice(0, 6)
+      .slice(0, 10)
       .map(
         (h, i) =>
-          `${i + 1}. ${h.title}\n   ${h.url}\n   ${(h.snippet || "").slice(0, 280)}`,
+          `${i + 1}. ${h.title}\n   ${h.url}\n   ${(h.snippet || "").slice(0, 520)}`,
       )
-      .join("\n");
+      .join("\n\n");
   } catch (err) {
     console.error("writeArticleSimple search skipped", err);
-    webBrief = "(recherche web indisponible — rédige à partir de la source seule)";
+    webBrief =
+      "(recherche web indisponible — exploite la source à fond, sans inventer)";
   }
 
-  await progress("Rédaction de l'article…");
-  const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 6500);
+  await progress("Rédaction factuelle de l'article…");
+  const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 9000);
   const userContent = [
-    `TITRE CRÉATIVE (faits établis — à reformuler pour le titre site, pas à recopier) :`,
+    `TITRE CRÉATIVE (faits établis — reformule pour le titre site, ne recopie pas) :`,
     input.creativeTitle,
     "",
     `URL source : ${input.sourceUrl}`,
     "",
-    "TEXTE SOURCE (matière principale) :",
+    "TEXTE SOURCE (à EXTRAIRE à fond : dates, noms, chiffres, citations, déroulé) :",
     sourceSlice,
     "",
-    "RÉSULTATS WEB COMPLÉMENTAIRES :",
+    "RÉSULTATS WEB (faits complémentaires à INTÉGRER s'ils enrichissent, sans inventer) :",
     webBrief || "(aucun)",
     "",
-    "Rédige title (reformulé) + excerpt + content maintenant.",
+    "Consigne : article JOURNALISTIQUE dense en faits.",
+    "INTERDIT : blabla de remplissage, gueulante générique, « les Français apprécieront », « on notera… ».",
+    "Si la matière le permet : plusieurs paragraphes de faits concrets (pas un seul).",
+    "Rédige title + excerpt + content maintenant.",
   ].join("\n");
 
   const attempts: Array<{
@@ -251,15 +271,14 @@ export async function writeArticleSimple(input: {
   }> = [
     {
       model: getKimiTextModel(),
-      maxTokens: 2800,
-      timeoutMs: 70_000,
+      maxTokens: 3600,
+      timeoutMs: 80_000,
       reasoningEffort: "low",
     },
-    // Secours plus court si le 1er timeout
     {
       model: "kimi-k2.6",
-      maxTokens: 2200,
-      timeoutMs: 55_000,
+      maxTokens: 2800,
+      timeoutMs: 60_000,
     },
   ];
 
