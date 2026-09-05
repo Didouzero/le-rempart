@@ -99,3 +99,54 @@ model PublishDraft {
 
   @@index([createdAt])
 }
+
+/// Abonnés newsletter gratuite (brief du matin).
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  source         String    @default("article")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([unsubscribedAt, createdAt])
+}
+
+enum MembershipStatus {
+  active
+  past_due
+  canceled
+  incomplete
+}
+
+/// Abonnés Rempart+ (4,90 €/mois).
+model Membership {
+  id                   String           @id @default(cuid())
+  email                String           @unique
+  status               MembershipStatus @default(incomplete)
+  stripeCustomerId     String?          @unique
+  stripeSubscriptionId String?          @unique
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([status])
+}
+
+/// Dossiers / enquêtes Rempart+ (contenu approfondi).
+model SpecialDossier {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String
+  content     String
+  coverImageUrl String?
+  /// Si true : visible seulement pour Rempart+.
+  membersOnly Boolean   @default(true)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([publishedAt])
+}

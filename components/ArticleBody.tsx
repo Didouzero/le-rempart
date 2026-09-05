@@ -1,9 +1,12 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ReactNode } from "react";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 type ArticleBodyProps = {
   content: string;
+  /** Insère le CTA newsletter au milieu du corps. */
+  showNewsletterCta?: boolean;
 };
 
 /**
@@ -62,7 +65,6 @@ function vimeoId(url: string): string | null {
   }
 }
 
-/** ID numérique d'un post X / Twitter (x.com|twitter.com/.../status/ID). */
 function xStatusId(url: string): string | null {
   try {
     const u = new URL(url);
@@ -154,48 +156,73 @@ function VideoEmbed({
   );
 }
 
-export function ArticleBody({ content }: ArticleBodyProps) {
+const mdComponents = {
+  h1: ({ children }: { children?: ReactNode }) => <h2>{children}</h2>,
+  a: ({ href, children }: { href?: string; children?: ReactNode }) => {
+    const label = textOf(children).trim().toLowerCase();
+    const embed =
+      (label === "video" || label === "vidéo") && href
+        ? embedFromHref(href)
+        : null;
+    if (embed) {
+      return (
+        <VideoEmbed
+          src={embed.src}
+          title={embed.title}
+          provider={embed.provider}
+        />
+      );
+    }
+
+    const external = Boolean(href && /^https?:\/\//i.test(href));
+    return (
+      <a
+        href={href}
+        {...(external
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : {})}
+      >
+        {children}
+      </a>
+    );
+  },
+};
+
+function MarkdownChunk({ source }: { source: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+      {source}
+    </ReactMarkdown>
+  );
+}
+
+/** Coupe le markdown en deux blocs (milieu ≈ 50 % des blocs). */
+function splitMarkdownMid(markdown: string): [string, string] {
+  const blocks = markdown
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  if (blocks.length < 4) {
+    return [markdown, ""];
+  }
+  const mid = Math.max(2, Math.floor(blocks.length / 2));
+  return [blocks.slice(0, mid).join("\n\n"), blocks.slice(mid).join("\n\n")];
+}
+
+export function ArticleBody({
+  content,
+  showNewsletterCta = true,
+}: ArticleBodyProps) {
   const md = autolinkBareUrls(markStandaloneVideos(content));
+  const [first, rest] = showNewsletterCta
+    ? splitMarkdownMid(md)
+    : [md, ""];
 
   return (
     <div className="prose-article">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          // Évite un second h1 qui concurrence le titre de page
-          h1: ({ children }) => <h2>{children}</h2>,
-          a: ({ href, children }) => {
-            const label = textOf(children).trim().toLowerCase();
-            const embed =
-              (label === "video" || label === "vidéo") && href
-                ? embedFromHref(href)
-                : null;
-            if (embed) {
-              return (
-                <VideoEmbed
-                  src={embed.src}
-                  title={embed.title}
-                  provider={embed.provider}
-                />
-              );
-            }
-
-            const external = Boolean(href && /^https?:\/\//i.test(href));
-            return (
-              <a
-                href={href}
-                {...(external
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-              >
-                {children}
-              </a>
-            );
-          },
-        }}
-      >
-        {md}
-      </ReactMarkdown>
+      <MarkdownChunk source={first} />
+      {showNewsletterCta ? <NewsletterSignup source="article-mid" /> : null}
+      {rest ? <MarkdownChunk source={rest} /> : null}
     </div>
   );
 }

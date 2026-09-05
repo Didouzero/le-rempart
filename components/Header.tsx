@@ -30,25 +30,27 @@ export function Header({ compact = false }: HeaderProps) {
         <div className="border-t border-white/10">
           <div className="animate-fade-in relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-9 pt-16 text-center sm:px-6 sm:pb-12 sm:pt-14">
             <Link
-              href="/nous-soutenir"
+              href="/s-abonner"
               className="group absolute right-2 top-2 z-10 inline-flex w-fit origin-top-right scale-[0.72] items-center gap-1.5 rounded-sm border border-accent/50 bg-accent px-2.5 py-1.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)] sm:right-6 sm:top-6 sm:scale-100 sm:gap-3 sm:px-4 sm:py-2.5"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-accent sm:h-8 sm:w-8">
                 <svg
                   className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                   viewBox="0 0 24 24"
-                  fill="currentColor"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
                   aria-hidden
                 >
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                 </svg>
               </span>
               <span className="flex flex-col leading-tight text-left">
                 <span className="font-display text-[0.78rem] tracking-[0.12em] sm:text-[0.95rem]">
-                  Nous soutenir
+                  S&apos;abonner au Rempart+
                 </span>
                 <span className="text-[0.62rem] text-ink/75 sm:text-xs">
-                  Aidez Le Rempart
+                  4,90&nbsp;€ / mois
                 </span>
               </span>
             </Link>

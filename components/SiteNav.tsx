@@ -15,6 +15,7 @@ const rubriqueLinks = ARTICLE_CATEGORIES.map((key) => ({
 }));
 
 const utilityLinks = [
+  { href: "/s-abonner", label: "S'abonner" },
   { href: "/contact", label: "Contact" },
   { href: "/nous-soutenir", label: "Nous soutenir" },
 ] as const;

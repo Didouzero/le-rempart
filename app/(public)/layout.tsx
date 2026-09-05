@@ -3,14 +3,16 @@ import { BackToTop } from "@/components/BackToTop";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { SiteFooter } from "@/components/SiteFooter";
+import { hasActiveRempartPlus } from "@/lib/membership";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const showAds = adsEnabled();
+  const plus = await hasActiveRempartPlus();
+  const showAds = adsEnabled() && !plus;
 
   return (
     <div className="site-shell flex min-h-screen flex-col">

@@ -1,3 +1,5 @@
+import { hasActiveRempartPlus } from "@/lib/membership";
+
 type AdSlotProps = {
   slot: string;
   className?: string;
@@ -9,12 +11,15 @@ export function adsEnabled(): boolean {
 }
 
 /**
- * Emplacement AdSense. Masqué tant que NEXT_PUBLIC_ADSENSE_ENABLED !== "true".
+ * Emplacement AdSense (conservé pour un retour éventuel).
+ * Masqué si Rempart+ actif, ou si AdSense désactivé.
  */
-export function AdSlot({ slot, className = "" }: AdSlotProps) {
+export async function AdSlot({ slot, className = "" }: AdSlotProps) {
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT?.trim();
-
   if (!adsEnabled() || !client) {
+    return null;
+  }
+  if (await hasActiveRempartPlus()) {
     return null;
   }
 

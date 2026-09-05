@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
 import { JsonLd } from "@/components/JsonLd";
+import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
 import {
@@ -21,6 +22,7 @@ import {
   SITE_LOGO_SQUARE,
   SITE_NAME,
 } from "@/lib/seo";
+import { hasActiveRempartPlus } from "@/lib/membership";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -160,6 +162,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const url = articlePublicUrl(article.publicId);
   const section = categoryLabel(article.category);
+  const plus = await hasActiveRempartPlus();
   const rubriquePath = categoryPath(article.category);
 
   return (
@@ -252,9 +255,11 @@ export default async function ArticlePage({ params }: Props) {
         </div>
       ) : null}
 
-      <ArticleBody content={article.content} />
+      <ArticleBody content={article.content} showNewsletterCta />
 
       <AdSlot slot="article-bottom" />
+
+      {plus ? null : <NativeAdsRail />}
 
       <RelatedArticles articles={related} />
     </article>

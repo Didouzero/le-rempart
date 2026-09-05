@@ -38,13 +38,25 @@ export default async function NousSoutenirPage({ searchParams }: Props) {
       <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
 
       <p className="mt-8 text-lg text-ink">
-        Le Rempart vit grâce à ses lecteurs. Un don ponctuel finance la
-        rédaction, la veille et la publication — sans dépendance aux
-        subventions ni aux grands groupes.
+        Nous voulons continuer à produire une information indépendante, sans
+        dépendre des subventions publiques ni des grands groupes de presse.
+      </p>
+      <p className="mt-4 text-lg text-ink">
+        Chaque jour, notre rédaction surveille des centaines de sources pour
+        sélectionner les informations que les médias traditionnels délaissent.
+      </p>
+      <p className="mt-4 text-lg text-ink">
+        Si vous estimez que ce travail doit continuer, vous pouvez nous aider à
+        financer le média.
       </p>
       <p className="mt-4 text-muted">
         Choisissez un montant, un moyen de paiement, puis validez. Le paiement
-        est sécurisé via Stripe.
+        est sécurisé via Stripe. Pour l&apos;abonnement Rempart+ (4,90&nbsp;€/mois),
+        rendez-vous sur{" "}
+        <a href="/s-abonner" className="text-ink underline decoration-accent">
+          S&apos;abonner
+        </a>
+        .
       </p>
 
       <DonateForm
