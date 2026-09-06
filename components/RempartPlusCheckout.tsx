@@ -8,10 +8,7 @@ type Props = {
   status: "success" | "canceled" | null;
 };
 
-export function RempartPlusCheckout({
-  configured,
-  status,
-}: Props) {
+export function RempartPlusCheckout({ configured, status }: Props) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -44,27 +41,28 @@ export function RempartPlusCheckout({
 
   if (!configured) {
     return (
-      <p className="mt-10 border border-ink/15 p-4 text-muted">
+      <p className="mt-6 border border-white/20 px-4 py-3 text-white/70">
         Paiement temporairement indisponible (Stripe non configuré).
       </p>
     );
   }
 
   return (
-    <div className="mt-10">
+    <div className="mt-6">
       {status === "success" ? (
-        <p className="mb-6 border border-accent/40 bg-accent/15 px-4 py-3 text-ink">
-          Merci — votre abonnement Rempart+ est en cours d&apos;activation.
-          Vérifiez votre e-mail Stripe / confirmation.
+        <p className="mb-5 border border-accent/50 bg-accent/15 px-4 py-3 text-accent">
+          Bienvenue. Votre accès Rempart+ est ouvert — direction les dossiers.
         </p>
       ) : null}
       {status === "canceled" ? (
-        <p className="mb-6 text-sm text-muted">Paiement annulé.</p>
+        <p className="mb-5 text-sm text-white/70">
+          Paiement interrompu. Rien n’a été débité.
+        </p>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex max-w-md flex-col gap-3">
-        <label className="text-sm text-muted" htmlFor="plus-email">
-          E-mail de l&apos;abonnement
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <label className="text-sm text-white/70" htmlFor="plus-email">
+          Votre e-mail d’accès
         </label>
         <input
           id="plus-email"
@@ -73,18 +71,18 @@ export function RempartPlusCheckout({
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="votre@email.fr"
-          className="border border-ink/15 bg-paper px-3 py-2.5 text-base text-ink outline-none focus:border-accent"
+          placeholder="vous@email.fr"
+          className="border border-white/20 bg-paper px-3 py-3 text-base text-ink outline-none focus:border-accent"
         />
         <button
           type="submit"
           disabled={busy}
-          className="font-display bg-ink px-5 py-3 text-sm tracking-[0.14em] text-paper transition hover:bg-accent hover:text-ink disabled:opacity-60"
+          className="font-display bg-accent px-5 py-3.5 text-base tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:opacity-60"
         >
-          {busy ? "Redirection…" : "S'abonner — 4,90 € / mois"}
+          {busy ? "Redirection…" : "Je m'abonne — 4,90 € / mois"}
         </button>
         {error ? (
-          <p className="text-sm text-red-700" role="alert">
+          <p className="text-sm text-red-300" role="alert">
             {error}
           </p>
         ) : null}

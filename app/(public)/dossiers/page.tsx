@@ -13,7 +13,12 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/dossiers",
 });
 
-export default async function DossiersPage() {
+type Props = {
+  searchParams: Promise<{ welcome?: string }>;
+};
+
+export default async function DossiersPage({ searchParams }: Props) {
+  const params = await searchParams;
   const isPlus = await hasActiveRempartPlus();
   let dossiers: Array<{
     slug: string;
@@ -60,6 +65,16 @@ export default async function DossiersPage() {
         </Link>
         .
       </p>
+      {params.welcome === "1" && isPlus ? (
+        <p className="mt-6 border border-accent/40 bg-accent/15 px-4 py-3 text-ink">
+          Bienvenue. Votre accès Rempart+ est ouvert sur cet appareil. Pour y
+          revenir plus tard :{" "}
+          <Link href="/connexion" className="underline decoration-accent">
+            connexion par e-mail
+          </Link>
+          .
+        </p>
+      ) : null}
 
       {dossiers.length === 0 ? (
         <p className="mt-12 text-muted">

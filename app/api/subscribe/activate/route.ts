@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendEmail } from "@/lib/email";
+import { applyPlusCookie } from "@/lib/membership";
+import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
-import { REMPART_PLUS_COOKIE } from "@/lib/membership";
+import { absoluteUrl } from "@/lib/seo";
 
 export const runtime = "nodejs";
 
@@ -21,21 +24,42 @@ export async function GET(req: NextRequest) {
       .trim()
       .toLowerCase();
     if (!email) {
-      return NextResponse.redirect(
-        new URL("/s-abonner?success=1", req.url),
-      );
+      return NextResponse.redirect(new URL("/s-abonner?success=1", req.url));
     }
 
-    const res = NextResponse.redirect(
-      new URL("/s-abonner?success=1", req.url),
-    );
-    res.cookies.set(REMPART_PLUS_COOKIE, email, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 45,
-    });
+    const paid =
+      session.payment_status === "paid" ||
+      session.status === "complete";
+    if (paid) {
+      const subId =
+        typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription?.id;
+      await prisma.membership.upsert({
+        where: { email },
+        create: {
+          email,
+          status: "active",
+          stripeSubscriptionId: subId || undefined,
+        },
+        update: {
+          status: "active",
+          stripeSubscriptionId: subId || undefined,
+        },
+      });
+    }
+
+    const dossiers = absoluteUrl("/dossiers");
+    const login = absoluteUrl("/connexion");
+    await sendEmail({
+      to: email,
+      subject: "Bienvenue dans Rempart+",
+      text: `Votre accès Rempart+ est ouvert.\nDossiers : ${dossiers}\nPour vous reconnecter plus tard : ${login}\n`,
+      html: `<p>Bienvenue. Votre accès Rempart+ est ouvert.</p><p><a href="${dossiers}">Ouvrir les dossiers</a></p><p>Plus tard, sur un autre appareil : <a href="${login}">${login}</a></p>`,
+    }).catch(() => ({ ok: false }));
+
+    const res = NextResponse.redirect(new URL("/dossiers?welcome=1", req.url));
+    applyPlusCookie(res, email);
     return res;
   } catch (err) {
     console.error("subscribe activate", err);
