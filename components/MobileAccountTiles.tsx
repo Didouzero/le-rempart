@@ -20,7 +20,7 @@ export function MobileAccountTiles({ isPlus = false }: MobileAccountTilesProps) 
 
   return createPortal(
     <div
-      className="flex w-[8.1rem] flex-col gap-1.5 lg:hidden"
+      className="flex flex-row items-stretch gap-1.5 lg:hidden"
       style={{
         position: "fixed",
         top: "calc(3.35rem + env(safe-area-inset-top, 0px) + 0.4rem)",
@@ -28,20 +28,6 @@ export function MobileAccountTiles({ isPlus = false }: MobileAccountTilesProps) 
         zIndex: 10045,
       }}
     >
-      <Link
-        href="/s-abonner"
-        className="group inline-flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent px-2 py-1.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:border-accent hover:bg-accent-deep hover:no-underline"
-      >
-        <CrownCircleIcon className="h-6 w-6" />
-        <span className="flex min-w-0 flex-col leading-none text-left">
-          <span className="font-display text-[0.68rem] tracking-[0.1em]">
-            S&apos;abonner
-          </span>
-          <span className="font-display mt-0.5 text-[0.68rem] tracking-[0.1em]">
-            au Rempart+
-          </span>
-        </span>
-      </Link>
       {isPlus ? null : (
         <Link
           href="/connexion"
@@ -58,6 +44,20 @@ export function MobileAccountTiles({ isPlus = false }: MobileAccountTilesProps) 
           </span>
         </Link>
       )}
+      <Link
+        href="/s-abonner"
+        className="group inline-flex w-[8.1rem] items-center gap-1.5 rounded-lg border border-accent/50 bg-accent px-2 py-1.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:border-accent hover:bg-accent-deep hover:no-underline"
+      >
+        <CrownCircleIcon className="h-6 w-6" />
+        <span className="flex min-w-0 flex-col leading-none text-left">
+          <span className="font-display text-[0.68rem] tracking-[0.1em]">
+            S&apos;abonner
+          </span>
+          <span className="font-display mt-0.5 text-[0.68rem] tracking-[0.1em]">
+            au Rempart+
+          </span>
+        </span>
+      </Link>
     </div>,
     document.body,
   );
