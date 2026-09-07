@@ -17,7 +17,7 @@ const PERKS = [
   {
     kicker: "Confort",
     title: "Site sans publicité",
-    text: "Plus aucune publicité sur Le Rempart. Juste l’info, propre, sur tout le site. ✅",
+    text: "Plus aucune publicité sur Le Rempart. L'information, claire, et sur tout le site. ✅",
   },
 ] as const;
 
