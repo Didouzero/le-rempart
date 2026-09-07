@@ -49,16 +49,18 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const dossiers = absoluteUrl("/dossiers");
+    const enquetes = absoluteUrl("/rubriques/enquetes");
     const login = absoluteUrl("/connexion");
     await sendEmail({
       to: email,
       subject: "Bienvenue dans Rempart+",
-      text: `Votre accès Rempart+ est ouvert.\nDossiers : ${dossiers}\nPour vous reconnecter plus tard : ${login}\n`,
-      html: `<p>Bienvenue. Votre accès Rempart+ est ouvert.</p><p><a href="${dossiers}">Ouvrir les dossiers</a></p><p>Plus tard, sur un autre appareil : <a href="${login}">${login}</a></p>`,
+      text: `Votre accès Rempart+ est ouvert.\nEnquêtes : ${enquetes}\nPour vous reconnecter plus tard : ${login}\n`,
+      html: `<p>Bienvenue. Votre accès Rempart+ est ouvert.</p><p><a href="${enquetes}">Ouvrir les enquêtes</a></p><p>Plus tard, sur un autre appareil : <a href="${login}">${login}</a></p>`,
     }).catch(() => ({ ok: false }));
 
-    const res = NextResponse.redirect(new URL("/dossiers?welcome=1", req.url));
+    const res = NextResponse.redirect(
+      new URL("/rubriques/enquetes?welcome=1", req.url),
+    );
     applyPlusCookie(res, email);
     return res;
   } catch (err) {

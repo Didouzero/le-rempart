@@ -51,7 +51,7 @@ export function RempartPlusCheckout({ configured, status }: Props) {
     <div className="mt-6">
       {status === "success" ? (
         <p className="mb-5 rounded-lg border border-accent/50 bg-accent/15 px-4 py-3 text-accent">
-          Bienvenue. Votre accès Rempart+ est ouvert — direction les dossiers.
+          Bienvenue. Votre accès Rempart+ est ouvert — direction les enquêtes.
         </p>
       ) : null}
       {status === "canceled" ? (

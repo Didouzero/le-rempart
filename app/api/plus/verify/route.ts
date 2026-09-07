@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/s-abonner", req.url));
   }
 
-  const res = NextResponse.redirect(new URL("/dossiers", req.url));
+  const res = NextResponse.redirect(new URL("/rubriques/enquetes", req.url));
   applyPlusCookie(res, email);
   return res;
 }

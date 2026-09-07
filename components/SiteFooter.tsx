@@ -6,7 +6,6 @@ import { NewsletterSignup } from "@/components/NewsletterSignup";
 const links = [
   { href: "/s-abonner", label: "Rempart+" },
   { href: "/connexion", label: "Connexion" },
-  { href: "/dossiers", label: "Dossiers" },
   { href: "/contact", label: "Nous contacter" },
   { href: "/nous-soutenir", label: "Nous soutenir" },
   { href: "/mentions-legales", label: "Mentions légales" },

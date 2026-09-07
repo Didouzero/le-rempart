@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       to: email,
       subject: "Votre accès Rempart+",
       text: `Cliquez pour ouvrir votre espace Rempart+ (valable 30 min) :\n${url}\n`,
-      html: `<p>Votre accès Rempart+ est à un clic.</p><p><a href="${url}">Ouvrir mon espace dossiers</a></p><p>Lien valable 30 minutes.</p>`,
+      html: `<p>Votre accès Rempart+ est à un clic.</p><p><a href="${url}">Ouvrir Enquête &amp; révélations</a></p><p>Lien valable 30 minutes.</p>`,
     });
     if (!sent.ok) {
       return NextResponse.json(

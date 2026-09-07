@@ -33,13 +33,13 @@ export default async function ConnexionPage({ searchParams }: Props) {
       <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
       <p className="mt-5 text-ink">
         Pas de mot de passe. Entrez l’e-mail utilisé pour l’abonnement : on
-        vous envoie un lien, vous cliquez, vous êtes dans les dossiers.
+        vous envoie un lien, vous cliquez, vous êtes dans les enquêtes.
       </p>
       {already ? (
         <p className="mt-6 rounded-lg border border-accent/40 bg-accent/15 px-4 py-3">
           Vous êtes déjà connecté.{" "}
-          <Link href="/dossiers" className="underline decoration-accent">
-            Voir les dossiers
+          <Link href="/rubriques/enquetes" className="underline decoration-accent">
+            Voir les enquêtes
           </Link>
           .
         </p>

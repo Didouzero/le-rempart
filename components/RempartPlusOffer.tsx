@@ -39,8 +39,8 @@ export function RempartPlusOffer({
       <section className="relative overflow-hidden rounded-lg bg-ink px-5 py-12 text-paper shadow-[var(--shadow-soft)] sm:px-10 sm:py-16">
         <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-10 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-        <p className="font-display text-sm tracking-[0.22em] text-accent">
-          Rempart+ ✍️
+        <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
+          Rempart+
         </p>
         <Title className="font-display mt-3 max-w-3xl text-[2.2rem] leading-[0.95] uppercase sm:text-5xl md:text-6xl">
           Découvrez l&apos;info que les autres n&apos;ont pas.
@@ -62,8 +62,8 @@ export function RempartPlusOffer({
       {alreadyPlus ? (
         <p className="mt-8 rounded-lg border border-accent/50 bg-accent/15 px-5 py-4 text-ink">
           Vous êtes déjà connecté en Rempart+.{" "}
-          <Link href="/dossiers" className="underline decoration-accent">
-            Accéder aux dossiers
+          <Link href="/rubriques/enquetes" className="underline decoration-accent">
+            Accéder aux enquêtes
           </Link>
           .
         </p>
@@ -100,7 +100,7 @@ export function RempartPlusOffer({
           <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
           <div className="mt-6 space-y-4 text-ink">
             <p>
-              La newsletter gratuite donne les gros titres du jour. La
+              La newsletter premium donne les gros titres du jour. La
               newsletter payante creuse chaque dossier en profondeur pour vous
               donner une longueur d&apos;avance.
             </p>
@@ -127,7 +127,7 @@ export function RempartPlusOffer({
           <p className="mt-2 text-white/80">
             Entrez l’e-mail qui servira de clé d’accès. Après le paiement, vous
             êtes connecté tout de suite — et vous pourrez revenir quand vous
-            voulez via un lien envoyé dans votre boîte.
+            voulez via un lien envoyé dans votre boîte. ✉️
           </p>
           <RempartPlusCheckout
             configured={isStripeConfigured()}

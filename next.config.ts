@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
         destination: "/rubriques/politique",
         permanent: true,
       },
+      {
+        source: "/dossiers",
+        destination: "/rubriques/enquetes",
+        permanent: true,
+      },
     ];
   },
 };

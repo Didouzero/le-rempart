@@ -240,7 +240,7 @@ export function SiteNav() {
       <>
         <div
           style={{ zIndex: 10040 }}
-          className={`fixed inset-x-0 top-0 border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out ${
+          className={`fixed inset-x-0 top-0 hidden border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out lg:block ${
             stickyVisible && !open
               ? "translate-y-0"
               : "pointer-events-none -translate-y-full"
@@ -248,16 +248,6 @@ export function SiteNav() {
         >
           <div className="marble-band text-paper">
             <DesktopNav ariaLabel="Navigation sticky" />
-            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 lg:hidden">
-              <Link
-                href="/"
-                className="inline-flex items-center no-underline hover:no-underline"
-                aria-label="Le Rempart"
-              >
-                <BrandWordmark className="w-[8.5rem]" />
-              </Link>
-              <MenuButton open={open} onToggle={toggle} />
-            </div>
             <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
           </div>
         </div>
@@ -402,9 +392,35 @@ export function SiteNav() {
     <>
       <DesktopNav ariaLabel="Navigation principale" />
 
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-end px-4 py-3 lg:hidden">
-        <MenuButton open={open} onToggle={toggle} />
+      <div
+        className="fixed inset-x-0 top-0 z-[10040] lg:hidden"
+        style={{
+          zIndex: 10040,
+          paddingTop: "env(safe-area-inset-top, 0px)",
+        }}
+      >
+        <div className="marble-band text-paper">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5">
+            <Link
+              href="/"
+              className="inline-flex items-center no-underline hover:no-underline"
+              aria-label="Le Rempart"
+            >
+              <BrandWordmark className="w-[8.5rem]" />
+            </Link>
+            <MenuButton open={open} onToggle={toggle} />
+          </div>
+          <div
+            className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"
+            aria-hidden
+          />
+        </div>
       </div>
+      <div
+        className="lg:hidden"
+        style={{ height: "calc(3.35rem + env(safe-area-inset-top, 0px))" }}
+        aria-hidden
+      />
 
       {chrome}
     </>
