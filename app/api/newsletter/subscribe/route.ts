@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { newsletterShell, sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { absoluteUrl } from "@/lib/seo";
 
 export const runtime = "nodejs";
 
@@ -49,6 +51,18 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
+
+  // Accusé de réception (non bloquant si Resend n'est pas encore configuré).
+  await sendEmail({
+    to: email,
+    subject: "Bienvenue — newsletter Le Rempart",
+    html: newsletterShell({
+      title: "Inscription confirmée",
+      bodyHtml: `<p style="font-size:15px;line-height:1.5;">Chaque matin à 7&nbsp;heures, vous recevrez les 10 infos essentielles de droite des dernières 24&nbsp;heures.</p>
+        <p style="font-size:15px;line-height:1.5;"><a href="${absoluteUrl("/")}" style="color:#0a0a0a;">Lire Le Rempart</a></p>`,
+    }),
+    text: `Inscription confirmée. Chaque matin à 7 heures : les 10 infos essentielles. ${absoluteUrl("/")}`,
+  }).catch(() => ({ ok: false }));
 
   return NextResponse.json({ ok: true });
 }
