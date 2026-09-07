@@ -138,11 +138,14 @@ export function newsArticleJsonLd(input: {
   publishedAt: Date | null;
   updatedAt: Date | null;
   section: string;
+  authorName?: string | null;
 }) {
   const published =
     input.publishedAt?.toISOString() || new Date().toISOString();
   const modified = input.updatedAt?.toISOString() || published;
   const image = input.imageUrl || absoluteUrl(SITE_LOGO_SQUARE);
+  const author =
+    input.authorName?.trim() || "Rédaction Le Rempart";
 
   return {
     "@context": "https://schema.org",
@@ -157,9 +160,8 @@ export function newsArticleJsonLd(input: {
       "@id": input.url,
     },
     author: {
-      "@type": "Organization",
-      name: "Rédaction Le Rempart",
-      url: absoluteUrl("/"),
+      "@type": "Person",
+      name: author,
     },
     publisher: {
       "@type": "NewsMediaOrganization",

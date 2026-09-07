@@ -27,6 +27,8 @@ model Article {
   title          String
   content        String
   excerpt        String
+  /// Alias éditorial affiché (rotation à la publication).
+  authorName     String?
   sourceText     String?
   sourceUrl      String?
   /// ResearchDossier JSON — actif central du pipeline (null tant que legacy).

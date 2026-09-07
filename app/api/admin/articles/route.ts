@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ArticleCategory, ArticleStatus } from "@prisma/client";
 import { z } from "zod";
+import { allocateNextAuthorName } from "@/lib/authors";
 import { classifyArticleCategory } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
@@ -50,6 +51,9 @@ export async function POST(request: Request) {
         content: data.content,
       })) as ArticleCategory;
 
+    const authorName =
+      status === "published" ? await allocateNextAuthorName() : null;
+
     const article = await prisma.article.create({
       data: {
         title: data.title.trim(),
@@ -60,6 +64,7 @@ export async function POST(request: Request) {
         category,
         slug,
         status,
+        authorName,
         publishedAt: status === "published" ? new Date() : null,
       },
     });

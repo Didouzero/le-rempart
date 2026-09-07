@@ -1,3 +1,4 @@
+import { allocateNextAuthorName } from "@/lib/authors";
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { classifyArticleCategory } from "@/lib/categories";
 import { fetchSourceText } from "@/lib/fetch-source";
@@ -228,6 +229,8 @@ export async function publishArticleFromCreative(input: {
     content: generated.content,
   });
 
+  const authorName = await allocateNextAuthorName();
+
   const article = await prisma.article.create({
     data: {
       title: generated.title,
@@ -238,6 +241,7 @@ export async function publishArticleFromCreative(input: {
       researchDossier: undefined,
       slug,
       category,
+      authorName,
       status: "published",
       publishedAt: new Date(),
       coverImageUrl,

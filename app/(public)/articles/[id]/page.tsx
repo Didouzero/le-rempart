@@ -6,6 +6,7 @@ import { ArticleBody } from "@/components/ArticleBody";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
+import { authorFromPublicId } from "@/lib/authors";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
 import {
   categoryLabel,
@@ -42,6 +43,7 @@ type ArticleRow = {
   title: string;
   excerpt: string;
   content: string;
+  authorName: string | null;
   publishedAt: Date | null;
   updatedAt: Date;
   coverImageUrl: string | null;
@@ -58,6 +60,7 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
         title: true,
         excerpt: true,
         content: true,
+        authorName: true,
         publishedAt: true,
         updatedAt: true,
         coverImageUrl: true,
@@ -81,6 +84,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const url = articlePublicUrl(article.publicId);
     const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
     const section = categoryLabel(article.category);
+    const author =
+      article.authorName?.trim() || authorFromPublicId(article.publicId);
 
     return {
       ...buildPageMetadata({
@@ -102,7 +107,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         publishedTime: article.publishedAt?.toISOString(),
         modifiedTime: article.updatedAt?.toISOString(),
         section,
-        authors: ["Rédaction Le Rempart"],
+        authors: [author],
         images: [{ url: imageUrl, alt: article.title }],
       },
       twitter: {
@@ -170,6 +175,8 @@ export default async function ArticlePage({ params }: Props) {
   const section = categoryLabel(article.category);
   const plus = await hasActiveRempartPlus();
   const rubriquePath = categoryPath(article.category);
+  const author =
+    article.authorName?.trim() || authorFromPublicId(article.publicId);
 
   return (
     <article className="animate-fade-up">
@@ -182,6 +189,7 @@ export default async function ArticlePage({ params }: Props) {
           publishedAt: article.publishedAt,
           updatedAt: article.updatedAt,
           section,
+          authorName: author,
         })}
       />
       <JsonLd
@@ -242,7 +250,7 @@ export default async function ArticlePage({ params }: Props) {
           {article.title}
         </h1>
         <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
-          Par la rédaction Le Rempart
+          Par {author}
         </p>
         <div className="gold-rule animate-line-grow mt-5 max-w-md" />
         <p className="mt-5 max-w-2xl text-lg italic text-black">

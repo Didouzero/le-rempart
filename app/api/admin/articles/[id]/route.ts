@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ArticleCategory, ArticleStatus } from "@prisma/client";
 import { z } from "zod";
+import { allocateNextAuthorName } from "@/lib/authors";
 import { classifyArticleCategory } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
@@ -65,6 +66,9 @@ export async function PATCH(request: Request, { params }: Params) {
         content: data.content,
       })) as ArticleCategory;
 
+    const becomingPublished =
+      status === "published" && !existing.authorName;
+
     const article = await prisma.article.update({
       where: { id },
       data: {
@@ -85,6 +89,9 @@ export async function PATCH(request: Request, { params }: Params) {
           : {}),
         slug,
         status,
+        ...(becomingPublished
+          ? { authorName: await allocateNextAuthorName() }
+          : {}),
         publishedAt:
           status === "published"
             ? existing.publishedAt ?? new Date()
