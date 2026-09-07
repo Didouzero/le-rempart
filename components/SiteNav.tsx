@@ -5,20 +5,35 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
+import { ARTICLE_CATEGORIES, CATEGORY_META, PREMIUM_CATEGORY } from "@/lib/categories";
+import { CrownIcon, HeartCircleIcon, PlusCircleIcon } from "@/components/BrandIcons";
 
 const homeLink = { href: "/", label: "Dernières news" } as const;
 
-const rubriqueLinks = ARTICLE_CATEGORIES.map((key) => ({
-  href: `/rubriques/${CATEGORY_META[key].slug}`,
-  label: CATEGORY_META[key].short,
-}));
+const rubriqueLinks = [
+  ...ARTICLE_CATEGORIES.map((key) => ({
+    href: `/rubriques/${CATEGORY_META[key].slug}`,
+    label: CATEGORY_META[key].short,
+    premium: false as const,
+  })),
+  {
+    href: PREMIUM_CATEGORY.path,
+    label: PREMIUM_CATEGORY.short,
+    premium: true as const,
+  },
+];
 
 const utilityLinks = [
-  { href: "/s-abonner", label: "S'abonner" },
-  { href: "/contact", label: "Contact" },
-  { href: "/nous-soutenir", label: "Nous soutenir" },
+  { href: "/s-abonner", label: "S'abonner", icon: "plus" as const },
+  { href: "/contact", label: "Contact", icon: null },
+  { href: "/nous-soutenir", label: "Nous soutenir", icon: "heart" as const },
 ] as const;
+
+function UtilityIcon({ icon }: { icon: "plus" | "heart" | null }) {
+  if (icon === "plus") return <PlusCircleIcon className="h-[1.05rem] w-[1.05rem]" />;
+  if (icon === "heart") return <HeartCircleIcon className="h-[1.05rem] w-[1.05rem]" />;
+  return null;
+}
 
 function BrandWordmark({ className = "" }: { className?: string }) {
   return (
@@ -60,7 +75,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
 
       {/* Rubriques info — un même bloc */}
       <div
-        className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-sm border border-white/15 bg-white/[0.04] px-4 py-2"
+        className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-sm border border-white/15 bg-white/[0.04] px-3 py-2"
         role="group"
         aria-label="Rubriques"
       >
@@ -71,13 +86,16 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
-              className={`font-display text-[1.22rem] tracking-[0.12em] transition-colors hover:text-accent ${
+              className={`font-display inline-flex items-center gap-1.5 text-[1.12rem] tracking-[0.12em] transition-colors hover:text-accent ${
                 active
                   ? "text-white underline decoration-accent decoration-2 underline-offset-4"
                   : "text-white/90 no-underline hover:no-underline"
               }`}
             >
               {link.label}
+              {link.premium ? (
+                <CrownIcon className="h-3.5 w-3.5 text-accent" />
+              ) : null}
             </Link>
           );
         })}
@@ -98,8 +116,9 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
           <Link
             key={link.href}
             href={link.href}
-            className="font-display border border-accent/45 px-3 py-1.5 text-[0.8rem] tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
+            className="font-display inline-flex items-center gap-1.5 border border-accent/45 px-3.5 py-2 text-[0.92rem] tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
           >
+            <UtilityIcon icon={link.icon} />
             {link.label}
           </Link>
         ))}
@@ -302,7 +321,7 @@ export function SiteNav() {
                         href={link.href}
                         tabIndex={open ? 0 : -1}
                         aria-current={active ? "page" : undefined}
-                        className={`font-display text-xl tracking-[0.12em] no-underline transition-all duration-300 hover:text-accent ${
+                        className={`font-display inline-flex items-center gap-2 text-xl tracking-[0.12em] no-underline transition-all duration-300 hover:text-accent ${
                           active
                             ? "text-white underline decoration-accent decoration-2 underline-offset-4"
                             : "text-white"
@@ -318,6 +337,9 @@ export function SiteNav() {
                         onClick={close}
                       >
                         {link.label}
+                        {link.premium ? (
+                          <CrownIcon className="h-4 w-4 text-accent" />
+                        ) : null}
                       </Link>
                     );
                   })}
@@ -331,7 +353,7 @@ export function SiteNav() {
                       key={link.href}
                       href={link.href}
                       tabIndex={open ? 0 : -1}
-                      className="font-display inline-flex w-fit border border-accent/50 px-3 py-2 text-sm tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink"
+                      className="font-display inline-flex w-fit items-center gap-2 border border-accent/50 px-3.5 py-2.5 text-base tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink"
                       style={{
                         transitionDelay: open ? `${280 + i * 40}ms` : "0ms",
                         opacity: open ? 1 : 0,
@@ -341,6 +363,7 @@ export function SiteNav() {
                       }}
                       onClick={close}
                     >
+                      <UtilityIcon icon={link.icon} />
                       {link.label}
                     </Link>
                   ))}

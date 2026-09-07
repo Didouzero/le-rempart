@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { CrownIcon } from "@/components/BrandIcons";
 import {
   ARTICLE_CATEGORIES,
   CATEGORY_META,
+  PREMIUM_CATEGORY,
   type ArticleCategory,
 } from "@/lib/categories";
 
@@ -18,6 +20,9 @@ const TILE_IMAGES: Record<ArticleCategory, string> = {
     "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=800&fit=crop&q=80",
 };
 
+const PREMIUM_TILE_IMAGE =
+  "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=800&fit=crop&q=80";
+
 export function CategoryTiles() {
   return (
     <section className="mt-14 animate-fade-up" aria-label="Rubriques">
@@ -26,7 +31,7 @@ export function CategoryTiles() {
         Rubriques
       </p>
       <div className="gold-rule mb-6 max-w-[12rem]" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
         {ARTICLE_CATEGORIES.map((key) => {
           const meta = CATEGORY_META[key];
           return (
@@ -49,6 +54,25 @@ export function CategoryTiles() {
             </Link>
           );
         })}
+        <Link
+          href={PREMIUM_CATEGORY.path}
+          className="group relative aspect-square overflow-hidden bg-ink no-underline shadow-[var(--shadow-soft)] hover:no-underline"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={PREMIUM_TILE_IMAGE}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-55"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+          <span className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 p-3 text-center font-display tracking-[0.12em] text-white">
+            <CrownIcon className="h-4 w-4 text-accent" />
+            <span className="text-[0.8rem] leading-tight sm:text-[0.95rem]">
+              {PREMIUM_CATEGORY.label}
+            </span>
+          </span>
+          <span className="absolute left-0 top-0 h-1 w-full bg-accent opacity-90" />
+        </Link>
       </div>
     </section>
   );

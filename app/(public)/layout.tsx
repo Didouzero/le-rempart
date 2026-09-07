@@ -2,6 +2,7 @@ import { AdSlot, adsEnabled } from "@/components/AdSlot";
 import { BackToTop } from "@/components/BackToTop";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { SiteFooter } from "@/components/SiteFooter";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -18,7 +19,7 @@ export default async function PublicLayout({
     <div className="site-shell flex min-h-screen flex-col">
       <JsonLd data={organizationJsonLd()} />
       <JsonLd data={websiteJsonLd()} />
-      <Header />
+      <Header isPlus={plus} />
       <div
         className={`mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 gap-0 xl:px-4 ${
           showAds
@@ -39,7 +40,7 @@ export default async function PublicLayout({
         ) : null}
 
         <main
-          className={`mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12 ${
+          className={`mx-auto w-full max-w-6xl flex-1 px-4 py-10 pb-28 sm:px-6 sm:py-12 sm:pb-24 ${
             showAds ? "xl:max-w-none xl:px-2" : ""
           }`}
         >
@@ -57,6 +58,9 @@ export default async function PublicLayout({
             />
           </aside>
         ) : null}
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-30">
+        <NewsletterSignup source="footer-sticky" variant="sticky" />
       </div>
       <SiteFooter />
       <BackToTop />

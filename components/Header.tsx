@@ -1,12 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { LoginCircleIcon } from "@/components/BrandIcons";
 import { SiteNav } from "@/components/SiteNav";
 
 type HeaderProps = {
   compact?: boolean;
+  isPlus?: boolean;
 };
 
-export function Header({ compact = false }: HeaderProps) {
+export function Header({ compact = false, isPlus = false }: HeaderProps) {
   return (
     <header className="marble-band text-paper">
       <SiteNav />
@@ -28,11 +30,11 @@ export function Header({ compact = false }: HeaderProps) {
 
       {!compact && (
         <div className="border-t border-white/10">
-          <div className="animate-fade-in relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-9 pt-16 text-center sm:px-6 sm:pb-12 sm:pt-14">
-            <div className="absolute right-2 top-2 z-10 flex origin-top-right scale-[0.78] flex-col items-end gap-1.5 sm:right-6 sm:top-6 sm:scale-100">
+            <div className="animate-fade-in relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-9 pt-28 text-center sm:px-6 sm:pb-12 sm:pt-14">
+            <div className="absolute right-2 top-2 z-10 flex w-[min(100%,11.5rem)] origin-top-right scale-[0.78] flex-col items-stretch gap-1.5 sm:right-6 sm:top-6 sm:w-[13.5rem] sm:scale-100">
               <Link
                 href="/s-abonner"
-                className="group inline-flex w-fit items-center gap-2 rounded-sm border border-accent/50 bg-accent px-3 py-2 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)] sm:gap-3 sm:px-4 sm:py-2.5"
+                className="group inline-flex w-full items-center gap-2 rounded-sm border border-accent/50 bg-accent px-3 py-2 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)] sm:gap-3 sm:px-4 sm:py-2.5"
               >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-accent sm:h-8 sm:w-8">
                   <svg
@@ -55,12 +57,22 @@ export function Header({ compact = false }: HeaderProps) {
                   </span>
                 </span>
               </Link>
-              <Link
-                href="/connexion"
-                className="font-display text-[0.7rem] tracking-[0.14em] text-white/70 no-underline transition hover:text-accent hover:no-underline sm:text-xs"
-              >
-                Se connecter
-              </Link>
+              {isPlus ? null : (
+                <Link
+                  href="/connexion"
+                  className="group inline-flex w-full items-center gap-2 rounded-sm border border-accent/50 bg-ink px-3 py-2 text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-ink hover:no-underline sm:gap-3 sm:px-4 sm:py-2.5"
+                >
+                  <LoginCircleIcon className="h-7 w-7 group-hover:bg-ink group-hover:text-accent sm:h-8 sm:w-8" />
+                  <span className="flex flex-col leading-none text-left">
+                    <span className="font-display text-[0.95rem] tracking-[0.14em] sm:text-[1.15rem]">
+                      Se connecter
+                    </span>
+                    <span className="mt-0.5 text-[0.65rem] tracking-[0.08em] text-white/65 group-hover:text-ink/70 sm:text-xs">
+                      Déjà abonné
+                    </span>
+                  </span>
+                </Link>
+              )}
             </div>
 
             <Link

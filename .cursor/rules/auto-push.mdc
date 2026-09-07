@@ -1,0 +1,10 @@
+---
+description: Push Le Rempart site changes online without waiting for confirmation
+alwaysApply: true
+---
+
+# Deploy without asking
+
+After implementing or fixing something on the public site (UI, copy, pages, bot-facing web), commit on `main` and `git push origin HEAD` in the same turn. Do not wait for the user to say « pousse en ligne » or to validate.
+
+Keep the existing git safety rules: no force-push, no hook skip, no commit of secrets. Do not push unrelated local experiments.

@@ -24,6 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     {
+      url: `${base}/rubriques/enquetes`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.65,
+    },
+    {
       url: `${base}/s-abonner`,
       lastModified: now,
       changeFrequency: "monthly",

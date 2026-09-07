@@ -52,6 +52,16 @@ export const CATEGORY_META: Record<
   },
 };
 
+/** Rubrique premium (dossiers Rempart+), hors enum Prisma / fil Telegram. */
+export const PREMIUM_CATEGORY = {
+  slug: "enquetes",
+  label: "Enquête & révélations",
+  short: "Enquêtes",
+  description:
+    "Enquêtes et révélations documentées, chaque mercredi et samedi. Réservé aux abonnés Rempart+.",
+  path: "/rubriques/enquetes",
+} as const;
+
 export function isArticleCategory(value: string): value is ArticleCategory {
   return (ARTICLE_CATEGORIES as readonly string[]).includes(value);
 }
