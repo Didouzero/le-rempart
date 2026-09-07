@@ -225,10 +225,6 @@ body {
   border-radius: var(--radius);
 }
 
-.newsletter-signup.newsletter-signup--flush {
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-
 .prose-article strong {
   font-weight: 700;
   color: var(--color-ink);
@@ -251,34 +247,6 @@ body {
   background: var(--color-accent);
   box-shadow: 0 0 0 0 rgba(255, 189, 89, 0.7);
   animation: pulse-live 1.8s ease-out infinite;
-}
-
-.ticker {
-  overflow: hidden;
-  white-space: nowrap;
-  border-block: 1px solid rgba(255, 189, 89, 0.35);
-  background: linear-gradient(90deg, #0a0a0a, #16130e 50%, #0a0a0a);
-}
-
-.ticker-track {
-  display: inline-flex;
-  min-width: max-content;
-  padding-block: 0.55rem;
-  animation: ticker-scroll 32s linear infinite;
-}
-
-.ticker-track span {
-  display: inline-block;
-  padding-inline: 2.5rem;
-  font-family: var(--font-display);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-size: 0.85rem;
-  color: var(--color-accent);
-}
-
-.ticker-track span.ticker-white {
-  color: #fff;
 }
 
 .media-frame {
@@ -435,15 +403,6 @@ a:hover .media-frame::after {
   }
 }
 
-@keyframes ticker-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @keyframes line-grow {
   from {
     transform: scaleX(0);
@@ -480,7 +439,6 @@ a:hover .media-frame::after {
   .animate-fade-up,
   .animate-fade-in,
   .animate-line-grow,
-  .ticker-track,
   .live-dot {
     animation: none !important;
   }

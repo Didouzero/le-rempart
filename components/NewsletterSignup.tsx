@@ -95,13 +95,10 @@ export function NewsletterSignup({
 
   if (variant === "footer") {
     return (
-      <aside
-        className="newsletter-signup newsletter-signup--flush border-t border-accent/35 bg-ink text-paper"
-        aria-label="Newsletter Le Rempart"
-      >
+      <aside className="bg-ink text-paper" aria-label="Newsletter Le Rempart">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-6 sm:py-6">
           <div className="min-w-0 flex-1">
-            <p className="font-display text-[0.8rem] tracking-[0.16em] text-accent">
+            <p className="font-display text-[0.92rem] tracking-[0.16em] text-accent">
               Newsletter gratuite
             </p>
             <p className="mt-1 text-sm leading-snug text-white/80 sm:text-base">
@@ -125,7 +122,7 @@ export function NewsletterSignup({
       }`}
       aria-label="Newsletter Le Rempart"
     >
-      <p className="font-display text-[0.8rem] tracking-[0.16em] text-accent">
+      <p className="font-display text-[0.92rem] tracking-[0.16em] text-accent">
         Newsletter gratuite
       </p>
       <p className="font-display mt-0.5 text-base tracking-[0.08em] sm:text-lg">

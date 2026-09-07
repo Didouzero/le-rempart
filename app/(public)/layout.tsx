@@ -2,7 +2,6 @@ import { AdSlot, adsEnabled } from "@/components/AdSlot";
 import { BackToTop } from "@/components/BackToTop";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
-import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { SiteFooter } from "@/components/SiteFooter";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -59,7 +58,6 @@ export default async function PublicLayout({
           </aside>
         ) : null}
       </div>
-      <NewsletterSignup source="footer-bar" variant="footer" />
       <SiteFooter />
       <BackToTop />
     </div>

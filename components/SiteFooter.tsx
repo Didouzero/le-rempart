@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CrownCircleIcon } from "@/components/BrandIcons";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 const links = [
   { href: "/s-abonner", label: "Rempart+" },
@@ -33,8 +34,16 @@ function FacebookIcon({ className }: { className?: string }) {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-0 border-t border-ink bg-ink text-white">
-      <div className="h-[3px] w-full bg-gradient-to-r from-accent via-accent-deep to-transparent" />
+    <footer className="mt-0 bg-ink text-white">
+      <div
+        className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"
+        aria-hidden
+      />
+      <NewsletterSignup source="footer-bar" variant="footer" />
+      <div
+        className="h-px w-full bg-gradient-to-r from-transparent via-accent/65 to-transparent"
+        aria-hidden
+      />
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-white/70 sm:px-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>

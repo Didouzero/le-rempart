@@ -13,23 +13,13 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
     <header className="marble-band text-paper">
       <SiteNav />
 
-      <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
-
-      <div className="ticker" aria-label="Devise du média">
-        <div className="ticker-track">
-          <span>Le Rempart — Le média de droite radicale</span>
-          <span className="ticker-white">Actualité de droite</span>
-          <span>Le Rempart — Le média de droite radicale</span>
-          <span className="ticker-white">Actualité de droite</span>
-          <span>Le Rempart — Le média de droite radicale</span>
-          <span className="ticker-white">Actualité de droite</span>
-          <span>Le Rempart — Le média de droite radicale</span>
-          <span className="ticker-white">Actualité de droite</span>
-        </div>
-      </div>
+      <div
+        className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"
+        aria-hidden
+      />
 
       {!compact && (
-        <div className="border-t border-white/10">
+        <div>
             <div className="animate-fade-in relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-9 pt-28 text-center sm:px-6 sm:pb-12 sm:pt-14">
             <div className="absolute right-2 top-2 z-10 flex w-[min(100%,11.5rem)] origin-top-right scale-[0.78] flex-col items-stretch gap-1.5 sm:right-6 sm:top-6 sm:w-[13.5rem] sm:scale-100">
               <Link

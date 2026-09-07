@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ARTICLE_CATEGORIES, CATEGORY_META, PREMIUM_CATEGORY } from "@/lib/categories";
-import { CrownIcon, HeartCircleIcon } from "@/components/BrandIcons";
+import { CrownIcon, HeartIcon } from "@/components/BrandIcons";
 
 const homeLink = { href: "/", label: "Dernières news" } as const;
 
@@ -29,7 +29,7 @@ const utilityLinks = [
 ] as const;
 
 function UtilityIcon({ icon }: { icon: "heart" | null }) {
-  if (icon === "heart") return <HeartCircleIcon className="h-7 w-7" />;
+  if (icon === "heart") return <HeartIcon className="h-[1.2rem] w-[1.2rem] shrink-0" />;
   return null;
 }
 
