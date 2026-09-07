@@ -52,8 +52,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // Accusé de réception (non bloquant si Resend n'est pas encore configuré).
-  await sendEmail({
+  const mailed = await sendEmail({
     to: email,
     subject: "Bienvenue — newsletter Le Rempart",
     html: newsletterShell({
@@ -62,7 +61,15 @@ export async function POST(req: Request) {
         <p style="font-size:15px;line-height:1.5;"><a href="${absoluteUrl("/")}" style="color:#0a0a0a;">Lire Le Rempart</a></p>`,
     }),
     text: `Inscription confirmée. Chaque matin à 7 heures : les 10 infos essentielles. ${absoluteUrl("/")}`,
-  }).catch(() => ({ ok: false }));
+  });
 
-  return NextResponse.json({ ok: true });
+  if (!mailed.ok) {
+    console.error("newsletter welcome mail failed", mailed.error);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    emailed: mailed.ok,
+    ...(mailed.ok ? {} : { emailError: mailed.error || "envoi impossible" }),
+  });
 }
