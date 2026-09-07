@@ -50,7 +50,7 @@ export function RempartPlusOffer({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-black/35" />
         <div className="relative z-10">
           <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
-            Rempart+
+            Le Rempart+
           </p>
           <Title className="font-display mt-3 max-w-3xl text-[2.2rem] leading-[0.95] uppercase sm:text-5xl md:text-6xl">
             Découvrez l&apos;info que les autres n&apos;ont pas.
@@ -134,7 +134,7 @@ export function RempartPlusOffer({
 
         <div className="rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
           <p className="font-display text-[1.05rem] tracking-[0.18em] text-accent">
-            Rejoindre Rempart+
+            Rejoindre le Rempart+
           </p>
           <p className="mt-2 text-white/80">
             Entrez l’e-mail qui servira de clé d’accès. Après le paiement, vous
