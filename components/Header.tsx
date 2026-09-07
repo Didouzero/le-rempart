@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CrownCircleIcon, LoginCircleIcon } from "@/components/BrandIcons";
+import { MobileAccountTiles } from "@/components/MobileAccountTiles";
 import { SiteNav } from "@/components/SiteNav";
 
 type HeaderProps = {
@@ -19,18 +20,18 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
       />
 
       {!compact && (
-        <div className="relative mx-auto w-full max-w-6xl px-3 py-3 lg:px-6 lg:pb-8 lg:pt-7">
-          <div className="flex w-full items-stretch gap-2 lg:absolute lg:right-6 lg:top-6 lg:w-[13.5rem] lg:flex-col lg:gap-1.5">
+        <div className="relative mx-auto hidden w-full max-w-6xl px-6 pb-8 pt-7 lg:block">
+          <div className="absolute right-6 top-6 z-10 flex w-[13.5rem] flex-col items-stretch gap-1.5">
             <Link
               href="/s-abonner"
-              className="group inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-accent/50 bg-accent px-2.5 py-2 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)] lg:w-full lg:flex-none lg:gap-3 lg:px-4 lg:py-2.5"
+              className="group inline-flex w-full items-center gap-3 rounded-lg border border-accent/50 bg-accent px-4 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
             >
-              <CrownCircleIcon className="h-7 w-7 lg:h-8 lg:w-8" />
-              <span className="flex min-w-0 flex-col leading-none text-left">
-                <span className="font-display text-[0.82rem] tracking-[0.12em] lg:text-[1.15rem] lg:tracking-[0.14em]">
+              <CrownCircleIcon className="h-8 w-8" />
+              <span className="flex flex-col leading-none text-left">
+                <span className="font-display text-[1.15rem] tracking-[0.14em]">
                   S&apos;abonner
                 </span>
-                <span className="font-display mt-0.5 text-[0.82rem] tracking-[0.12em] lg:text-[1.15rem] lg:tracking-[0.14em]">
+                <span className="font-display mt-0.5 text-[1.15rem] tracking-[0.14em]">
                   au Rempart+
                 </span>
               </span>
@@ -38,14 +39,14 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
             {isPlus ? null : (
               <Link
                 href="/connexion"
-                className="group inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-accent/50 bg-ink px-2.5 py-2 text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-ink hover:no-underline lg:w-full lg:flex-none lg:gap-3 lg:px-4 lg:py-2.5"
+                className="group inline-flex w-full items-center gap-3 rounded-lg border border-accent/50 bg-ink px-4 py-2.5 text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
               >
-                <LoginCircleIcon className="h-7 w-7 group-hover:bg-ink group-hover:text-accent lg:h-8 lg:w-8" />
-                <span className="flex min-w-0 flex-col leading-none text-left">
-                  <span className="font-display text-[0.82rem] tracking-[0.12em] lg:text-[1.15rem] lg:tracking-[0.14em]">
+                <LoginCircleIcon className="h-8 w-8 group-hover:bg-ink group-hover:text-accent" />
+                <span className="flex flex-col leading-none text-left">
+                  <span className="font-display text-[1.15rem] tracking-[0.14em]">
                     Se connecter
                   </span>
-                  <span className="mt-0.5 text-[0.58rem] tracking-[0.08em] text-white/65 group-hover:text-ink/70 lg:text-xs">
+                  <span className="mt-0.5 text-xs tracking-[0.08em] text-white/65 group-hover:text-ink/70">
                     Déjà abonné
                   </span>
                 </span>
@@ -53,7 +54,7 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
             )}
           </div>
 
-          <div className="hidden flex-col items-center text-center lg:flex">
+          <div className="flex flex-col items-center text-center">
             <Link
               href="/"
               className="no-underline hover:no-underline"
@@ -69,12 +70,14 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
               />
             </Link>
             <div className="animate-line-grow mx-auto mt-3 h-[3px] w-28 bg-accent" />
-            <p className="font-tagline mx-auto mt-3 max-w-xl text-[0.8rem] text-white sm:text-[0.925rem]">
+            <p className="font-tagline mx-auto mt-3 max-w-xl text-[0.925rem] text-white">
               Le média de droite radicale
             </p>
           </div>
         </div>
       )}
+
+      <MobileAccountTiles isPlus={isPlus} />
     </header>
   );
 }

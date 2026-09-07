@@ -121,7 +121,7 @@ export function RempartPlusOffer({
         </div>
 
         <div className="rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
-          <p className="font-display text-sm tracking-[0.18em] text-accent">
+          <p className="font-display text-[1.05rem] tracking-[0.18em] text-accent">
             Rejoindre Rempart+
           </p>
           <p className="mt-2 text-white/80">

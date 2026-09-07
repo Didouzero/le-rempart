@@ -123,10 +123,7 @@ export function NewsletterSignup({
       aria-label="Newsletter Le Rempart"
     >
       <p className="font-display text-[0.92rem] tracking-[0.16em] text-accent">
-        Newsletter gratuite
-      </p>
-      <p className="font-display mt-0.5 text-base tracking-[0.08em] sm:text-lg">
-        S&apos;abonner gratuitement à la newsletter
+        Rejoindre la newsletter gratuite
       </p>
       <p className="mt-1.5 text-sm leading-snug text-white/80">
         Chaque matin, à 7 heures, les 10 infos essentielles de droite des

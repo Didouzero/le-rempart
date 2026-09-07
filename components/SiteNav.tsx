@@ -58,11 +58,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
       <Link
         href={homeLink.href}
         aria-current={pathname === "/" ? "page" : undefined}
-        className={`group font-display inline-flex shrink-0 items-center gap-2.5 rounded-lg border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
-          pathname === "/"
-            ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
-            : "text-accent"
-        }`}
+        className="group font-display inline-flex shrink-0 items-center gap-2.5 rounded-lg border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
       >
         <span
           className="live-dot shrink-0 group-hover:!bg-ink group-hover:!shadow-none"
