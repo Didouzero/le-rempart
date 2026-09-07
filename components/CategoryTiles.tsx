@@ -38,7 +38,7 @@ export function CategoryTiles() {
             <Link
               key={key}
               href={`/rubriques/${meta.slug}`}
-              className="group relative aspect-square overflow-hidden bg-ink no-underline shadow-[var(--shadow-soft)] hover:no-underline"
+              className="group relative aspect-square overflow-hidden rounded-lg bg-ink no-underline shadow-[var(--shadow-soft)] hover:no-underline"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -56,7 +56,7 @@ export function CategoryTiles() {
         })}
         <Link
           href={PREMIUM_CATEGORY.path}
-          className="group relative aspect-square overflow-hidden bg-ink no-underline shadow-[var(--shadow-soft)] hover:no-underline"
+          className="group relative aspect-square overflow-hidden rounded-lg bg-ink no-underline shadow-[var(--shadow-soft)] hover:no-underline"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

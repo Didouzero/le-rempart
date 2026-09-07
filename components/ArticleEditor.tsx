@@ -187,7 +187,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
 
   return (
     <div className="space-y-8">
-      <form onSubmit={onGenerate} className="space-y-4 border border-rule bg-white p-5">
+      <form onSubmit={onGenerate} className="space-y-4 rounded-lg border border-rule bg-white p-5">
         <h2 className="font-display text-xl">Source</h2>
         <label className="block text-sm font-semibold">
           Titre
@@ -226,7 +226,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
         </button>
       </form>
 
-      <div className="space-y-4 border border-rule bg-white p-5">
+      <div className="space-y-4 rounded-lg border border-rule bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-xl">Article</h2>
           <span className="text-sm capitalize text-muted">Statut : {status}</span>
@@ -274,7 +274,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
           <div className="space-y-3 border-t border-rule pt-4">
             <h3 className="font-display text-lg">Illustration (site)</h3>
             {coverImageUrl ? (
-              <div className="overflow-hidden border border-rule bg-black/5">
+              <div className="overflow-hidden rounded-lg border border-rule bg-black/5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={coverImageUrl}

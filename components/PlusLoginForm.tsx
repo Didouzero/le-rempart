@@ -33,7 +33,7 @@ export function PlusLoginForm() {
 
   if (done) {
     return (
-      <p className="mt-8 border border-ink/15 bg-white/50 px-4 py-4">
+      <p className="mt-8 rounded-lg border border-ink/15 bg-white/50 px-4 py-4">
         Si cet e-mail correspond à un abonnement actif, le lien d’accès vient
         d’arriver. Pensez à regarder les spams.
       </p>
@@ -53,12 +53,12 @@ export function PlusLoginForm() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="vous@email.fr"
-        className="border border-ink/15 bg-paper px-3 py-3 text-base outline-none focus:border-accent"
+        className="rounded-lg border border-ink/15 bg-paper px-3 py-3 text-base outline-none focus:border-accent"
       />
       <button
         type="submit"
         disabled={busy}
-        className="font-display bg-ink px-5 py-3 text-sm tracking-[0.14em] text-paper transition hover:bg-accent hover:text-ink disabled:opacity-60"
+        className="font-display rounded-lg bg-ink px-5 py-3 text-sm tracking-[0.14em] text-paper transition hover:bg-accent hover:text-ink disabled:opacity-60"
       >
         {busy ? "Envoi…" : "M’envoyer le lien"}
       </button>

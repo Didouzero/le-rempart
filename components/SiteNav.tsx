@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ARTICLE_CATEGORIES, CATEGORY_META, PREMIUM_CATEGORY } from "@/lib/categories";
-import { CrownIcon, HeartCircleIcon, PlusCircleIcon } from "@/components/BrandIcons";
+import { CrownIcon, HeartCircleIcon } from "@/components/BrandIcons";
 
 const homeLink = { href: "/", label: "Dernières news" } as const;
 
@@ -24,14 +24,12 @@ const rubriqueLinks = [
 ];
 
 const utilityLinks = [
-  { href: "/s-abonner", label: "S'abonner", icon: "plus" as const },
   { href: "/contact", label: "Contact", icon: null },
   { href: "/nous-soutenir", label: "Nous soutenir", icon: "heart" as const },
 ] as const;
 
-function UtilityIcon({ icon }: { icon: "plus" | "heart" | null }) {
-  if (icon === "plus") return <PlusCircleIcon className="h-[1.05rem] w-[1.05rem]" />;
-  if (icon === "heart") return <HeartCircleIcon className="h-5 w-5" />;
+function UtilityIcon({ icon }: { icon: "heart" | null }) {
+  if (icon === "heart") return <HeartCircleIcon className="h-7 w-7" />;
   return null;
 }
 
@@ -60,7 +58,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
       <Link
         href={homeLink.href}
         aria-current={pathname === "/" ? "page" : undefined}
-        className={`group font-display inline-flex shrink-0 items-center gap-2.5 border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
+        className={`group font-display inline-flex shrink-0 items-center gap-2.5 rounded-lg border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
           pathname === "/"
             ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
             : "text-accent"
@@ -80,7 +78,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
 
       {/* Rubriques — 3 + 3 */}
       <div
-        className="grid grid-cols-3 gap-x-5 gap-y-1.5 rounded-sm border border-white/15 bg-white/[0.04] px-4 py-2"
+        className="grid grid-cols-3 gap-x-5 gap-y-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2"
         role="group"
         aria-label="Rubriques"
       >
@@ -125,7 +123,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
-              className={`font-display inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border border-accent/45 px-3.5 py-2 text-[0.92rem] tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
+              className={`font-display inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-accent/45 px-3.5 py-2 text-[0.92rem] tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
                 active
                   ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
                   : "text-accent"
@@ -175,7 +173,7 @@ function MenuButton({
   return (
     <button
       type="button"
-      className={`inline-flex h-11 w-11 items-center justify-center border border-white/25 text-white transition-colors duration-300 hover:border-accent/60 ${className}`}
+      className={`icon-bare inline-flex items-center justify-center p-2 text-white transition-colors duration-300 hover:text-accent ${className}`}
       aria-expanded={open}
       aria-controls="mobile-nav-drawer"
       aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
@@ -258,7 +256,7 @@ export function SiteNav() {
               >
                 <BrandWordmark className="w-[8.5rem]" />
               </Link>
-              <MenuButton open={open} onToggle={toggle} className="h-10 w-10" />
+              <MenuButton open={open} onToggle={toggle} />
             </div>
             <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
           </div>
@@ -308,7 +306,7 @@ export function SiteNav() {
               <Link
                 href={homeLink.href}
                 tabIndex={open ? 0 : -1}
-                className="font-display inline-flex w-fit items-center gap-2.5 border border-accent/50 px-3 py-2 text-lg tracking-[0.12em] text-accent no-underline transition-all duration-300 hover:border-accent hover:bg-accent hover:text-ink"
+                className="font-display inline-flex w-fit items-center gap-2.5 rounded-lg border border-accent/50 px-3 py-2 text-lg tracking-[0.12em] text-accent no-underline transition-all duration-300 hover:border-accent hover:bg-accent hover:text-ink"
                 style={{
                   transitionDelay: open ? "80ms" : "0ms",
                   opacity: open ? 1 : 0,
@@ -372,7 +370,7 @@ export function SiteNav() {
                       href={link.href}
                       tabIndex={open ? 0 : -1}
                       aria-current={active ? "page" : undefined}
-                      className={`font-display inline-flex w-fit items-center gap-2 whitespace-nowrap border border-accent/50 px-3.5 py-2.5 text-base tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink ${
+                      className={`font-display inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-lg border border-accent/50 px-3.5 py-2.5 text-base tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink ${
                         active
                           ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
                           : "text-accent"

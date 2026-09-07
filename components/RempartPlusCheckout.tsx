@@ -41,7 +41,7 @@ export function RempartPlusCheckout({ configured, status }: Props) {
 
   if (!configured) {
     return (
-      <p className="mt-6 border border-white/20 px-4 py-3 text-white/70">
+      <p className="mt-6 rounded-lg border border-white/20 px-4 py-3 text-white/70">
         Paiement temporairement indisponible (Stripe non configuré).
       </p>
     );
@@ -50,7 +50,7 @@ export function RempartPlusCheckout({ configured, status }: Props) {
   return (
     <div className="mt-6">
       {status === "success" ? (
-        <p className="mb-5 border border-accent/50 bg-accent/15 px-4 py-3 text-accent">
+        <p className="mb-5 rounded-lg border border-accent/50 bg-accent/15 px-4 py-3 text-accent">
           Bienvenue. Votre accès Rempart+ est ouvert — direction les dossiers.
         </p>
       ) : null}
@@ -72,12 +72,12 @@ export function RempartPlusCheckout({ configured, status }: Props) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="vous@email.fr"
-          className="border border-white/20 bg-paper px-3 py-3 text-base text-ink outline-none focus:border-accent"
+          className="rounded-lg border border-white/20 bg-paper px-3 py-3 text-base text-ink outline-none focus:border-accent"
         />
         <button
           type="submit"
           disabled={busy}
-          className="font-display bg-accent px-5 py-3.5 text-base tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:opacity-60"
+          className="font-display rounded-lg bg-accent px-5 py-3.5 text-base tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:opacity-60"
         >
           {busy ? "Redirection…" : "Je m'abonne — 4,90 € / mois"}
         </button>

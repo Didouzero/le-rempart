@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CrownCircleIcon } from "@/components/BrandIcons";
 
 const links = [
   { href: "/s-abonner", label: "Rempart+" },
@@ -53,7 +54,7 @@ export function SiteFooter() {
               href={FACEBOOK_PAGE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="group inline-flex w-fit items-center gap-3 rounded-sm border border-accent/50 bg-[#1877F2] px-4 py-2.5 text-white no-underline shadow-[0_8px_24px_rgba(24,119,242,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-[#166FE5] hover:no-underline hover:shadow-[0_12px_28px_rgba(24,119,242,0.45)]"
+              className="group inline-flex w-fit items-center gap-3 rounded-lg border border-accent/50 bg-[#1877F2] px-4 py-2.5 text-white no-underline shadow-[0_8px_24px_rgba(24,119,242,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-[#166FE5] hover:no-underline hover:shadow-[0_12px_28px_rgba(24,119,242,0.45)]"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#1877F2]">
                 <FacebookIcon className="h-5 w-5" />
@@ -69,20 +70,9 @@ export function SiteFooter() {
             </a>
             <Link
               href="/s-abonner"
-              className="group inline-flex w-fit items-center gap-3 rounded-sm border border-accent/50 bg-accent px-4 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
+              className="group inline-flex w-fit items-center gap-3 rounded-lg border border-accent/50 bg-accent px-4 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-accent">
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.6"
-                  aria-hidden
-                >
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                </svg>
-              </span>
+              <CrownCircleIcon className="h-8 w-8" />
               <span className="flex flex-col leading-tight">
                 <span className="font-display text-[0.95rem] tracking-[0.12em]">
                   S&apos;abonner au Rempart+

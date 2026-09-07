@@ -199,7 +199,7 @@ export function DonateForm({
       currency: "eur",
       appearance: {
         variables: {
-          borderRadius: "2px",
+          borderRadius: "0.55rem",
         },
       },
     }),
@@ -241,7 +241,7 @@ export function DonateForm({
     <form onSubmit={onSubmit} className="mt-10 space-y-10">
       {status === "success" ? (
         <p
-          className="border border-accent/50 bg-accent/15 px-4 py-3 text-ink"
+          className="rounded-lg border border-accent/50 bg-accent/15 px-4 py-3 text-ink"
           role="status"
         >
           Merci. Votre don a bien été enregistré. Il soutient directement Le
@@ -250,7 +250,7 @@ export function DonateForm({
       ) : null}
       {status === "canceled" ? (
         <p
-          className="border border-rule bg-white/60 px-4 py-3 text-muted"
+          className="rounded-lg border border-rule bg-white/60 px-4 py-3 text-muted"
           role="status"
         >
           Paiement annulé. Vous pouvez réessayer quand vous voulez.
@@ -270,7 +270,7 @@ export function DonateForm({
                 type="button"
                 onClick={() => setAmount(value)}
                 aria-pressed={active}
-                className={`font-display min-h-16 border px-2 py-3 text-lg tracking-[0.08em] transition ${
+                className={`font-display min-h-16 rounded-lg border px-2 py-3 text-lg tracking-[0.08em] transition ${
                   active
                     ? "border-accent bg-accent text-ink shadow-[0_8px_24px_rgba(255,189,89,0.28)]"
                     : "border-rule bg-white/70 text-ink hover:border-accent/70 hover:bg-accent/10"
@@ -299,14 +299,14 @@ export function DonateForm({
                   setError(null);
                 }}
                 aria-pressed={active}
-                className={`flex items-center gap-3 border px-4 py-3 text-left transition ${
+                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition ${
                   active
                     ? "border-accent bg-ink text-white"
                     : "border-rule bg-white/70 text-ink hover:border-accent/70"
                 }`}
               >
                 <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                     active ? "bg-accent text-ink" : "bg-ink text-accent"
                   }`}
                 >
@@ -337,7 +337,7 @@ export function DonateForm({
       </fieldset>
 
       {!configured ? (
-        <p className="border border-rule bg-white/60 px-4 py-3 text-sm text-muted">
+        <p className="rounded-lg border border-rule bg-white/60 px-4 py-3 text-sm text-muted">
           Les paiements seront bientôt actifs. Les clés Stripe doivent encore
           être configurées.
         </p>
@@ -364,7 +364,7 @@ export function DonateForm({
         <button
           type="submit"
           disabled={!configured || loading || method === "apple_pay"}
-          className="font-display inline-flex min-h-12 w-full items-center justify-center border border-accent bg-accent px-6 text-[1rem] tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          className="font-display inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-accent bg-accent px-6 text-[1rem] tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {ctaLabel}
         </button>

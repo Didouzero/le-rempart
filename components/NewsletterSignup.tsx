@@ -64,8 +64,8 @@ export function NewsletterSignup({
         placeholder="votre@email.fr"
         className={
           variant === "footer"
-            ? "min-w-0 flex-1 border border-white/20 bg-paper px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent"
-            : "min-w-0 flex-[2] border border-white/20 bg-paper px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-accent"
+            ? "min-w-0 flex-1 rounded-lg border border-white/20 bg-paper px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent"
+            : "min-w-0 flex-[2] rounded-lg border border-white/20 bg-paper px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-accent"
         }
       />
       <button
@@ -73,8 +73,8 @@ export function NewsletterSignup({
         disabled={status === "loading"}
         className={
           variant === "footer"
-            ? "font-display shrink-0 bg-accent px-5 py-2.5 text-sm tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:opacity-60"
-            : "font-display min-w-0 flex-1 bg-accent px-2 py-2 text-center text-[0.7rem] tracking-[0.1em] text-ink transition hover:bg-accent-deep disabled:opacity-60 sm:text-xs sm:tracking-[0.12em]"
+            ? "font-display shrink-0 rounded-lg bg-accent px-5 py-2.5 text-sm tracking-[0.12em] text-ink transition hover:bg-accent-deep disabled:opacity-60"
+            : "font-display min-w-0 flex-1 rounded-lg bg-accent px-2 py-2 text-center text-[0.7rem] tracking-[0.1em] text-ink transition hover:bg-accent-deep disabled:opacity-60 sm:text-xs sm:tracking-[0.12em]"
         }
       >
         {status === "loading" ? "…" : "S'abonner"}
@@ -96,7 +96,7 @@ export function NewsletterSignup({
   if (variant === "footer") {
     return (
       <aside
-        className="newsletter-signup border-t border-accent/35 bg-ink text-paper"
+        className="newsletter-signup newsletter-signup--flush border-t border-accent/35 bg-ink text-paper"
         aria-label="Newsletter Le Rempart"
       >
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-6 sm:py-6">

@@ -33,7 +33,7 @@ export function BackToTop() {
         bottom: "max(1rem, env(safe-area-inset-bottom, 0px))",
         zIndex: 10050,
       }}
-      className={`flex h-11 w-11 items-center justify-center rounded-sm border border-accent/60 bg-ink text-accent shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-300 ease-out hover:border-accent hover:text-accent-deep ${
+      className={`flex h-11 w-11 items-center justify-center rounded-lg border border-accent/60 bg-ink text-accent shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-300 ease-out hover:border-accent hover:text-accent-deep ${
         visible
           ? "pointer-events-auto translate-y-0 opacity-100"
           : "pointer-events-none translate-y-3 opacity-0"

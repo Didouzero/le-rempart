@@ -66,7 +66,7 @@ export default async function DossiersPage({ searchParams }: Props) {
         .
       </p>
       {params.welcome === "1" && isPlus ? (
-        <p className="mt-6 border border-accent/40 bg-accent/15 px-4 py-3 text-ink">
+        <p className="mt-6 rounded-lg border border-accent/40 bg-accent/15 px-4 py-3 text-ink">
           Bienvenue. Votre accès Rempart+ est ouvert sur cet appareil. Pour y
           revenir plus tard :{" "}
           <Link href="/connexion" className="underline decoration-accent">

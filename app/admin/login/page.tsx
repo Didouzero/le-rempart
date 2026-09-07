@@ -56,7 +56,7 @@ function LoginForm() {
         </div>
         <form
           onSubmit={onSubmit}
-          className="space-y-4 border border-rule bg-white p-6"
+          className="space-y-4 rounded-lg border border-rule bg-white p-6"
         >
           <div>
             <h1 className="font-display text-3xl">Connexion</h1>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CrownIcon } from "@/components/BrandIcons";
+import { CrownCircleIcon, CrownIcon } from "@/components/BrandIcons";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
@@ -134,7 +134,7 @@ export default async function EnquetesPage() {
             {lockedCards.map((d, i) => (
               <article
                 key={d.slug}
-                className="border border-ink/10 bg-white/55 p-5 shadow-[var(--shadow-soft)]"
+                className="rounded-lg border border-ink/10 bg-white/55 p-5 shadow-[var(--shadow-soft)]"
                 style={{
                   opacity: i === 0 ? 0.72 : 0.28,
                   filter: i === 0 ? "none" : "blur(0.4px)",
@@ -158,20 +158,9 @@ export default async function EnquetesPage() {
             </p>
             <Link
               href="/s-abonner"
-              className="group mt-6 inline-flex items-center gap-3 rounded-sm border border-accent/50 bg-accent px-5 py-3 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
+              className="group mt-6 inline-flex items-center gap-3 rounded-lg border border-accent/50 bg-accent px-5 py-3 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-accent">
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.6"
-                  aria-hidden
-                >
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                </svg>
-              </span>
+              <CrownCircleIcon className="h-8 w-8" />
               <span className="flex flex-col leading-none text-left">
                 <span className="font-display text-[1.05rem] tracking-[0.14em]">
                   S&apos;abonner

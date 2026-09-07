@@ -42,7 +42,7 @@ export function NativeAdsRail() {
           ].map((item) => (
             <li
               key={item.title}
-              className="border border-ink/10 bg-white/40 p-4 opacity-80"
+              className="rounded-lg border border-ink/10 bg-white/40 p-4 opacity-80"
             >
               <p className="text-[0.65rem] uppercase tracking-[0.14em] text-muted">
                 {item.kind}

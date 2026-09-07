@@ -27,7 +27,7 @@ export default async function AdminDashboardPage() {
     return (
       <div>
         <h1 className="font-display text-3xl">Articles</h1>
-        <p className="mt-4 border border-rule bg-white px-4 py-8 text-muted">
+        <p className="mt-4 rounded-lg border border-rule bg-white px-4 py-8 text-muted">
           Base de données inaccessible. Vérifiez <code>DATABASE_URL</code> et
           lancez <code>npx prisma migrate deploy</code>.
         </p>
@@ -48,14 +48,14 @@ export default async function AdminDashboardPage() {
       </div>
 
       {articles.length === 0 ? (
-        <p className="border border-rule bg-white px-4 py-10 text-center text-muted">
+        <p className="rounded-lg border border-rule bg-white px-4 py-10 text-center text-muted">
           Aucun article.{" "}
           <Link href="/admin/new" className="font-semibold">
             Créer le premier
           </Link>
         </p>
       ) : (
-        <div className="overflow-x-auto border border-rule bg-white">
+        <div className="overflow-x-auto rounded-lg border border-rule bg-white">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-rule bg-rule/40">
               <tr>

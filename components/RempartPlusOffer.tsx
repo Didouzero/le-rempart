@@ -36,7 +36,7 @@ export function RempartPlusOffer({
   const Title = titleAs;
   return (
     <div>
-      <section className="relative overflow-hidden bg-ink px-5 py-12 text-paper shadow-[var(--shadow-soft)] sm:px-10 sm:py-16">
+      <section className="relative overflow-hidden rounded-lg bg-ink px-5 py-12 text-paper shadow-[var(--shadow-soft)] sm:px-10 sm:py-16">
         <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-10 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
         <p className="font-display text-sm tracking-[0.22em] text-accent">
@@ -60,7 +60,7 @@ export function RempartPlusOffer({
       </section>
 
       {alreadyPlus ? (
-        <p className="mt-8 border border-accent/50 bg-accent/15 px-5 py-4 text-ink">
+        <p className="mt-8 rounded-lg border border-accent/50 bg-accent/15 px-5 py-4 text-ink">
           Vous êtes déjà connecté en Rempart+.{" "}
           <Link href="/dossiers" className="underline decoration-accent">
             Accéder aux dossiers
@@ -73,7 +73,7 @@ export function RempartPlusOffer({
         {PERKS.map((perk, i) => (
           <article
             key={perk.title}
-            className="border border-ink/10 bg-white/55 p-5 shadow-[var(--shadow-soft)]"
+            className="rounded-lg border border-ink/10 bg-white/55 p-5 shadow-[var(--shadow-soft)]"
           >
             <p className="font-display text-xs tracking-[0.18em] text-accent-deep">
               0{i + 1} · {perk.kicker}
@@ -120,7 +120,7 @@ export function RempartPlusOffer({
           </p>
         </div>
 
-        <div className="border border-ink bg-ink p-6 text-paper sm:p-8">
+        <div className="rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
           <p className="font-display text-sm tracking-[0.18em] text-accent">
             Rejoindre Rempart+
           </p>

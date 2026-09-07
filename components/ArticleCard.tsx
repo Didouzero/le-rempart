@@ -58,7 +58,7 @@ export function ArticleCard({
               <img src={src} alt={title} />
             </div>
           ) : (
-            <div className="flex aspect-[21/9] w-full items-end bg-ink p-6 sm:p-10">
+            <div className="flex aspect-[21/9] w-full items-end rounded-lg bg-ink p-6 sm:p-10">
               <span className="font-display text-2xl tracking-[0.12em] text-accent">
                 À la une
               </span>

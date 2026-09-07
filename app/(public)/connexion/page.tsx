@@ -36,7 +36,7 @@ export default async function ConnexionPage({ searchParams }: Props) {
         vous envoie un lien, vous cliquez, vous êtes dans les dossiers.
       </p>
       {already ? (
-        <p className="mt-6 border border-accent/40 bg-accent/15 px-4 py-3">
+        <p className="mt-6 rounded-lg border border-accent/40 bg-accent/15 px-4 py-3">
           Vous êtes déjà connecté.{" "}
           <Link href="/dossiers" className="underline decoration-accent">
             Voir les dossiers
