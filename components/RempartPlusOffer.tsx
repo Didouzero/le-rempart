@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { RempartPlusCheckout } from "@/components/RempartPlusCheckout";
 import { getStripePublishableKey, isStripeConfigured } from "@/lib/stripe";
@@ -37,26 +38,36 @@ export function RempartPlusOffer({
   return (
     <div>
       <section className="relative overflow-hidden rounded-lg bg-ink px-5 py-12 text-paper shadow-[var(--shadow-soft)] sm:px-10 sm:py-16">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-10 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-        <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
-          Rempart+
-        </p>
-        <Title className="font-display mt-3 max-w-3xl text-[2.2rem] leading-[0.95] uppercase sm:text-5xl md:text-6xl">
-          Découvrez l&apos;info que les autres n&apos;ont pas.
-        </Title>
-        <p className="mt-5 max-w-2xl text-base text-white/80 sm:text-lg">
-          Pour le prix d’un café, levez le rideau sur nos enquêtes, nos dossiers
-          privés et nos révélations documentées, et recevez l&apos;actualité
-          détaillée chaque matin. ✍️
-        </p>
-        <div className="mt-8 flex flex-wrap items-end gap-4">
-          <p className="font-display text-5xl leading-none tracking-[0.04em] text-accent">
-            4,90&nbsp;€
+        <Image
+          src="/rempart-plus-hero.jpg"
+          alt=""
+          fill
+          sizes="(min-width: 1024px) 72rem, 100vw"
+          className="object-cover object-[center_35%]"
+          priority={titleAs === "h1"}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-black/76" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-black/35" />
+        <div className="relative z-10">
+          <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
+            Rempart+
           </p>
-          <p className="pb-1 text-sm text-white/70">
-            / mois · sans engagement · résiliable en 2 clics
+          <Title className="font-display mt-3 max-w-3xl text-[2.2rem] leading-[0.95] uppercase sm:text-5xl md:text-6xl">
+            Découvrez l&apos;info que les autres n&apos;ont pas.
+          </Title>
+          <p className="mt-5 max-w-2xl text-base text-white/80 sm:text-lg">
+            Pour le prix d’un café, levez le rideau sur nos enquêtes, nos dossiers
+            privés et nos révélations documentées, et recevez l&apos;actualité
+            détaillée chaque matin. ✍️
           </p>
+          <div className="mt-8 flex flex-wrap items-end gap-4">
+            <p className="font-display text-5xl leading-none tracking-[0.04em] text-accent">
+              4,90&nbsp;€
+            </p>
+            <p className="pb-1 text-sm text-white/70">
+              / mois · sans engagement · résiliable en 2 clics
+            </p>
+          </div>
         </div>
       </section>
 
