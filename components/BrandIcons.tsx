@@ -14,10 +14,10 @@ export function PlusCircleIcon({ className }: { className?: string }) {
 export function HeartCircleIcon({ className }: { className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-current ${className ?? "h-4 w-4"}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-current ${className ?? "h-5 w-5"}`}
       aria-hidden
     >
-      <svg className="h-[58%] w-[58%]" viewBox="0 0 24 24" fill="currentColor">
+      <svg className="h-[62%] w-[62%]" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 19s-7-4.35-7-9.15C5 7.2 6.9 5.5 9.05 5.5c1.24 0 2.32.58 2.95 1.5.63-.92 1.71-1.5 2.95-1.5C17.1 5.5 19 7.2 19 9.85 19 14.65 12 19 12 19z" />
       </svg>
     </span>
@@ -32,7 +32,11 @@ export function CrownIcon({ className }: { className?: string }) {
       fill="currentColor"
       aria-hidden
     >
-      <path d="M3.4 16.2 5.2 8.4c.15-.64.96-.8 1.35-.27L9.5 12l2.05-5.47a.75.75 0 0 1 1.4 0L14.99 12l2.96-3.87c.39-.53 1.2-.37 1.35.27l1.8 7.8a1 1 0 0 1-.97 1.23H4.37a1 1 0 0 1-.97-1.23ZM4 19.25h16a.75.75 0 0 1 0 1.5H4a.75.75 0 0 1 0-1.5Z" />
+      <path d="M3 17.2 5.1 8.4a.7.7 0 0 1 1.22-.28L9.2 12l2.18-5.7a.7.7 0 0 1 1.24 0L14.8 12l2.88-3.88a.7.7 0 0 1 1.22.28L21 17.2a.85.85 0 0 1-.82 1.05H3.82A.85.85 0 0 1 3 17.2Z" />
+      <rect x="3.2" y="19.15" width="17.6" height="1.7" rx="0.35" />
+      <circle cx="5.15" cy="7.35" r="1.35" />
+      <circle cx="12" cy="5.15" r="1.45" />
+      <circle cx="18.85" cy="7.35" r="1.35" />
     </svg>
   );
 }

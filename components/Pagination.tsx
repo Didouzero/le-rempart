@@ -4,7 +4,6 @@ type PaginationProps = {
   page: number;
   totalPages: number;
   basePath?: string;
-  /** Conserve ?q= dans les liens de pagination. */
   q?: string;
 };
 
@@ -18,6 +17,13 @@ function buildHref(basePath: string, page: number, q?: string): string {
   return `${basePath === "/" ? "/" : basePath}?${qs}`;
 }
 
+function visiblePages(totalPages: number): Array<number | "ellipsis"> {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  return [1, 2, 3, "ellipsis", totalPages - 1, totalPages];
+}
+
 export function Pagination({
   page,
   totalPages,
@@ -26,8 +32,7 @@ export function Pagination({
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  const pages: number[] = [];
-  for (let i = 1; i <= totalPages; i += 1) pages.push(i);
+  const items = visiblePages(totalPages);
 
   return (
     <nav
@@ -42,12 +47,23 @@ export function Pagination({
           ←
         </Link>
       ) : null}
-      {pages.map((p) => {
-        const active = p === page;
+      {items.map((item) => {
+        if (item === "ellipsis") {
+          return (
+            <span
+              key="ellipsis"
+              className="font-display px-1 py-2 text-sm tracking-[0.2em] text-muted"
+              aria-hidden
+            >
+              ...
+            </span>
+          );
+        }
+        const active = item === page;
         return (
           <Link
-            key={p}
-            href={buildHref(basePath, p, q)}
+            key={item}
+            href={buildHref(basePath, item, q)}
             aria-current={active ? "page" : undefined}
             className={`font-display min-w-10 px-3 py-2 text-center text-sm tracking-[0.12em] no-underline ${
               active
@@ -55,7 +71,7 @@ export function Pagination({
                 : "text-muted hover:text-accent"
             }`}
           >
-            {p}
+            {item}
           </Link>
         );
       })}

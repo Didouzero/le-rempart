@@ -40,7 +40,7 @@ export default async function PublicLayout({
         ) : null}
 
         <main
-          className={`mx-auto w-full max-w-6xl flex-1 px-4 py-10 pb-28 sm:px-6 sm:py-12 sm:pb-24 ${
+          className={`mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12 ${
             showAds ? "xl:max-w-none xl:px-2" : ""
           }`}
         >
@@ -59,9 +59,7 @@ export default async function PublicLayout({
           </aside>
         ) : null}
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-30">
-        <NewsletterSignup source="footer-sticky" variant="sticky" />
-      </div>
+      <NewsletterSignup source="footer-bar" variant="footer" />
       <SiteFooter />
       <BackToTop />
     </div>

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArticleCard } from "@/components/ArticleCard";
-import { ArticleSearch } from "@/components/ArticleSearch";
+import { ListPageHeader } from "@/components/ArticleSearch";
 import { JsonLd } from "@/components/JsonLd";
+import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { Pagination } from "@/components/Pagination";
 import {
   ARTICLE_PAGE_SIZE,
@@ -16,6 +17,7 @@ import {
   type ArticleCategory,
 } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
+import { hasActiveRempartPlus } from "@/lib/membership";
 import {
   absoluteUrl,
   buildPageMetadata,
@@ -126,6 +128,12 @@ export default async function RubriquePage({ params, searchParams }: Props) {
 
   const featured = page === 1 && !q ? articles[0] : null;
   const list = featured ? articles.slice(1) : articles;
+  const plus = await hasActiveRempartPlus();
+  const resultLine = q
+    ? total === 0
+      ? `Aucun résultat pour « ${q} » dans ${meta.label}.`
+      : `${total} résultat${total > 1 ? "s" : ""} pour « ${q} ».`
+    : null;
 
   return (
     <div className="animate-fade-up">
@@ -136,29 +144,15 @@ export default async function RubriquePage({ params, searchParams }: Props) {
           path,
         })}
       />
-      <div className="mb-8">
-        <p className="section-kicker">
-          <span className="live-dot" aria-hidden />
-          Rubrique
-        </p>
-        <h1 className="font-display mt-2 text-4xl tracking-[0.08em] sm:text-5xl">
-          {meta.label}
-        </h1>
-        <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
-        <p className="mt-4 max-w-2xl text-base text-muted">{meta.description}</p>
-        <ArticleSearch
-          basePath={path}
-          q={q}
-          placeholder={`Rechercher dans ${meta.label}…`}
-        />
-        {q ? (
-          <p className="mt-3 text-sm text-muted">
-            {total === 0
-              ? `Aucun résultat pour « ${q} » dans ${meta.label}.`
-              : `${total} résultat${total > 1 ? "s" : ""} pour « ${q} ».`}
-          </p>
-        ) : null}
-      </div>
+      <ListPageHeader
+        kicker="Rubrique"
+        title={meta.label}
+        description={meta.description}
+        basePath={path}
+        q={q}
+        placeholder={`Rechercher dans ${meta.label}…`}
+        resultLine={resultLine}
+      />
 
       {articles.length === 0 ? (
         <p className="py-16 text-center text-muted">
@@ -206,6 +200,8 @@ export default async function RubriquePage({ params, searchParams }: Props) {
           />
         </div>
       )}
+
+      {plus ? null : <NativeAdsRail />}
     </div>
   );
 }

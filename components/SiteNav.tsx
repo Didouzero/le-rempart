@@ -31,7 +31,7 @@ const utilityLinks = [
 
 function UtilityIcon({ icon }: { icon: "plus" | "heart" | null }) {
   if (icon === "plus") return <PlusCircleIcon className="h-[1.05rem] w-[1.05rem]" />;
-  if (icon === "heart") return <HeartCircleIcon className="h-[1.05rem] w-[1.05rem]" />;
+  if (icon === "heart") return <HeartCircleIcon className="h-5 w-5" />;
   return null;
 }
 
@@ -59,7 +59,12 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
       {/* Accueil — encadré comme Contact / Nous soutenir + live-dot */}
       <Link
         href={homeLink.href}
-        className="group font-display inline-flex shrink-0 items-center gap-2.5 border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
+        aria-current={pathname === "/" ? "page" : undefined}
+        className={`group font-display inline-flex shrink-0 items-center gap-2.5 border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
+          pathname === "/"
+            ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+            : "text-accent"
+        }`}
       >
         <span
           className="live-dot shrink-0 group-hover:!bg-ink group-hover:!shadow-none"
@@ -73,9 +78,9 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
         aria-hidden
       />
 
-      {/* Rubriques info — un même bloc */}
+      {/* Rubriques — 3 + 3 */}
       <div
-        className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded-sm border border-white/15 bg-white/[0.04] px-3 py-2"
+        className="grid grid-cols-3 gap-x-5 gap-y-1.5 rounded-sm border border-white/15 bg-white/[0.04] px-4 py-2"
         role="group"
         aria-label="Rubriques"
       >
@@ -86,7 +91,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
-              className={`font-display inline-flex items-center gap-1.5 text-[1.12rem] tracking-[0.12em] transition-colors hover:text-accent ${
+              className={`font-display inline-flex items-center justify-center gap-1.5 text-[1.05rem] tracking-[0.12em] transition-colors hover:text-accent ${
                 active
                   ? "text-white underline decoration-accent decoration-2 underline-offset-4"
                   : "text-white/90 no-underline hover:no-underline"
@@ -94,7 +99,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
             >
               {link.label}
               {link.premium ? (
-                <CrownIcon className="h-3.5 w-3.5 text-accent" />
+                <CrownIcon className="h-4 w-4 text-accent" />
               ) : null}
             </Link>
           );
@@ -112,16 +117,25 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
         role="group"
         aria-label="Contact et soutien"
       >
-        {utilityLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="font-display inline-flex items-center gap-1.5 border border-accent/45 px-3.5 py-2 text-[0.92rem] tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
-          >
-            <UtilityIcon icon={link.icon} />
-            {link.label}
-          </Link>
-        ))}
+        {utilityLinks.map((link) => {
+          const active =
+            pathname === link.href || pathname.startsWith(`${link.href}/`);
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={active ? "page" : undefined}
+              className={`font-display inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border border-accent/45 px-3.5 py-2 text-[0.92rem] tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
+                active
+                  ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                  : "text-accent"
+              }`}
+            >
+              <UtilityIcon icon={link.icon} />
+              {link.label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
@@ -348,12 +362,21 @@ export function SiteNav() {
 
               <div className="border-t border-white/15 pt-5">
                 <div className="flex flex-col gap-3">
-                  {utilityLinks.map((link, i) => (
+                  {utilityLinks.map((link, i) => {
+                    const active =
+                      pathname === link.href ||
+                      pathname.startsWith(`${link.href}/`);
+                    return (
                     <Link
                       key={link.href}
                       href={link.href}
                       tabIndex={open ? 0 : -1}
-                      className="font-display inline-flex w-fit items-center gap-2 border border-accent/50 px-3.5 py-2.5 text-base tracking-[0.14em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink"
+                      aria-current={active ? "page" : undefined}
+                      className={`font-display inline-flex w-fit items-center gap-2 whitespace-nowrap border border-accent/50 px-3.5 py-2.5 text-base tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink ${
+                        active
+                          ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                          : "text-accent"
+                      }`}
                       style={{
                         transitionDelay: open ? `${280 + i * 40}ms` : "0ms",
                         opacity: open ? 1 : 0,
@@ -366,7 +389,8 @@ export function SiteNav() {
                       <UtilityIcon icon={link.icon} />
                       {link.label}
                     </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </nav>

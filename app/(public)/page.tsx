@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleCard } from "@/components/ArticleCard";
-import { ArticleSearch } from "@/components/ArticleSearch";
+import { ListPageHeader } from "@/components/ArticleSearch";
 import { CategoryTiles } from "@/components/CategoryTiles";
+import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { Pagination } from "@/components/Pagination";
+import { RempartPlusOffer } from "@/components/RempartPlusOffer";
 import {
   ARTICLE_PAGE_SIZE,
   parsePageParam,
   parseSearchQuery,
   publishedArticleWhere,
 } from "@/lib/article-list";
+import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import {
   SITE_DEFAULT_TITLE,
@@ -46,8 +49,8 @@ export async function generateMetadata({
     isPaged ? `page ${page}` : null,
   ].filter(Boolean);
   const title = titleParts.length
-    ? `Dernières news — ${titleParts.join(" — ")}`
-    : "Dernières news";
+    ? `L'actualité en direct — ${titleParts.join(" — ")}`
+    : "L'actualité en direct";
 
   const qs = new URLSearchParams();
   if (q) qs.set("q", q);
@@ -68,6 +71,7 @@ export default async function HomePage({ searchParams }: Props) {
   const requested = parsePageParam(params.page);
   const q = parseSearchQuery(params.q);
   const where = publishedArticleWhere({ q });
+  const plus = await hasActiveRempartPlus();
 
   let total = 0;
   let articles: Array<{
@@ -119,28 +123,20 @@ export default async function HomePage({ searchParams }: Props) {
     <div>
       <AdSlot slot="home-below-header" />
 
-      <div className="mb-8 animate-fade-up">
-        <p className="section-kicker">
-          <span className="live-dot" aria-hidden />
-          Fil d&apos;actualité
-        </p>
-        <h1 className="font-display mt-2 text-4xl tracking-[0.08em] sm:text-5xl">
-          Dernières news
-        </h1>
-        <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
-        <ArticleSearch
-          basePath="/"
-          q={q}
-          placeholder="Rechercher dans toutes les news…"
-        />
-        {q ? (
-          <p className="mt-3 text-sm text-muted">
-            {total === 0
+      <ListPageHeader
+        kicker="Fil d'actualité"
+        title="L'actualité en direct"
+        basePath="/"
+        q={q}
+        placeholder="Rechercher dans toutes les news…"
+        resultLine={
+          q
+            ? total === 0
               ? `Aucun résultat pour « ${q} ».`
-              : `${total} résultat${total > 1 ? "s" : ""} pour « ${q} ».`}
-          </p>
-        ) : null}
-      </div>
+              : `${total} résultat${total > 1 ? "s" : ""} pour « ${q} ».`
+            : null
+        }
+      />
 
       {articles.length === 0 ? (
         <p className="py-16 text-center text-muted">
@@ -198,6 +194,21 @@ export default async function HomePage({ searchParams }: Props) {
       )}
 
       <CategoryTiles />
+
+      <section className="mt-14 animate-fade-up" aria-label="Le Rempart+">
+        <p className="section-kicker mb-2">
+          <span className="live-dot" aria-hidden />
+          Le Rempart+
+        </p>
+        <div className="gold-rule mb-6 max-w-[12rem]" />
+        <RempartPlusOffer
+          alreadyPlus={plus}
+          showHowItWorks={false}
+          titleAs="h2"
+        />
+      </section>
+
+      {plus ? null : <NativeAdsRail />}
     </div>
   );
 }

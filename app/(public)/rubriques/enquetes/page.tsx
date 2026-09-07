@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CrownIcon } from "@/components/BrandIcons";
 import { JsonLd } from "@/components/JsonLd";
+import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
@@ -183,6 +184,8 @@ export default async function EnquetesPage() {
           </div>
         </div>
       )}
+
+      {isPlus ? null : <NativeAdsRail />}
     </div>
   );
 }

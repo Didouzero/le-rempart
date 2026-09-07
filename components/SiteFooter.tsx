@@ -32,7 +32,7 @@ function FacebookIcon({ className }: { className?: string }) {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-0 border-t border-ink bg-ink pb-28 text-white sm:pb-24">
+    <footer className="mt-0 border-t border-ink bg-ink text-white">
       <div className="h-[3px] w-full bg-gradient-to-r from-accent via-accent-deep to-transparent" />
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-white/70 sm:px-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
