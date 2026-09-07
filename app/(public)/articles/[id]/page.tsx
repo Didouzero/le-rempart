@@ -28,6 +28,12 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
+function breadcrumbTitle(title: string): string {
+  const t = title.replace(/\s+/g, " ").trim();
+  if (t.length <= 33) return t;
+  return `${t.slice(0, 33).trimEnd()}...`;
+}
+
 export const dynamic = "force-dynamic";
 
 type ArticleRow = {
@@ -210,8 +216,8 @@ export default async function ArticlePage({ params }: Props) {
           <li aria-hidden className="text-accent">
             /
           </li>
-          <li className="max-w-[min(100%,28rem)] truncate text-muted">
-            {article.title}
+          <li className="text-muted">
+            {breadcrumbTitle(article.title)}
           </li>
         </ol>
       </nav>

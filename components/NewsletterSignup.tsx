@@ -77,7 +77,7 @@ export function NewsletterSignup({
             : "font-display min-w-0 flex-1 rounded-lg bg-accent px-2 py-2 text-center text-[0.7rem] tracking-[0.1em] text-ink transition hover:bg-accent-deep disabled:opacity-60 sm:text-xs sm:tracking-[0.12em]"
         }
       >
-        {status === "loading" ? "…" : "S'abonner"}
+        {status === "loading" ? "…" : "Je m'inscris"}
       </button>
     </form>
   );
@@ -99,7 +99,7 @@ export function NewsletterSignup({
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-6 sm:py-6">
           <div className="min-w-0 flex-1">
             <p className="font-display text-[0.92rem] tracking-[0.16em] text-accent">
-              Newsletter gratuite
+              Rejoignez la newsletter gratuite
             </p>
             <p className="mt-1 text-sm leading-snug text-white/80 sm:text-base">
               Chaque matin, à 7 heures, les 10 infos essentielles de droite des
@@ -123,7 +123,7 @@ export function NewsletterSignup({
       aria-label="Newsletter Le Rempart"
     >
       <p className="font-display text-[0.92rem] tracking-[0.16em] text-accent">
-        Rejoindre la newsletter gratuite
+        Rejoignez la newsletter gratuite
       </p>
       <p className="mt-1.5 text-sm leading-snug text-white/80">
         Chaque matin, à 7 heures, les 10 infos essentielles de droite des

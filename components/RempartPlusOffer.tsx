@@ -6,7 +6,7 @@ const PERKS = [
   {
     kicker: "Chaque matin",
     title: "Le Brief approfondi",
-    text: "Les 10 infos essentielles complètes des dernières 24 heures et tout ce que les autres médias glissent sous le tapis. 🗞️",
+    text: "Chaque matin, les 10 infos essentielles complètes des dernières 24 heures et tout ce que les autres médias glissent sous le tapis. 🗞️",
   },
   {
     kicker: "Exclusif",
@@ -47,7 +47,8 @@ export function RempartPlusOffer({
         </Title>
         <p className="mt-5 max-w-2xl text-base text-white/80 sm:text-lg">
           Pour le prix d’un café, levez le rideau sur nos enquêtes, nos dossiers
-          privés et nos révélations documentées. ✍️
+          privés et nos révélations documentées, et recevez l&apos;actualité
+          détaillée chaque matin. ✍️
         </p>
         <div className="mt-8 flex flex-wrap items-end gap-4">
           <p className="font-display text-5xl leading-none tracking-[0.04em] text-accent">
@@ -100,8 +101,8 @@ export function RempartPlusOffer({
           <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
           <div className="mt-6 space-y-4 text-ink">
             <p>
-              La newsletter premium donne les gros titres du jour. La
-              newsletter payante creuse chaque dossier en profondeur pour vous
+              La newsletter gratuite donne les gros titres du jour. La
+              newsletter premium creuse chaque dossier en profondeur pour vous
               donner une longueur d&apos;avance.
             </p>
             <p>
