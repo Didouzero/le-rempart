@@ -55,7 +55,8 @@ CORPS DE L'ARTICLE :
   organisations avec leur périmètre exact, communes, juridictions, dates, montants au chiffre près.
 - Attribue explicitement : "selon l'enquête de <média du dossier>", "d'après <média>". N'utilise QUE
   les médias listés dans sources / mediaHistory du dossier.
-- Reprends les verbatims du dossier entre guillemets, avec leur auteur.
+- Reprends les verbatims du dossier entre guillemets français EN ITALIQUE Markdown :
+  *« citation exacte »*, avec leur auteur juste après.
 - Explique les mécanismes concrets : comment le déficit s'est creusé, comment la procédure fonctionne,
   qui décide quoi. Le lecteur doit comprendre l'enchaînement, pas seulement le résultat.
 - Explique les notions de conceptsToExplain / glossary quand elles servent la compréhension.
@@ -69,11 +70,15 @@ LISTES :
 - Maximum 2 blocs de listes, 3 à 6 puces chacun, chaque puce factuelle et sourcée par le dossier.
 - Le reste doit rester rédigé : une liste ne remplace pas l'analyse.
 
-ANGLE REMPART :
-- UNIQUEMENT dans la dernière section (ex. "Le regard du Rempart", "Ce que révèle ce dossier").
-- Critique de la gestion, de l'entre-soi politique, du coût pour le contribuable : appuyée sur les
-  faits déjà exposés, sans nouveau fait, sans insulte, sans procès d'intention non documenté.
-- Aucune trace de ce ton dans les sections factuelles ni dans le chapô.
+ANGLE REMPART (analyse, pas sarcasme) :
+- Après les faits : 1 à 3 paragraphes (souvent un ## dédié) qui QUESTIONNENT le sens politique
+  ou social de l'affaire — intention possible, contradictions, coût pour le contribuable,
+  réception dans l'opinion SI le dossier le documente.
+- Ton argumenté, sérieux, nuancé. INTERDIT : ironie lourde, « on croit rêver », vannes,
+  procès d'intention gratuit, gueulante générique.
+- Appuyée uniquement sur les faits déjà exposés / éléments du dossier. Aucune invention.
+- Aucune trace de ton éditorial dans le chapô ; dans les sections factuelles, rester
+  informatif.
 
 DOSSIER FAIBLE OU VIDE :
 - Si keyFacts est vide ou ne contient rien de vérifiable sur le sujet : écris une brève courte
@@ -261,7 +266,7 @@ export async function runWritingAgent(
     dossierPayload(input.dossier),
     cautious
       ? "Rédige la brève JSON prudente. Métadonnées Editor obligatoires."
-      : "Rédige l'article JSON : faits nommés et chiffrés d'abord, mécanismes ensuite, angle Rempart dans la dernière section seulement. Métadonnées Editor obligatoires.",
+      : "Rédige l'article JSON : faits nommés et chiffrés d'abord, mécanismes ensuite, puis analyse Rempart argumentée (pas sarcastique). Citations en *« … »*. Métadonnées Editor obligatoires.",
   ]
     .filter(Boolean)
     .join("\n\n");

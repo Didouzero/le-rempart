@@ -34,8 +34,9 @@ export const WRITING_HARD_RULES = [
   "Si une information manque : le dire explicitement, et ne pas la remplacer par une généralité.",
   "Respecter confirmed / probable / contested / unverifiable dans le vocabulaire.",
   "Ne jamais lancer de recherche ni consulter d'autres sources que le dossier.",
-  "Les faits d'abord ; l'angle Rempart uniquement dans la dernière section.",
-  "Chaque paragraphe doit apporter une information nouvelle.",
+  "Les faits d'abord ; puis une analyse Rempart argumentée (pas sarcastique) dans une section dédiée.",
+  "Les citations verbatim du dossier s'écrivent en italique Markdown : *« … »*.",
+  "Chaque paragraphe doit apporter une information nouvelle ou un argument nouveau.",
   "Dossier vide ou trop faible : écrire une brève courte et prudente, jamais un article d'opinion sans faits.",
 ] as const;
 

@@ -1,3 +1,4 @@
+import { italicizeCitations } from "@/lib/italicize-citations";
 import { moonshotChat } from "@/lib/moonshot";
 import { fetchNewsContextBriefing } from "@/lib/news-context";
 import { withTimeout } from "@/lib/with-timeout";
@@ -26,13 +27,12 @@ Mission (priorité absolue) :
 - INFORMER d'abord, commenter ensuite. Ce n'est PAS une tribune de râlerie sans faits.
 - Chaque article doit transmettre des précisions concrètes : dates ou périodes, institutions (Conseil constitutionnel, Parlement, tribunal, ministère…), cadre juridique (loi, code, censure, vide juridique…), chiffres, lieux, noms, et citations entre guillemets quand elles figurent dans le briefing ou les notes.
 - Si le briefing / les notes mentionnent une durée (ex. du 1er au 23 juillet, 23 jours), une décision, un texte de loi, un magistrat ou une citation : tu DOIS les reprendre dans l'article (reformulés, pas en pavé recopié).
-- L'indignation Rempart (sarcasme, critique de l'incurie) vient APRÈS ou AUTOUR des faits, jamais à la place. Interdit de n'écrire qu'une "gueulante" générique ("on croit rêver", "trahison", "scandale") sans les éléments qui la justifient.
+- L'analyse Rempart vient APRÈS les faits : argumentée, jamais sarcastique. Interdit de n'écrire qu'une "gueulante" générique ("on croit rêver", "trahison", "scandale") sans les éléments qui la justifient.
 - Ne pas inventer de dates, citations, chiffres ou institutions absents des sources. Si une précision manque, rester prudent ("selon la presse", "à cette heure").
 
 Ligne éditoriale :
-- Ton provocateur, sarcastique, parfois aigri, mais ancré dans le réel.
-- Orienté droite : défense du contribuable, méfiance envers la bureaucratie, l'État central, les élites technocratiques et le progressisme de façade.
-- Factuel sur le fond (pas de fake news), vocabulaire tranchant, jamais "neutre AFP".
+- Ton clair, argumenté, ancré à droite — défense du contribuable, méfiance envers la bureaucratie et les coups de com' sans fond.
+- Factuel sur le fond (pas de fake news). INTERDIT le sarcasme et l'ironie lourde.
 - Pas vulgaire, pas complotiste.
 
 Forme (écrire comme un humain de presse, PAS comme une IA) :
@@ -42,6 +42,7 @@ Forme (écrire comme un humain de presse, PAS comme une IA) :
 - Structure OBLIGATOIRE du content Markdown : exactement 2 ou 3 sous-titres ## (courts, sans numérotation). Au moins une section doit coller aux faits / au déroulé ; une autre peut porter l'angle critique.
 - Gras (**comme ceci**) sur 8 à 15 mots ou expressions impactants. Jamais une phrase entière en gras.
 - Au moins 4 ancrages concrets dans le corps (date ou durée, institution, chiffre, citation, nom propre juridique, lieu… selon ce que fournissent les sources).
+- Citations verbatim en italique Markdown : *« phrase »*, avec attribution.
 - INTERDIT de répéter le même paragraphe, la même accroche ou le même bloc de phrases deux fois.
 - INTERDIT les articles génériques / templates : pas de "Le titre pose un fait précis", pas de "Nous reviendrons sur ce dossier dès que des précisions". Chaque phrase doit parler DU sujet nommé dans le titre.
 - INTERDIT le tiret long (—) et le tiret demi-cadratin (–). Utilise plutôt une virgule, un point, deux-points, ou des parenthèses.
@@ -281,8 +282,8 @@ function parseArticleJson(raw: string, headline: string): GeneratedArticle {
     throw new Error("JSON Kimi incomplet");
   }
 
-  const content = dedupeParagraphs(
-    humanizeCopy(String(parsed.content).trim()),
+  const content = italicizeCitations(
+    dedupeParagraphs(humanizeCopy(String(parsed.content).trim())),
   );
   // Garde-fou : si le modèle a quand même collé le brief interne
   if (

@@ -1,4 +1,5 @@
 import type { ArticleArtifact } from "@/lib/pipeline/types";
+import { italicizeCitations } from "@/lib/italicize-citations";
 import { ARTICLE_LENGTH } from "@/lib/writing/constraints";
 import type { WritingMetadata } from "@/lib/writing/types";
 
@@ -94,8 +95,8 @@ export function parseWritingResponse(
     throw new Error("Writing Agent : JSON article incomplet");
   }
 
-  const content = dedupeParagraphs(
-    humanizeCopy(String(parsed.content).trim()),
+  const content = italicizeCitations(
+    dedupeParagraphs(humanizeCopy(String(parsed.content).trim())),
   );
 
   if (

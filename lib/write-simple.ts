@@ -1,6 +1,7 @@
 import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { searchWebForSubject } from "@/lib/research/web-search";
 import { scrubBoilerplate } from "@/lib/fetch-source";
+import { italicizeCitations } from "@/lib/italicize-citations";
 import { moonshotChat } from "@/lib/moonshot";
 
 export type SimpleArticle = {
@@ -168,41 +169,53 @@ function humanize(text: string): string {
       /\s*(À chacun d'en tirer|Chacun en tirera)[^.!?]*[.!?]?\s*/gi,
       " ",
     )
+    .replace(
+      /\s*on croit rêver[^.!?]*[.!?]?\s*/gi,
+      " ",
+    )
     .replace(/ {2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite dure). Tu rédiges un VRAI article d'actualité : densément FACTUEL, pas un édito, pas un billet d'humeur.
+const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite). Tu rédiges un VRAI article d'actualité : faits d'abord, puis analyse ARGUMENTÉE. Ni tribune sarcastique, ni simple reformulation d'un seul média.
 
 Tu reçois :
 1) Le TITRE CRÉATIVE (faits établis — à prendre comme VRAIS)
-2) Le texte scrapé de l'article SOURCE (matière principale — à exploiter à fond)
-3) Des résultats web complémentaires (autres détails, noms, chiffres, réactions)
+2) Le texte scrapé de l'article SOURCE (matière factuelle principale)
+3) Des résultats web complémentaires (contexte, antécédents, réactions, chiffres, angles possibles)
 
-OBJECTIF : un développement journalistique. Le lecteur doit apprendre des FAITS à chaque paragraphe.
+OBJECTIF DOUBLE :
+A) Rapporter fidèlement les FAITS (qui / quoi / où / quand / combien / cadre).
+B) Apporter un ANGLE ÉDITORIAL : interroger le sens politique ou social de l'événement, avec des arguments (pas des vannes). Exemple de posture : « Que cherche X avec cette mesure ? Sa popularité est faible ; ce type de coup de com' est aujourd'hui mal reçu ; se rapprocher du peuple peut se retourner contre soi. » — ton sérieux, nuancé, argumenté.
 
 TITRE SITE (champ "title") :
-- Même faits / même angle que la créative, reformulé (pas recopié mot pour mot).
+- Même faits / même sujet que la créative, reformulé (pas recopié mot pour mot).
 - Noms, lieux, chiffres conservés. Pas d'emoji / hashtag / MAJUSCULES partout.
 
 STRUCTURE DU CORPS (content) — OBLIGATOIRE :
 1) Accroche factuelle (qui / quoi / où / quand).
 2) Déroulé des faits : chronologie, décisions, cadre (loi, tribunal, ministère…), chiffres, citations COURTES attribuées.
-3) Réactions(s) ou élément(s) de contexte NOMÉ(S) si présents dans source ou web.
-4) Optionnel : UNE seule phrase d'angle Rempart en toute fin — pas plus. Souvent inutile si les faits parlent.
+3) Contexte complémentaire tiré du web si utile (antécédents, réactions NOMÉES, sondages, chiffres annexes) — pas une 2e reformulation de la source.
+4) Analyse éditoriale (1 à 3 paragraphes, souvent sous un ## dédié) : questionner l'intention, les contradictions, le coût politique, ce que ça révèle — TOUJOURS argumenté, jamais sarcastique. Si la matière web/source est trop pauvre pour analyser sans inventer : raccourcis cette partie, ne fabule pas.
+5) Optionnel : une phrase de clôture nette.
+
+CITATIONS (forme) :
+- Toute citation verbatim entre guillemets français DOIT être en italique Markdown : *« phrase exacte »* — puis attribution (selon X, a déclaré Y…).
+- Citations COURTES (une phrase ou moins). Pas de pavé recopié.
 
 RÈGLES DURES :
-- 85 %+ du texte = FAITS tirés de la source et/ou des résultats web. Dates, montants, âges, peines, lieux, fonctions, institutions, citations.
-- EXTRAIS tout ce qui est utile dans la source ET dans le web : ne te contente PAS d'un seul paragraphe de faits puis du remplissage.
-- Si la matière est riche → article dense (vise 500–900 mots). Si pauvre → plus court, mais SANS blabla pour combler.
-- INTERDIT de gonfler avec des banalités / tics Rempart creux :
-  « on notera la sévérité… », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on croit rêver », « scandale absolu » sans fait nouveau, « pendant que… » en refrain, gueulante anti-gouvernement sans élément nouveau.
-- INTERDIT l'article = 1 paragraphe de faits + 4 paragraphes d'opinion / ironie / critique générique du pouvoir.
-- Ne pas inventer noms, chiffres, citations absents des matières. Si ce n'est pas dans source/web : tu ne l'écris pas.
+- ~70 % faits (source + web) ; ~30 % analyse argumentée. Jamais l'inverse.
+- INTERDIT de se contenter de paraphraser l'article source d'un bout à l'autre. La source sert de socle ; le web et l'angle servent à CONSTRUIRE.
+- EXTRAIS tout ce qui est utile dans la source ET dans le web.
+- Si la matière est riche → article dense (vise 600–1100 mots). Si pauvre → plus court, mais SANS blabla pour combler.
+- INTERDIT le sarcasme, l'ironie lourde, les tics Rempart creux :
+  « on croit rêver », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on notera la sévérité… », « scandale absolu », refrain « pendant que… », gueulante anti-gouvernement sans élément nouveau.
+- INTERDIT l'article = faits + 4 paragraphes d'opinion sarcastique.
+- Ne pas inventer noms, chiffres, citations, sondages absents des matières. Si ce n'est pas dans source/web : tu ne l'écris pas. Tu peux en revanche ENCHAÎNER des raisonnements politiques prudents à partir de faits établis (« cela peut se lire comme… », « difficile d'y voir autre chose qu'… »).
 - Le titre créative fixe les faits centraux : ne les relativise pas (« non sourcé », « non confirmé »…).
-- Ton : presse claire, droite dure dans le CHOIX des faits mis en avant — pas dans le volume de râlerie.
-- content en Markdown : 2 ou 3 ## factuels (pas « Analyse » / « Ce qu'il faut retenir » creux). Peu de **gras**.
+- Ton : presse claire, argumentée, droite dans les questions posées et les faits choisis — pas dans le volume de râlerie.
+- content en Markdown : 2 à 4 ## utiles (faits / contexte / lecture politique…). Peu de **gras**.
 - Pas de tiret long (—), pas d'emojis, pas de hashtags, pas de style ChatGPT.
 - excerpt = 1–2 phrases FACTUELLES (qui / quoi / où), zéro édito.
 
@@ -210,7 +223,7 @@ Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}`;
 
 /**
- * Pipeline léger : petite recherche web + 1 appel Kimi.
+ * Pipeline léger : recherche web (faits + angles) + 1 appel Kimi.
  * Pas de dossier JSON, pas de cascade research→writing.
  */
 export async function writeArticleSimple(input: {
@@ -221,17 +234,24 @@ export async function writeArticleSimple(input: {
 }): Promise<SimpleArticle> {
   const progress = input.onProgress || (async () => {});
 
-  await progress("Recherche web (faits complémentaires)…");
+  await progress("Recherche web (contexte et angles)…");
   let webBrief = "";
   try {
     const hits = await Promise.race([
-      searchWebForSubject({ subject: input.creativeTitle, fast: true }),
+      searchWebForSubject({
+        subject: input.creativeTitle,
+        extraQueries: [
+          `${input.creativeTitle} sondage popularité`,
+          `${input.creativeTitle} réactions opposition contexte`,
+        ],
+        fast: true,
+      }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("search timeout")), 18_000),
+        setTimeout(() => reject(new Error("search timeout")), 22_000),
       ),
     ]);
     webBrief = hits
-      .slice(0, 10)
+      .slice(0, 12)
       .map(
         (h, i) =>
           `${i + 1}. ${h.title}\n   ${h.url}\n   ${(h.snippet || "").slice(0, 520)}`,
@@ -243,7 +263,7 @@ export async function writeArticleSimple(input: {
       "(recherche web indisponible — exploite la source à fond, sans inventer)";
   }
 
-  await progress("Rédaction factuelle de l'article…");
+  await progress("Rédaction (faits + angle argumenté)…");
   const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 9000);
   const userContent = [
     `TITRE CRÉATIVE (faits établis — reformule pour le titre site, ne recopie pas) :`,
@@ -251,15 +271,16 @@ export async function writeArticleSimple(input: {
     "",
     `URL source : ${input.sourceUrl}`,
     "",
-    "TEXTE SOURCE (à EXTRAIRE à fond : dates, noms, chiffres, citations, déroulé) :",
+    "TEXTE SOURCE (socle factuel : dates, noms, chiffres, citations, déroulé) :",
     sourceSlice,
     "",
-    "RÉSULTATS WEB (faits complémentaires à INTÉGRER s'ils enrichissent, sans inventer) :",
+    "RÉSULTATS WEB (NE PAS seulement reformuler la source) :",
+    "Sers-t'en pour : contexte, antécédents, réactions nommées, chiffres annexes,",
+    "éléments qui nourrissent une ANALYSE (popularité, contradictions, coût politique…).",
     webBrief || "(aucun)",
     "",
-    "Consigne : article JOURNALISTIQUE dense en faits.",
-    "INTERDIT : blabla de remplissage, gueulante générique, « les Français apprécieront », « on notera… ».",
-    "Si la matière le permet : plusieurs paragraphes de faits concrets (pas un seul).",
+    "Consigne : 1) rapporter les faits ; 2) ajouter un angle éditorial ARGUMENTÉ (pas sarcastique) ;",
+    "3) citations en italique *« … »* ; 4) interdiction de paraphraser bêtement la seule source.",
     "Rédige title + excerpt + content maintenant.",
   ].join("\n");
 
@@ -271,14 +292,14 @@ export async function writeArticleSimple(input: {
   }> = [
     {
       model: getKimiTextModel(),
-      maxTokens: 3600,
-      timeoutMs: 80_000,
-      reasoningEffort: "low",
+      maxTokens: 4500,
+      timeoutMs: 100_000,
+      reasoningEffort: "high",
     },
     {
       model: "kimi-k2.6",
-      maxTokens: 2800,
-      timeoutMs: 60_000,
+      maxTokens: 3600,
+      timeoutMs: 70_000,
     },
   ];
 
@@ -299,7 +320,7 @@ export async function writeArticleSimple(input: {
       return {
         title: pickReformulatedTitle(input.creativeTitle, parsed.title),
         excerpt: humanize(parsed.excerpt),
-        content: humanize(parsed.content),
+        content: italicizeCitations(humanize(parsed.content)),
       };
     } catch (err) {
       lastErr = err;
