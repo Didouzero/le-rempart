@@ -42,7 +42,21 @@ export async function sendEmail(
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     console.error("resend error", res.status, detail);
-    return { ok: false, error: `Resend HTTP ${res.status}` };
+    let message = `Resend HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(detail) as {
+        message?: string;
+        name?: string;
+      };
+      if (parsed.message) {
+        message = `${message}: ${parsed.message}`;
+      } else if (detail) {
+        message = `${message}: ${detail.slice(0, 240)}`;
+      }
+    } catch {
+      if (detail) message = `${message}: ${detail.slice(0, 240)}`;
+    }
+    return { ok: false, error: message };
   }
   return { ok: true };
 }
