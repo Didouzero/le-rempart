@@ -18,7 +18,9 @@ export function isStripeConfigured(): boolean {
 }
 
 export function getStripePublishableKey(): string | null {
-  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
+  const key =
+    process.env.STRIPE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
   return key || null;
 }
 
