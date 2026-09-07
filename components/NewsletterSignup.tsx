@@ -29,14 +29,21 @@ export function NewsletterSignup({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, source }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        emailed?: boolean;
+      };
       if (!res.ok) {
         setStatus("error");
         setMessage(data.error || "Inscription impossible. Réessayez.");
         return;
       }
       setStatus("ok");
-      setMessage("Inscription enregistrée. Bienvenue dans le brief du matin.");
+      setMessage(
+        data.emailed === false
+          ? "Inscription enregistrée, mais l’e-mail de bienvenue n’a pas pu partir. Vérifiez plus tard ou contactez-nous."
+          : "Inscription enregistrée. Vérifiez votre boîte (et les spams) pour le mail de bienvenue.",
+      );
       setEmail("");
     } catch {
       setStatus("error");
