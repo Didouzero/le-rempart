@@ -47,7 +47,7 @@ export default async function NousSoutenirPage({ searchParams }: Props) {
       </p>
       <p className="mt-4 text-lg text-ink">
         Si vous estimez que ce travail doit continuer, vous pouvez nous aider à
-        financer le média.
+        financer notre média. ✍️
       </p>
       <p className="mt-4 text-muted">
         Choisissez un montant, un moyen de paiement, puis validez. Le paiement

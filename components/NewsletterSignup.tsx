@@ -44,24 +44,24 @@ export function NewsletterSignup({
 
   return (
     <aside
-      className={`my-10 border border-ink/15 bg-ink px-5 py-6 text-paper sm:px-7 sm:py-7 ${
-        compact ? "my-6 py-5" : ""
+      className={`newsletter-signup my-6 max-w-[42rem] border border-ink/15 bg-ink px-4 py-4 text-paper ${
+        compact ? "my-5 py-3.5" : ""
       }`}
       aria-label="Newsletter Le Rempart"
     >
-      <p className="font-display text-sm tracking-[0.16em] text-accent">
+      <p className="font-display text-[0.7rem] tracking-[0.16em] text-accent">
         Newsletter gratuite
       </p>
-      <h2 className="font-display mt-2 text-xl tracking-[0.08em] sm:text-2xl">
+      <p className="font-display mt-0.5 text-base tracking-[0.08em] sm:text-lg">
         S&apos;abonner gratuitement à la newsletter
-      </h2>
-      <p className="mt-3 max-w-xl text-sm text-white/80 sm:text-base">
-        Chaque matin à 7&nbsp;h : 10 infos essentielles des dernières 24&nbsp;h
-        (immigration, politique, sécurité, justice…). Zéro spam.
+      </p>
+      <p className="mt-1.5 text-sm leading-snug text-white/80">
+        Chaque matin, à 7 heures, les 10 infos essentielles des dernières 24
+        heures à droite. 🗞️
       </p>
       <form
         onSubmit={onSubmit}
-        className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-stretch"
+        className="mt-3 flex flex-row items-stretch gap-2"
       >
         <label className="sr-only" htmlFor={`nl-${source}`}>
           Adresse e-mail
@@ -74,19 +74,19 @@ export function NewsletterSignup({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="votre@email.fr"
-          className="min-w-0 flex-1 border border-white/20 bg-paper px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted/70 focus:border-accent"
+          className="min-w-0 w-0 flex-[2] border border-white/20 bg-paper px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-accent"
         />
         <button
           type="submit"
           disabled={status === "loading"}
-          className="font-display shrink-0 bg-accent px-5 py-2.5 text-sm tracking-[0.14em] text-ink transition hover:bg-accent-deep disabled:opacity-60"
+          className="font-display w-0 min-w-0 flex-1 bg-accent px-2 py-2 text-center text-[0.7rem] tracking-[0.1em] text-ink transition hover:bg-accent-deep disabled:opacity-60 sm:text-xs sm:tracking-[0.12em]"
         >
           {status === "loading" ? "…" : "S'abonner"}
         </button>
       </form>
       {message ? (
         <p
-          className={`mt-3 text-sm ${
+          className={`mt-2 text-sm ${
             status === "error" ? "text-red-300" : "text-accent"
           }`}
           role="status"

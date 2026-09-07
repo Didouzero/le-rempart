@@ -5,7 +5,7 @@ import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 type ArticleBodyProps = {
   content: string;
-  /** Insère le CTA newsletter au milieu du corps. */
+  /** Insère le CTA newsletter juste avant le dernier paragraphe. */
   showNewsletterCta?: boolean;
 };
 
@@ -196,17 +196,16 @@ function MarkdownChunk({ source }: { source: string }) {
   );
 }
 
-/** Coupe le markdown en deux blocs (milieu ≈ 50 % des blocs). */
-function splitMarkdownMid(markdown: string): [string, string] {
+/** Coupe le markdown juste avant le dernier bloc (dernier paragraphe). */
+function splitMarkdownBeforeLast(markdown: string): [string, string] {
   const blocks = markdown
     .split(/\n{2,}/)
     .map((b) => b.trim())
     .filter(Boolean);
-  if (blocks.length < 4) {
+  if (blocks.length < 2) {
     return [markdown, ""];
   }
-  const mid = Math.max(2, Math.floor(blocks.length / 2));
-  return [blocks.slice(0, mid).join("\n\n"), blocks.slice(mid).join("\n\n")];
+  return [blocks.slice(0, -1).join("\n\n"), blocks[blocks.length - 1] ?? ""];
 }
 
 export function ArticleBody({
@@ -215,14 +214,22 @@ export function ArticleBody({
 }: ArticleBodyProps) {
   const md = autolinkBareUrls(markStandaloneVideos(content));
   const [first, rest] = showNewsletterCta
-    ? splitMarkdownMid(md)
+    ? splitMarkdownBeforeLast(md)
     : [md, ""];
 
   return (
-    <div className="prose-article">
-      <MarkdownChunk source={first} />
-      {showNewsletterCta ? <NewsletterSignup source="article-mid" /> : null}
-      {rest ? <MarkdownChunk source={rest} /> : null}
-    </div>
+    <>
+      <div className="prose-article">
+        <MarkdownChunk source={first} />
+      </div>
+      {showNewsletterCta ? (
+        <NewsletterSignup source="article-before-last" />
+      ) : null}
+      {rest ? (
+        <div className="prose-article">
+          <MarkdownChunk source={rest} />
+        </div>
+      ) : null}
+    </>
   );
 }
