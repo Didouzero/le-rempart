@@ -15,7 +15,6 @@ import {
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import {
-  SITE_DEFAULT_TITLE,
   SITE_DESCRIPTION,
   buildPageMetadata,
 } from "@/lib/seo";
@@ -37,10 +36,9 @@ export async function generateMetadata({
 
   if (!isPaged && !hasSearch) {
     return buildPageMetadata({
-      title: SITE_DEFAULT_TITLE,
+      title: "L'ACTUALITÉ À LA UNE",
       description: SITE_DESCRIPTION,
       path: "/",
-      absoluteTitle: true,
     });
   }
 
@@ -49,8 +47,8 @@ export async function generateMetadata({
     isPaged ? `page ${page}` : null,
   ].filter(Boolean);
   const title = titleParts.length
-    ? `L'actualité en direct — ${titleParts.join(" — ")}`
-    : "L'actualité en direct";
+    ? `L'actualité à la une — ${titleParts.join(" — ")}`
+    : "L'actualité à la une";
 
   const qs = new URLSearchParams();
   if (q) qs.set("q", q);
@@ -125,7 +123,7 @@ export default async function HomePage({ searchParams }: Props) {
 
       <ListPageHeader
         kicker="Fil d'actualité"
-        title="L'actualité en direct"
+        title="L'actualité à la une"
         basePath="/"
         q={q}
         placeholder="Rechercher dans toutes les news…"

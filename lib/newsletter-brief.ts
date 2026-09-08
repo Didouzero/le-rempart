@@ -1,5 +1,5 @@
 import { articlePublicPath } from "@/lib/article-url";
-import { categoryLabel } from "@/lib/categories";
+import { categoryLabel, classifyArticleCategory } from "@/lib/categories";
 import { newsletterShell } from "@/lib/email";
 import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { moonshotChat } from "@/lib/moonshot";
@@ -150,7 +150,12 @@ export async function buildTenPointBrief(): Promise<BriefItem[]> {
         title: h.title.slice(0, 180),
         blurb: (h.snippet || h.title).slice(0, 280),
         href: h.url,
-        section: h.publisher || "Veille",
+        section: categoryLabel(
+          classifyArticleCategory({
+            title: h.title,
+            excerpt: h.snippet,
+          }),
+        ),
         kind: "veille",
       });
     }
@@ -203,7 +208,7 @@ export function renderBriefHtml(opts: {
 
   const itemsHtml = items
     .map((it, i) => {
-      const tag = it.kind === "site" ? "Le Rempart" : escapeHtml(it.section);
+      const tag = escapeHtml(it.section);
       return `
       <tr>
         <td style="padding:0 0 22px;">

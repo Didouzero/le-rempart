@@ -100,15 +100,25 @@ export function classifyArticleCategory(input: {
     ),
   );
 
-  // 1) Immigration — nationalités / migrants / étrangers en premier
-  if (
-    /\b(migrant|migrants|immigr|clandestin|sans[- ]papier|etranger|etrangere|etrangers|asile|refugie|refugies|expulsion|reconduite|oqfami|ofii|frontiere|travers[eé]e|naufrae|jungles? de calais|calais|mayotte|tunisien|tunisienne|marocain|marocaine|algerien|algerienne|afghan|afghane|syrien|syrienne|soudanais|erythreen|guineen|malien|senegalais|ivoirien|pakistanais|bangladais|turc\b|turque|kosovar|albanais|rom\b|roma\b|maghrebin|subsaharien|comorien)\b/.test(
+  const electoralFrame =
+    /\b(campagne( electorale| presidentielle)?|presidentielle|legislatives|municipales|europeennes|candidat|candidate|candidature|election|elections|sondage|sondages|investiture|scrutin)\b/.test(
+      blob,
+    );
+  const strongImmigration =
+    /\b(migrant|migrants|immigr|clandestin|sans[- ]papier|etranger|etrangere|etrangers|asile|refugie|refugies|expulsion|reconduite|oqfami|ofii|naufrae|jungles? de calais)\b/.test(
       blob,
     ) ||
     /\b(un|une|des|le|la|du)\s+(tunisien|marocain|algerien|afghan|syrien|etranger|migrant)/.test(
       blob,
-    )
-  ) {
+    );
+  const weakImmigration =
+    /\b(frontiere|travers[eé]e|calais|mayotte|tunisien|tunisienne|marocain|marocaine|algerien|algerienne|afghan|afghane|syrien|syrienne|soudanais|erythreen|guineen|malien|senegalais|ivoirien|pakistanais|bangladais|turc\b|turque|kosovar|albanais|rom\b|roma\b|maghrebin|subsaharien|comorien)\b/.test(
+      blob,
+    );
+
+  // 1) Immigration — faits migratoires. Un mot « frontière » dans une campagne
+  // électorale (Attal, « chantiers », etc.) ne doit pas voler la rubrique Politique.
+  if (strongImmigration || (weakImmigration && !electoralFrame)) {
     return "immigration";
   }
 
