@@ -27,6 +27,8 @@ export type RunEditorialPipelineOptions = {
   fast?: boolean;
   /** URL scrapée = matière principale ; skip web search si corpus riche. */
   sourceFirst?: boolean;
+  extraQueries?: string[];
+  investigation?: boolean;
   onProgress?: (message: string) => void | Promise<void>;
 };
 
@@ -63,6 +65,7 @@ export async function runEditorialPipeline(
       runResearchAgent({
         ...subject,
         maxPasses: opts?.maxResearchPasses,
+        extraQueries: opts?.extraQueries,
         fast: opts?.fast,
         sourceFirst: opts?.sourceFirst,
       }),
@@ -83,6 +86,7 @@ export async function runEditorialPipeline(
           dossier,
           subjectTitle: subject.title,
           fast: opts?.fast,
+          investigation: opts?.investigation,
         }),
         writingTimeoutMs,
         "Timeout writing",

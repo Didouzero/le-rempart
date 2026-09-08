@@ -74,6 +74,7 @@ function rankCandidate(
   let score = relevanceScore(candidateToHit(c), subject, entities);
   score += rankingScoreFromTier(tier) * 1.5;
   if (c.discoveredVia === "subject.sourceUrl") score += 400;
+  if (c.discoveredVia === "subject.extraSourceUrl") score += 320;
   if ((c.snippet || "").length > 200) score += 20;
   return score;
 }
@@ -117,6 +118,7 @@ function hitToCandidate(hit: WebSearchHit): SourceCandidate {
 export async function discoverSourceCandidates(input: {
   title: string;
   sourceUrl?: string;
+  extraSourceUrls?: string[];
   extraQueries?: string[];
   fast?: boolean;
   /** Ne pas lancer Google/Bing/Moonshot — URL fournie + texte scrapé suffisent. */
@@ -129,6 +131,16 @@ export async function discoverSourceCandidates(input: {
       url: input.sourceUrl,
       title: input.title,
       discoveredVia: "subject.sourceUrl",
+    });
+  }
+
+  for (const extra of input.extraSourceUrls || []) {
+    const u = extra.trim();
+    if (!/^https?:\/\//i.test(u)) continue;
+    candidates.push({
+      url: u,
+      title: input.title,
+      discoveredVia: "subject.extraSourceUrl",
     });
   }
 
@@ -255,6 +267,7 @@ async function scrapeCandidate(
 export async function collectDeepSources(input: {
   title: string;
   sourceUrl?: string;
+  extraSourceUrls?: string[];
   sourceText?: string;
   extraQueries?: string[];
   alreadyHaveUrls?: string[];
@@ -266,7 +279,7 @@ export async function collectDeepSources(input: {
     /^Accroche éditoriale secondaire/i.test(seed) || seed.length < 80;
   const richSeed = Boolean(seed && !isCaptionSeed && seed.length >= 400);
 
-  // Déjà scrapé en amont (Telegram) : pas de re-fetch ni de web search.
+  // Déjà scrapé en amont (Telegram) : on garde le texte + on scrape les URLs extra.
   if (input.skipWebSearch && richSeed) {
     const seedDoc = enrichSourceWithTier({
       url: input.sourceUrl || "seed:sourceText",
@@ -280,7 +293,39 @@ export async function collectDeepSources(input: {
       excerpt: seed.slice(0, MAX_EXCERPT),
       notes: "subject.sourceText",
     });
-    return { sources: [seedDoc], seedNotes: undefined };
+    const extraUrls = (input.extraSourceUrls || [])
+      .map((u) => u.trim())
+      .filter((u) => /^https?:\/\//i.test(u) && u !== input.sourceUrl)
+      .slice(0, 8);
+    if (extraUrls.length === 0) {
+      return { sources: [seedDoc], seedNotes: undefined };
+    }
+    const extraDocs = await Promise.all(
+      extraUrls.map(async (url) => {
+        try {
+          const text = await fetchSourceText(url);
+          if ((text?.trim().length || 0) < MIN_SCRAPE_CHARS) return null;
+          return enrichSourceWithTier({
+            url,
+            title: input.title,
+            publisher: hostOf(url),
+            language: "fr",
+            retrievedAt: new Date().toISOString(),
+            type: classifySourceType(url),
+            scraped: true,
+            confidence: 0,
+            excerpt: text.slice(0, MAX_EXCERPT),
+            notes: "subject.extraSourceUrl",
+          });
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return {
+      sources: [seedDoc, ...extraDocs.filter(Boolean)],
+      seedNotes: undefined,
+    };
   }
 
   const have = new Set(
@@ -290,6 +335,7 @@ export async function collectDeepSources(input: {
     await discoverSourceCandidates({
       title: input.title,
       sourceUrl: input.sourceUrl,
+      extraSourceUrls: input.extraSourceUrls,
       extraQueries: input.extraQueries,
       fast: input.fast,
       skipWebSearch: input.skipWebSearch,

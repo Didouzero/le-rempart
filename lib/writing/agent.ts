@@ -15,6 +15,8 @@ export type WritingAgentInput = {
   subjectTitle: string;
   /** Moins de retries / timeouts plus courts (Telegram / Vercel). */
   fast?: boolean;
+  /** Enquête mercredi/samedi : plus long, plus documenté. */
+  investigation?: boolean;
 };
 
 export type { WritingAgentResult };
@@ -234,45 +236,68 @@ export async function runWritingAgent(
 
   const variant = pickStructureVariant(input.subjectTitle || input.dossier.subject);
   const strength = dossierStrength(input.dossier);
-  const minWords = minWordsForDossier(strength);
+  const investigation = Boolean(input.investigation);
+  const minWords = investigation
+    ? ARTICLE_LENGTH.investigationMinWords
+    : minWordsForDossier(strength);
   const coverage = input.dossier.coverage;
-  const cautious = strength === "empty";
+  const cautious = strength === "empty" && !investigation;
+  const lengthLine = investigation
+    ? `Cible longueur ENQUÊTE : ${ARTICLE_LENGTH.investigationTargetMin}–${ARTICLE_LENGTH.investigationTargetMax} mots (minimum ${minWords}).`
+    : cautious
+      ? `Cible longueur : ${ARTICLE_LENGTH.cautiousMinWords}–350 mots.`
+      : `Cible longueur : ${ARTICLE_LENGTH.targetMinWords}–${ARTICLE_LENGTH.targetMaxWords} mots (min acceptable ${minWords}).`;
 
   const userContent = [
     `Sujet : ${input.subjectTitle || input.dossier.subject}`,
-    cautious
+    investigation
       ? [
-          "DOSSIER INSUFFISANT : la recherche n'a pas établi les faits de ce sujet.",
-          `Écris une BRÈVE PRUDENTE de ${ARTICLE_LENGTH.cautiousMinWords} à 350 mots, 2 H2 suffisent :`,
-          "1) ce qui circule et sous quelle forme, présenté comme non vérifié ;",
-          "2) ce qui manque pour l'établir (documents, décision de justice, chiffres officiels).",
-          "INTERDIT ABSOLU : citer un nom de personne, un montant, une date précise ou un média",
-          "qui ne figure pas dans le dossier. Pas d'éditorial, pas de montée en généralité militante.",
+          "MODE ENQUÊTE (mercredi / samedi, Rempart+) :",
+          "Tu mènes l'enquête, tu ne reformules pas un seul article.",
+          "Questions à traiter SI le dossier le permet : qui est la personne, parcours avant le mandat,",
+          "revenus / indemnités, patrimoine ou logement, dettes éventuelles, contradictions entre discours et faits,",
+          "sources nommées, chiffres, dates. Si une info manque : le dire clairement.",
+          "Mise en page soignée : 4 à 7 ##, listes courtes si utiles, citations en *« … »*.",
+          "Ton argumenté, sans sarcasme. Ne pas inventer de capture d'écran : décrire les documents du dossier.",
         ].join("\n")
-      : [
-          `Variante de structure indicative (les H2 doivent d'abord suivre la matière du dossier) : ${variant.id} — ${variant.label}`,
-          `Plan suggéré : ${variant.suggestedPlan.join(" → ")}`,
-          `Ouverture : ${variant.openingHint}`,
-          `Clôture : ${variant.closingHint}`,
-        ].join("\n"),
+      : cautious
+        ? [
+            "DOSSIER INSUFFISANT : la recherche n'a pas établi les faits de ce sujet.",
+            `Écris une BRÈVE PRUDENTE de ${ARTICLE_LENGTH.cautiousMinWords} à 350 mots, 2 H2 suffisent :`,
+            "1) ce qui circule et sous quelle forme, présenté comme non vérifié ;",
+            "2) ce qui manque pour l'établir (documents, décision de justice, chiffres officiels).",
+            "INTERDIT ABSOLU : citer un nom de personne, un montant, une date précise ou un média",
+            "qui ne figure pas dans le dossier. Pas d'éditorial, pas de montée en généralité militante.",
+          ].join("\n")
+        : [
+            `Variante de structure indicative (les H2 doivent d'abord suivre la matière du dossier) : ${variant.id} — ${variant.label}`,
+            `Plan suggéré : ${variant.suggestedPlan.join(" → ")}`,
+            `Ouverture : ${variant.openingHint}`,
+            `Clôture : ${variant.closingHint}`,
+          ].join("\n"),
     cautious ? null : namedMaterialBlock(input.dossier),
     coverage
       ? `Coverage dossier (%): faits ${coverage.facts}, chrono ${coverage.chronology}, primaires ${coverage.primarySources}, contexte ${coverage.context}, réactions ${coverage.reactions}, historique ${coverage.history}, juridique ${coverage.legal}, stats ${coverage.statistics}, overall ${coverage.overall}`
       : null,
-    cautious
-      ? `Cible longueur : ${ARTICLE_LENGTH.cautiousMinWords}–350 mots.`
-      : `Cible longueur : ${ARTICLE_LENGTH.targetMinWords}–${ARTICLE_LENGTH.targetMaxWords} mots (min acceptable ${minWords}).`,
+    lengthLine,
     "RESEARCH DOSSIER (seule source autorisée) :",
     dossierPayload(input.dossier),
     cautious
       ? "Rédige la brève JSON prudente. Métadonnées Editor obligatoires."
-      : "Rédige l'article JSON : faits nommés et chiffrés d'abord, mécanismes ensuite, puis analyse Rempart argumentée (pas sarcastique). Citations en *« … »*. Métadonnées Editor obligatoires.",
+      : investigation
+        ? "Rédige l'enquête JSON : faits, parcours, argent, contradictions, sources. Citations *« … »*. Métadonnées Editor obligatoires."
+        : "Rédige l'article JSON : faits nommés et chiffrés d'abord, mécanismes ensuite, puis analyse Rempart argumentée (pas sarcastique). Citations en *« … »*. Métadonnées Editor obligatoires.",
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const attempts: Array<{ timeoutMs: number; maxTokens: number; model?: string }> =
-    input.fast
+    investigation
+      ? [
+          { timeoutMs: 120_000, maxTokens: 8500 },
+          { timeoutMs: 110_000, maxTokens: 8000, model: "kimi-k2.6" },
+        ]
+      : input.fast
       ? [
           { timeoutMs: 70_000, maxTokens: 5500, model: "kimi-k2.6" },
           { timeoutMs: 65_000, maxTokens: 5000 },
@@ -292,7 +317,11 @@ export async function runWritingAgent(
         model: attempt.model || getKimiTextModel(),
         maxTokens: attempt.maxTokens,
         timeoutMs: attempt.timeoutMs,
-        reasoningEffort: attempt.model ? undefined : "low",
+        reasoningEffort: investigation
+          ? "high"
+          : attempt.model
+            ? undefined
+            : "low",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -302,7 +331,9 @@ export async function runWritingAgent(
               lengthHint || null,
               cautious
                 ? `OBLIGATOIRE : au moins ${minWords} mots, et rien d'inventé. La prudence prime sur la longueur.`
-                : `OBLIGATOIRE : vise au moins ${minWords} mots en exploitant chronologie, acteurs, montants, citations et contexte du dossier (sans jamais inventer).`,
+                : investigation
+                  ? `OBLIGATOIRE ENQUÊTE : vise au moins ${minWords} mots, sections documentées, rien d'inventé.`
+                  : `OBLIGATOIRE : vise au moins ${minWords} mots en exploitant chronologie, acteurs, montants, citations et contexte du dossier (sans jamais inventer).`,
             ]
               .filter(Boolean)
               .join("\n\n"),
@@ -314,6 +345,7 @@ export async function runWritingAgent(
         structureVariantId: variant.id,
         minWords,
         cautious,
+        investigation,
       });
     } catch (err) {
       lastErr = err;

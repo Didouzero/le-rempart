@@ -33,7 +33,11 @@ export const maxDuration = 300;
 function normalizeCommand(text: string): string {
   const raw = text.trim().split(/\s+/)[0] || "";
   const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  return withSlash.toLowerCase().replace(/@\w+$/i, "");
+  return withSlash
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/@\w+$/i, "");
 }
 
 function commandsHelpText(): string {
@@ -63,6 +67,12 @@ function commandsHelpText(): string {
     "/fb_retry 69 — republier l’article #69 sur Facebook",
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
+    "",
+    "── Enquête Rempart+ (mercredi / samedi) ──",
+    "/enquete <sujet> — démarre une enquête approfondie",
+    "Puis envoie PLUSIEURS liens de référence (HATVP, articles, Assemblée…)",
+    "/enquete_ok — lancer la rédaction (3 à 8 min)",
+    "/enquete_cancel — abandonner",
     "",
     "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
     "Rien n’est publié en auto sans ton OK.",
@@ -302,12 +312,123 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
+    if (
+      cmd === "/enquete" ||
+      cmd === "/enquete_ok" ||
+      cmd === "/enquete_go" ||
+      cmd === "/enquete_cancel" ||
+      cmd === "/enquete_annuler"
+    ) {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
+        return;
+      }
+      const {
+        clearInvestigationSession,
+        getInvestigationSession,
+        startInvestigationSession,
+      } = await import("@/lib/investigation-draft");
+
+      if (cmd === "/enquete_cancel" || cmd === "/enquete_annuler") {
+        await clearInvestigationSession();
+        await telegramSendMessage(chatId, "Enquête annulée.");
+        return;
+      }
+
+      if (cmd === "/enquete_ok" || cmd === "/enquete_go") {
+        const session = await getInvestigationSession(chatId);
+        if (!session) {
+          await telegramSendMessage(
+            chatId,
+            "Aucune enquête en cours. Ex. :\n/enquete Sébastien Delogu fins de mois",
+          );
+          return;
+        }
+        if (session.urls.length < 2) {
+          await telegramSendMessage(
+            chatId,
+            `Pas assez de liens (${session.urls.length}). Envoie au moins 2 références, idéalement 5–8, puis /enquete_ok.`,
+          );
+          return;
+        }
+        await telegramSendMessage(
+          chatId,
+          `Lancement enquête : ${session.subject}\n${session.urls.length} sources. Patience (plusieurs minutes).`,
+        );
+        try {
+          const { publishInvestigation } = await import("@/lib/investigation");
+          await publishInvestigation({
+            subject: session.subject,
+            urls: session.urls,
+            notify: telegramNotifier(chatId),
+          });
+          await clearInvestigationSession();
+        } catch (err) {
+          await telegramSendMessage(
+            chatId,
+            `❌ Enquête : ${err instanceof Error ? err.message : "échec"}`,
+          );
+        }
+        return;
+      }
+
+      const subject = text.replace(/^\/enquete\S*/i, "").trim();
+      if (subject.length < 8) {
+        await telegramSendMessage(
+          chatId,
+          [
+            "Usage :",
+            "/enquete Sébastien Delogu fins de mois",
+            "",
+            "Ensuite colle plusieurs liens (un message ou plusieurs).",
+            "Quand c’est bon : /enquete_ok",
+          ].join("\n"),
+        );
+        return;
+      }
+      await startInvestigationSession(chatId, subject);
+      await telegramSendMessage(
+        chatId,
+        [
+          `Enquête prête : ${subject}`,
+          "",
+          "Envoie maintenant tes liens de référence (plusieurs URLs, autant que possible).",
+          "HATVP, articles de presse, Assemblée, déclarations…",
+          "",
+          "Puis /enquete_ok pour lancer la rédaction longue.",
+          "/enquete_cancel pour abandonner.",
+        ].join("\n"),
+      );
+      return;
+    }
+
     if (!isTelegramUserAllowed(userId)) {
       await telegramSendMessage(
         chatId,
         `Accès non autorisé.\nTon id : ${userId}`,
       );
       return;
+    }
+
+    {
+      const {
+        addInvestigationUrls,
+        extractAllHttpUrls,
+        getInvestigationSession,
+      } = await import("@/lib/investigation-draft");
+      const inv = await getInvestigationSession(chatId);
+      const invUrls = text ? extractAllHttpUrls(text) : [];
+      if (inv && invUrls.length && !cmd.startsWith("/")) {
+        const updated = await addInvestigationUrls(chatId, invUrls);
+        await telegramSendMessage(
+          chatId,
+          `+${invUrls.length} lien(s). Total : ${updated?.urls.length || invUrls.length}.\nEncore des sources ? Envoie-les. Sinon /enquete_ok.`,
+        );
+        return;
+      }
     }
 
     let fileId: string | null = null;

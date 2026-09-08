@@ -36,6 +36,8 @@ export type PipelineSubject = {
   sourceText?: string;
   /** Entrée principale du Knowledge Builder (URL veille / admin). */
   sourceUrl?: string;
+  /** URLs supplémentaires (enquête : plusieurs références). */
+  extraSourceUrls?: string[];
   /** Accroche éditoriale secondaire (Canva) — jamais source de faits. */
   caption?: string;
 };

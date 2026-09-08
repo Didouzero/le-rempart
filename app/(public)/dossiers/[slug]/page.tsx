@@ -85,18 +85,39 @@ export default async function DossierPage({ params }: Props) {
   }
 
   return (
-    <article className="animate-fade-up max-w-3xl">
-      <p className="section-kicker">Dossier</p>
-      <h1 className="font-display mt-2 text-3xl tracking-[0.08em] sm:text-4xl">
+    <article className="animate-fade-up mx-auto max-w-3xl">
+      <p className="section-kicker">
+        <span className="live-dot" aria-hidden />
+        Enquête &amp; révélations
+      </p>
+      <time className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted">
+        {dossier.publishedAt
+          ? new Intl.DateTimeFormat("fr-FR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }).format(dossier.publishedAt)
+          : ""}
+      </time>
+      <h1 className="font-display mt-3 text-[1.85rem] leading-[1.08] sm:text-4xl md:text-[2.6rem]">
         {dossier.title}
       </h1>
-      <p className="mt-4 text-lg italic text-ink">{dossier.excerpt}</p>
+      <p className="mt-5 max-w-2xl border-l-4 border-accent pl-4 text-lg italic text-ink">
+        {dossier.excerpt}
+      </p>
       {dossier.coverImageUrl ? (
-        <div className="media-frame my-8">
+        <div className="media-frame my-10 max-h-[36rem] w-full shadow-[var(--shadow-soft)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={dossier.coverImageUrl} alt="" />
+          <img
+            src={dossier.coverImageUrl}
+            alt=""
+            className="max-h-[36rem] w-full object-cover"
+          />
         </div>
-      ) : null}
+      ) : (
+        <div className="gold-rule animate-line-grow mt-8 max-w-md" />
+      )}
       <ArticleBody content={dossier.content} showNewsletterCta={false} />
     </article>
   );

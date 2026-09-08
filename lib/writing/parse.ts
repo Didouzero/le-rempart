@@ -85,6 +85,7 @@ export function parseWritingResponse(
     minWords: number;
     /** Dossier vide : brève courte tolérée (2 H2, plancher bas). */
     cautious?: boolean;
+    investigation?: boolean;
   },
 ): { article: ArticleArtifact; metadata: WritingMetadata } {
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -117,15 +118,20 @@ export function parseWritingResponse(
   const words = countWords(content);
   const floor = opts.cautious
     ? ARTICLE_LENGTH.cautiousMinWords
-    : ARTICLE_LENGTH.softAcceptMin;
+    : opts.investigation
+      ? ARTICLE_LENGTH.investigationMinWords
+      : ARTICLE_LENGTH.softAcceptMin;
   if (words < floor) {
     throw new Error(
       `Writing Agent : article trop court (${words} mots, plancher ${floor})`,
     );
   }
-  if (words > ARTICLE_LENGTH.hardMaxWords) {
+  const hardMax = opts.investigation
+    ? ARTICLE_LENGTH.investigationHardMaxWords
+    : ARTICLE_LENGTH.hardMaxWords;
+  if (words > hardMax) {
     throw new Error(
-      `Writing Agent : article trop long (${words} mots, max ${ARTICLE_LENGTH.hardMaxWords})`,
+      `Writing Agent : article trop long (${words} mots, max ${hardMax})`,
     );
   }
   const lengthWarning =
@@ -134,7 +140,7 @@ export function parseWritingResponse(
       : null;
 
   const h2Count = (content.match(/^##\s+/gm) || []).length;
-  const minH2 = opts.cautious ? 2 : 3;
+  const minH2 = opts.cautious ? 2 : opts.investigation ? 4 : 3;
   if (h2Count < minH2) {
     throw new Error(`Writing Agent : trop peu de H2 (${h2Count})`);
   }

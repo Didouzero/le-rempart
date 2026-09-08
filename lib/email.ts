@@ -65,16 +65,21 @@ export function newsletterShell(opts: {
   title: string;
   bodyHtml: string;
   footerNote?: string;
+  /** Masque le titre du shell (ex. brief avec en-tête graphique). */
+  hideTitle?: boolean;
 }): string {
   const site = absoluteUrl("/") || SITE_URL;
+  const heading = opts.hideTitle
+    ? ""
+    : `<p style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#5c574f;">${SITE_NAME}</p>
+    <h1 style="font-size:22px;line-height:1.2;">${opts.title}</h1>
+    <div style="height:3px;width:80px;background:#ffbd59;margin:12px 0 24px;"></div>`;
   return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="utf-8"><title>${opts.title}</title></head>
 <body style="margin:0;background:#f4f2ed;color:#0a0a0a;font-family:Georgia,serif;">
   <div style="max-width:640px;margin:0 auto;padding:24px 16px;">
-    <p style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#5c574f;">${SITE_NAME}</p>
-    <h1 style="font-size:22px;line-height:1.2;">${opts.title}</h1>
-    <div style="height:3px;width:80px;background:#ffbd59;margin:12px 0 24px;"></div>
+    ${heading}
     ${opts.bodyHtml}
     <p style="margin-top:32px;font-size:12px;color:#5c574f;">
       ${opts.footerNote || `Vous recevez ce brief car vous êtes abonné à ${SITE_NAME}.`}

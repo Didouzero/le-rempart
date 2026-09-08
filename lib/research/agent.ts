@@ -35,6 +35,7 @@ export type ResearchAgentInput = PipelineSubject & {
   fast?: boolean;
   /** Ancrage URL : skip recherche web si le scrape est déjà riche. */
   sourceFirst?: boolean;
+  extraQueries?: string[];
 };
 
 export type ResearchAgentResult = {
@@ -70,7 +71,9 @@ export async function runResearchAgent(
   const firstCollect = await collectDeepSources({
     title: researchTitle,
     sourceUrl: input.sourceUrl,
+    extraSourceUrls: input.extraSourceUrls,
     sourceText: input.sourceText,
+    extraQueries: input.extraQueries,
     fast: input.fast,
     skipWebSearch,
   });
