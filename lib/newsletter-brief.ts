@@ -5,7 +5,7 @@ import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { moonshotChat } from "@/lib/moonshot";
 import { prisma } from "@/lib/prisma";
 import { searchWebForSubject, type WebSearchHit } from "@/lib/research/web-search";
-import { absoluteUrl, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { absoluteUrl, SITE_NAME } from "@/lib/seo";
 
 export type BriefItem = {
   title: string;
@@ -139,7 +139,7 @@ export async function buildTenPointBrief(): Promise<BriefItem[]> {
   }));
 
   const siteTitles = siteItems.map((s) => s.title);
-  let veille: BriefItem[] = [];
+  const veille: BriefItem[] = [];
   try {
     const hits = await fetchVeilleHits();
     for (const h of hits) {
@@ -197,7 +197,6 @@ export function renderBriefHtml(opts: {
   premium: boolean;
 }): string {
   const { dateLabel, items, premium } = opts;
-  const site = (absoluteUrl("/") || SITE_URL).replace(/^https?:\/\//, "");
   const kicker = premium
     ? "Brief premium — l'actu en 10 points, version étayée"
     : "L'actu en 10 points";
