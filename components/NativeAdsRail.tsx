@@ -1,17 +1,20 @@
 "use client";
 
 import Script from "next/script";
+import { MgidSiteScript, MgidWidget } from "@/components/MgidLoader";
+import {
+  mgidEnabled,
+  mgidUnderArticleWidgetId,
+} from "@/lib/mgid";
 
 /**
  * Native ads — MGID en priorité, Taboola en repli.
  * AdSense (AdSlot) reste ailleurs, éteint tant que Google refuse.
  */
 export function NativeAdsRail() {
-  const mgidSite = process.env.NEXT_PUBLIC_MGID_SITE_ID?.trim();
-  const mgidWidget = process.env.NEXT_PUBLIC_MGID_WIDGET_ID?.trim();
-  const mgidEnabled = process.env.NEXT_PUBLIC_MGID_ENABLED === "true";
+  const mgidWidget = mgidUnderArticleWidgetId();
 
-  if (mgidEnabled && mgidSite && mgidWidget) {
+  if (mgidEnabled() && mgidWidget) {
     return (
       <section
         className="mt-12 border-t border-ink/20 pt-10"
@@ -26,16 +29,9 @@ export function NativeAdsRail() {
         </h2>
         <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
         <div className="mt-8 min-h-[120px]">
-          <div data-type="_mgwidget" data-widget-id={mgidWidget} />
+          <MgidWidget widgetId={mgidWidget} />
         </div>
-        <Script
-          id="mgid-site"
-          src={`https://jsc.mgid.com/site/${encodeURIComponent(mgidSite)}.js`}
-          strategy="afterInteractive"
-        />
-        <Script id="mgid-load" strategy="lazyOnload">{`
-(function(w,q){w[q]=w[q]||[];w[q].push(["_mgc.load"])})(window,"_mgq");
-`}</Script>
+        <MgidSiteScript />
       </section>
     );
   }

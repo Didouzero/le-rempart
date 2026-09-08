@@ -142,6 +142,12 @@ body {
   max-width: 42rem;
 }
 
+.article-side-ad iframe,
+.article-side-ad img,
+.article-side-ad [data-type="_mgwidget"] {
+  max-width: 100%;
+}
+
 .prose-article p {
   margin: 0 0 1.25rem;
 }

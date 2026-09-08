@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
+import { ArticleSideAds } from "@/components/ArticleSideAds";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
@@ -269,7 +270,9 @@ export default async function ArticlePage({ params }: Props) {
         </div>
       ) : null}
 
-      <ArticleBody content={article.content} showNewsletterCta />
+      <ArticleSideAds show={!plus}>
+        <ArticleBody content={article.content} showNewsletterCta />
+      </ArticleSideAds>
 
       <AdSlot slot="article-bottom" />
 
