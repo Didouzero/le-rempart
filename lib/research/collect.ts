@@ -323,7 +323,7 @@ export async function collectDeepSources(input: {
       }),
     );
     return {
-      sources: [seedDoc, ...extraDocs.filter(Boolean)],
+      sources: [seedDoc, ...extraDocs.filter((d): d is NonNullable<typeof d> => Boolean(d))],
       seedNotes: undefined,
     };
   }
