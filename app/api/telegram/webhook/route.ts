@@ -75,6 +75,7 @@ function commandsHelpText(): string {
     "1) Envoie la créative Facebook (PNG/JPG)",
     "2) Envoie le prompt : un message, ou un fichier .txt si c’est trop long",
     "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
+    "/enquete_refaire — réécrire entièrement la dernière enquête (même lien, pas de FB)",
     "/enquete_cancel — abandonner",
     "",
     "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
@@ -328,7 +329,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       cmd === "/enquete_ok" ||
       cmd === "/enquete_go" ||
       cmd === "/enquete_cancel" ||
-      cmd === "/enquete_annuler"
+      cmd === "/enquete_annuler" ||
+      cmd === "/enquete_refaire" ||
+      cmd === "/enquete_redo"
     ) {
       if (!isTelegramUserAllowed(userId)) {
         await telegramSendMessage(
@@ -341,6 +344,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         clearInvestigationSession,
         getInvestigationSession,
         startInvestigationSession,
+        startInvestigationRewriteSession,
       } = await import("@/lib/investigation-draft");
 
       if (cmd === "/enquete_cancel" || cmd === "/enquete_annuler") {
@@ -368,6 +372,34 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await telegramSendMessage(
           chatId,
           "Pas besoin de /enquete_ok. Envoie le prompt : un message, ou un fichier .txt.",
+        );
+        return;
+      }
+
+      if (cmd === "/enquete_refaire" || cmd === "/enquete_redo") {
+        const latest = await prisma.specialDossier.findFirst({
+          orderBy: { updatedAt: "desc" },
+          select: { id: true, title: true, slug: true },
+        });
+        if (!latest) {
+          await telegramSendMessage(
+            chatId,
+            "Aucune enquête à réécrire. Lance d’abord /enquete.",
+          );
+          return;
+        }
+        await startInvestigationRewriteSession(chatId, latest.id, latest.title);
+        await telegramSendMessage(
+          chatId,
+          [
+            `Réécriture intégrale de :`,
+            latest.title,
+            `https://www.le-rempart.org/dossiers/${latest.slug}`,
+            "",
+            "Même lien public. Pas de nouveau post Facebook.",
+            "Envoie le prompt complet (message ou fichier .txt).",
+            "/enquete_cancel pour abandonner.",
+          ].join("\n"),
         );
         return;
       }
@@ -413,7 +445,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       } = await import("@/lib/investigation-draft");
       const inv = await getInvestigationSession(chatId);
       if (inv) {
-        if (fileId) {
+        if (fileId && !inv.replaceDossierId) {
           await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
           const image = await telegramDownloadFile(fileId);
           let headline = manualCaption;
@@ -491,7 +523,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               );
               return;
             }
-            if (!inv.fileId) {
+            if (!inv.fileId && !inv.replaceDossierId) {
               await telegramSendMessage(
                 chatId,
                 "Il me manque la créative. Renvoie une image PNG/JPG, puis le prompt.",
@@ -500,19 +532,33 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             }
             await telegramSendMessage(
               chatId,
-              "Prompt reçu. Lancement de l’enquête (recherche + rédaction, plusieurs minutes)…",
+              inv.replaceDossierId
+                ? "Prompt reçu. Réécriture intégrale (même lien, plusieurs minutes)…"
+                : "Prompt reçu. Lancement de l’enquête (recherche + rédaction, plusieurs minutes)…",
             );
             try {
-              const image = await telegramDownloadFile(inv.fileId);
-              const { publishInvestigation } = await import(
-                "@/lib/investigation"
-              );
-              await publishInvestigation({
-                prompt,
-                headline: inv.headline,
-                creative: { buffer: image.buffer, mime: image.mime },
-                notify: telegramNotifier(chatId),
-              });
+              if (inv.replaceDossierId) {
+                const { rewriteInvestigation } = await import(
+                  "@/lib/investigation"
+                );
+                await rewriteInvestigation({
+                  dossierId: inv.replaceDossierId,
+                  prompt,
+                  headline: inv.headline,
+                  notify: telegramNotifier(chatId),
+                });
+              } else {
+                const image = await telegramDownloadFile(inv.fileId!);
+                const { publishInvestigation } = await import(
+                  "@/lib/investigation"
+                );
+                await publishInvestigation({
+                  prompt,
+                  headline: inv.headline,
+                  creative: { buffer: image.buffer, mime: image.mime },
+                  notify: telegramNotifier(chatId),
+                });
+              }
               await clearInvestigationSession();
             } catch (err) {
               await telegramSendMessage(

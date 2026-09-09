@@ -11,6 +11,7 @@ import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   extractAllHttpUrls,
   extractInvestigationFocus,
+  saveDossierBrief,
 } from "@/lib/investigation-draft";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
@@ -174,12 +175,16 @@ async function publishInvestigationFacebook(input: {
   }
 }
 
-export async function publishInvestigation(input: {
+export async function draftInvestigationArticle(input: {
   prompt: string;
   headline?: string;
-  creative?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
-}): Promise<{ slug: string; title: string; url: string }> {
+}): Promise<{
+  title: string;
+  excerpt: string;
+  content: string;
+  sourceText: string;
+}> {
   const notify = input.notify || (async () => {});
   const prompt = input.prompt.trim();
   if (prompt.length < 40) {
@@ -192,7 +197,7 @@ export async function publishInvestigation(input: {
   const urls = extractAllHttpUrls(prompt);
 
   await notify(
-    `Sujet retenu : ${subject}\nEnquête longue (dossier payant) : recherche + rédaction exhaustive, plusieurs minutes.`,
+    `Sujet retenu : ${subject}\nEnquête longue (dossier payant, 4000 mots visés) : recherche + rédaction exhaustive.`,
   );
 
   const scraped = await scrapeInvestigationSources(urls, notify);
@@ -228,48 +233,115 @@ export async function publishInvestigation(input: {
     throw new Error("La rédaction de l’enquête n’a rien produit.");
   }
 
+  return {
+    title: article.title,
+    excerpt: article.excerpt,
+    content: article.content,
+    sourceText,
+  };
+}
+
+export async function rewriteInvestigation(input: {
+  dossierId: string;
+  prompt: string;
+  headline?: string;
+  notify?: (text: string) => Promise<void>;
+}): Promise<{ slug: string; title: string; url: string }> {
+  const notify = input.notify || (async () => {});
+  const existing = await prisma.specialDossier.findUnique({
+    where: { id: input.dossierId },
+  });
+  if (!existing) {
+    throw new Error("Enquête introuvable.");
+  }
+
+  const drafted = await draftInvestigationArticle({
+    prompt: input.prompt,
+    headline: input.headline || existing.title,
+    notify,
+  });
+
+  const author = await allocateNextAuthorName();
+  const datedContent = [
+    drafted.content,
+    "",
+    `*Enquête Le Rempart — ${author}.*`,
+  ].join("\n");
+
+  await prisma.specialDossier.update({
+    where: { id: existing.id },
+    data: {
+      title: drafted.title,
+      excerpt: drafted.excerpt.slice(0, 1500),
+      content: datedContent,
+      publishedAt: existing.publishedAt ?? new Date(),
+    },
+  });
+  await saveDossierBrief(existing.id, input.prompt);
+
+  const url = absoluteUrl(`/dossiers/${existing.slug}`);
+  await notify(
+    `Enquête réécrite (même lien).\n${drafted.title}\n${url}`,
+  );
+  return { slug: existing.slug, title: drafted.title, url };
+}
+
+export async function publishInvestigation(input: {
+  prompt: string;
+  headline?: string;
+  creative?: { buffer: Buffer; mime: string };
+  notify?: (text: string) => Promise<void>;
+}): Promise<{ slug: string; title: string; url: string }> {
+  const notify = input.notify || (async () => {});
+  const drafted = await draftInvestigationArticle({
+    prompt: input.prompt,
+    headline: input.headline,
+    notify,
+  });
+
   await notify("Illustration site…");
   const cover = await withTimeout(
     resolveRelevantCoverUrl({
-      title: article.title,
-      excerpt: article.excerpt,
+      title: drafted.title,
+      excerpt: drafted.excerpt,
     }),
     28_000,
     "Timeout illustration",
   ).catch(() => null);
 
-  const slug = await uniqueDossierSlug(article.title);
+  const slug = await uniqueDossierSlug(drafted.title);
   const author = await allocateNextAuthorName();
   const datedContent = [
-    article.content,
+    drafted.content,
     "",
     `*Enquête Le Rempart — ${author}.*`,
   ].join("\n");
 
-  await prisma.specialDossier.create({
+  const created = await prisma.specialDossier.create({
     data: {
       slug,
-      title: article.title,
-      excerpt: article.excerpt.slice(0, 500),
+      title: drafted.title,
+      excerpt: drafted.excerpt.slice(0, 1500),
       content: datedContent,
       coverImageUrl: cover,
       membersOnly: true,
       publishedAt: new Date(),
     },
   });
+  await saveDossierBrief(created.id, input.prompt);
 
   const url = absoluteUrl(`/dossiers/${slug}`);
-  await notify(`Enquête publiée (Rempart+).\n${article.title}\n${url}`);
+  await notify(`Enquête publiée (Rempart+).\n${drafted.title}\n${url}`);
 
   await publishInvestigationFacebook({
-    title: article.title,
-    excerpt: article.excerpt,
-    content: article.content,
+    title: drafted.title,
+    excerpt: drafted.excerpt,
+    content: drafted.content,
     articleUrl: url,
-    sourceText,
+    sourceText: drafted.sourceText,
     creative: input.creative,
     notify,
   });
 
-  return { slug, title: article.title, url };
+  return { slug, title: drafted.title, url };
 }

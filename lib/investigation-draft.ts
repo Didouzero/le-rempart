@@ -13,6 +13,8 @@ export type InvestigationSession = {
   imageMime?: string;
   headline?: string;
   prompt?: string;
+  /** Si défini : réécriture de cette enquête (même URL, pas de post Facebook). */
+  replaceDossierId?: string;
   startedAt: number;
 };
 
@@ -61,6 +63,50 @@ export async function startInvestigationSession(
   };
   await save(session);
   return session;
+}
+
+export async function startInvestigationRewriteSession(
+  chatId: number,
+  dossierId: string,
+  headline?: string,
+): Promise<InvestigationSession> {
+  const session: InvestigationSession = {
+    chatId,
+    step: "awaiting_prompt",
+    urls: [],
+    replaceDossierId: dossierId,
+    headline,
+    startedAt: Date.now(),
+  };
+  await save(session);
+  return session;
+}
+
+function briefKey(dossierId: string): string {
+  return `dossier:brief:${dossierId}`;
+}
+
+export async function saveDossierBrief(
+  dossierId: string,
+  prompt: string,
+): Promise<void> {
+  const key = briefKey(dossierId);
+  const value = prompt.trim().slice(0, 60000);
+  await prisma.appSetting.upsert({
+    where: { key },
+    create: { key, value },
+    update: { value },
+  });
+}
+
+export async function getDossierBrief(
+  dossierId: string,
+): Promise<string | null> {
+  const row = await prisma.appSetting.findUnique({
+    where: { key: briefKey(dossierId) },
+  });
+  const value = row?.value?.trim() || "";
+  return value.length >= 40 ? value : null;
 }
 
 export async function setInvestigationCreative(

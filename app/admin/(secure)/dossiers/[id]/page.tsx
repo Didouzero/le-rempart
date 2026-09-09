@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { DossierEditor } from "@/components/DossierEditor";
+import { getDossierBrief } from "@/lib/investigation-draft";
 import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ id: string }> };
@@ -10,6 +11,7 @@ export default async function AdminEditDossierPage({ params }: Props) {
   const { id } = await params;
   const dossier = await prisma.specialDossier.findUnique({ where: { id } });
   if (!dossier) notFound();
+  const brief = (await getDossierBrief(dossier.id)) || "";
 
   return (
     <div>
@@ -30,6 +32,7 @@ export default async function AdminEditDossierPage({ params }: Props) {
           membersOnly: dossier.membersOnly,
           published: Boolean(dossier.publishedAt),
           slug: dossier.slug,
+          brief,
         }}
       />
     </div>

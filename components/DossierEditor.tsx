@@ -13,6 +13,7 @@ type DossierEditorProps = {
     membersOnly: boolean;
     published: boolean;
     slug: string;
+    brief: string;
   };
 };
 
@@ -24,7 +25,9 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
   const [coverImageUrl, setCoverImageUrl] = useState(initial.coverImageUrl);
   const [membersOnly, setMembersOnly] = useState(initial.membersOnly);
   const [published, setPublished] = useState(initial.published);
+  const [brief, setBrief] = useState(initial.brief);
   const [saving, setSaving] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -43,6 +46,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
           coverImageUrl: coverImageUrl.trim() || null,
           membersOnly,
           published,
+          brief: brief.trim() || null,
         }),
       });
       const data = await response.json();
@@ -55,6 +59,49 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
       setError(err instanceof Error ? err.message : "Erreur d'enregistrement");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onRegenerate() {
+    if (
+      !window.confirm(
+        "Réécrire ENTIÈREMENT cette enquête (même lien) ? L’ancien texte sera remplacé. Ça prend plusieurs minutes : ne ferme pas l’onglet.",
+      )
+    ) {
+      return;
+    }
+    if (brief.trim().length < 40) {
+      setError("Colle d’abord le prompt complet (celui du .txt) dans le champ Brief.");
+      return;
+    }
+    setRegenerating(true);
+    setError("");
+    setMessage("Régénération en cours (recherche + rédaction, 5 à 10 min)…");
+    try {
+      const response = await fetch(
+        `/api/admin/dossiers/${dossierId}/regenerate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: brief }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Régénération impossible");
+      }
+      if (data.dossier) {
+        setTitle(data.dossier.title || title);
+        setExcerpt(data.dossier.excerpt || excerpt);
+        setContent(data.dossier.content || content);
+      }
+      setMessage("Enquête réécrite. Relis avant de partager le lien.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de régénération");
+      setMessage("");
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -85,6 +132,29 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
         <a href={`/dossiers/${initial.slug}`} className="underline">
           /dossiers/{initial.slug}
         </a>
+      </p>
+      <label className="block text-sm font-semibold">
+        Brief / prompt (pour régénérer)
+        <textarea
+          className="admin-input mt-2 min-h-40 font-mono text-[0.9rem] leading-relaxed"
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+          placeholder="Colle ici le prompt complet (.txt) si tu veux faire réécrire l’enquête par Kimi."
+        />
+      </label>
+      <button
+        type="button"
+        className="admin-btn admin-btn-secondary"
+        disabled={regenerating || saving || brief.trim().length < 40}
+        onClick={onRegenerate}
+      >
+        {regenerating
+          ? "Régénération… ne ferme pas l’onglet"
+          : "Réécrire entièrement avec Kimi"}
+      </button>
+      <p className="text-xs text-muted">
+        Même URL publique. Pas de nouveau post Facebook. Compte 5 à 10 minutes.
+        Cible : 4000 mots minimum.
       </p>
       <label className="block text-sm font-semibold">
         Titre
@@ -152,7 +222,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
         <button
           type="button"
           className="admin-btn"
-          disabled={saving || !title.trim() || !content.trim() || !excerpt.trim()}
+          disabled={saving || regenerating || !title.trim() || !content.trim() || !excerpt.trim()}
           onClick={onSave}
         >
           {saving ? "Enregistrement…" : "Enregistrer"}
@@ -160,7 +230,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
         <button
           type="button"
           className="admin-btn admin-btn-secondary ml-auto border-red-800 text-red-800"
-          disabled={saving}
+          disabled={saving || regenerating}
           onClick={onDelete}
         >
           Supprimer

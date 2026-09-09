@@ -346,7 +346,7 @@ export async function runWritingAgent(
               cautious
                 ? `OBLIGATOIRE : au moins ${minWords} mots, et rien d'inventé. La prudence prime sur la longueur.`
                 : investigation
-                  ? `OBLIGATOIRE ENQUÊTE PAYANTE : vise ${ARTICLE_LENGTH.investigationTargetMin}–${ARTICLE_LENGTH.investigationTargetMax} mots (minimum ${minWords}). Développe CHAQUE chapitre du brief. Un condensé de 800 mots = échec.`
+                  ? `OBLIGATOIRE ENQUÊTE PAYANTE : vise ${ARTICLE_LENGTH.investigationTargetMin}–${ARTICLE_LENGTH.investigationTargetMax} mots. Plancher dur : ${minWords} mots. Un condensé de 800 ou 2000 mots = échec.`
                   : `OBLIGATOIRE : vise au moins ${minWords} mots en exploitant chronologie, acteurs, montants, citations et contexte du dossier (sans jamais inventer).`,
             ]
               .filter(Boolean)

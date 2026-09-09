@@ -19,9 +19,9 @@ export const ARTICLE_LENGTH = {
   targetMaxWords: 1200,
   hardMaxWords: 2000,
   investigationHardMaxWords: 14000,
-  /** Enquête Rempart+ : dossier payant, exhaustif. */
-  investigationMinWords: 2800,
-  investigationTargetMin: 4500,
+  /** Enquête Rempart+ : dossier payant, plancher dur 3000, cible 4000+. */
+  investigationMinWords: 3000,
+  investigationTargetMin: 4000,
   investigationTargetMax: 9000,
 } as const;
 

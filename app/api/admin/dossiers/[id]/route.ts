@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { saveDossierBrief } from "@/lib/investigation-draft";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 
@@ -14,6 +15,7 @@ const schema = z.object({
     .optional(),
   membersOnly: z.boolean().optional(),
   published: z.boolean().optional(),
+  brief: z.string().nullable().optional(),
 });
 
 async function uniqueSlug(title: string, excludeId: string): Promise<string> {
@@ -76,6 +78,13 @@ export async function PATCH(request: Request, { params }: Params) {
           : null,
       },
     });
+
+    if (data.brief != null) {
+      const trimmed = data.brief.trim();
+      if (trimmed.length >= 40) {
+        await saveDossierBrief(id, trimmed);
+      }
+    }
 
     return NextResponse.json(dossier);
   } catch (err) {
