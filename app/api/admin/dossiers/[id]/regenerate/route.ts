@@ -4,11 +4,13 @@ import { getDossierBrief } from "@/lib/investigation-draft";
 import {
   createInvestigationJob,
   kickInvestigationJob,
+  processInvestigationSlice,
+  scheduleInvestigationContinuation,
 } from "@/lib/investigation-job";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -46,13 +48,17 @@ export async function POST(request: Request, { params }: Params) {
       headline: existing.title,
       dossierId: id,
     });
-    await kickInvestigationJob(job.id, "slice");
-    await kickInvestigationJob(job.id, "watchdog");
+    scheduleInvestigationContinuation(kickInvestigationJob(job.id, "watchdog"));
+    const result = await processInvestigationSlice(job.id);
+    if (result.continue && !result.busy) {
+      scheduleInvestigationContinuation(kickInvestigationJob(job.id, "slice"));
+    }
 
     return NextResponse.json({
       jobId: job.id,
       token: job.token,
       accepted: true,
+      phase: result.phase,
     });
   } catch (err) {
     console.error("dossier regenerate", err);

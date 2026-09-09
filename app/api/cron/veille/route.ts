@@ -27,6 +27,16 @@ async function handle(request: NextRequest) {
     console.error("veille cron: rappel enquête", err);
   }
 
+  try {
+    const { resumeStuckInvestigationJobs } = await import(
+      "@/lib/investigation-job"
+    );
+    const resumed = await resumeStuckInvestigationJobs();
+    if (resumed > 0) console.info("veille cron: enquêtes relancées", resumed);
+  } catch (err) {
+    console.error("veille cron: reprise enquêtes", err);
+  }
+
   // force=1 : saute seulement le check horaire (jamais la validation Telegram)
   const force =
     request.nextUrl.searchParams.get("force") === "1" ||

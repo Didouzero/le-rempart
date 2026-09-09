@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import { randomBytes, randomUUID } from "crypto";
 import {
   persistNewInvestigationDossier,
@@ -130,6 +131,31 @@ export function investigationJobSelfUrl(): string {
   return absoluteUrl("/api/jobs/investigation");
 }
 
+function investigationJobHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const cron = process.env.CRON_SECRET?.trim();
+  if (cron) headers.Authorization = `Bearer ${cron}`;
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+  if (bypass) {
+    headers["x-vercel-protection-bypass"] = bypass;
+    headers["x-vercel-set-bypass-cookie"] = "true";
+  }
+  return headers;
+}
+
+/** Garde le travail en vie après la réponse HTTP (relais Vercel). */
+export function scheduleInvestigationContinuation(
+  work: Promise<unknown>,
+): void {
+  waitUntil(
+    Promise.resolve(work).catch((err) => {
+      console.error("investigation continuation", err);
+    }),
+  );
+}
+
 export async function loadInvestigationJob(
   id: string,
 ): Promise<InvestigationJob | null> {
@@ -234,29 +260,91 @@ export async function createInvestigationJob(input: {
     },
   };
   await saveInvestigationJob(job);
+  if (job.dossierId) {
+    await cancelSiblingInvestigationJobs(job);
+  }
   return job;
+}
+
+async function cancelSiblingInvestigationJobs(
+  current: InvestigationJob,
+): Promise<void> {
+  if (!current.dossierId) return;
+  const rows = await prisma.appSetting.findMany({
+    where: { key: { startsWith: "investigation:job:" } },
+  });
+  for (const row of rows) {
+    let other: InvestigationJob;
+    try {
+      other = JSON.parse(row.value) as InvestigationJob;
+    } catch {
+      continue;
+    }
+    if (other.id === current.id) continue;
+    if (other.dossierId !== current.dossierId) continue;
+    if (other.phase === "done" || other.phase === "failed") continue;
+    other.phase = "failed";
+    other.error = "Remplacé par une nouvelle réécriture.";
+    other.runningSince = null;
+    await saveInvestigationJob(other);
+  }
 }
 
 export async function kickInvestigationJob(
   jobId: string,
   mode: "slice" | "watchdog" = "slice",
-): Promise<void> {
+): Promise<boolean> {
   const job = await loadInvestigationJob(jobId);
-  if (!job) return;
-  const cron = process.env.CRON_SECRET?.trim();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (cron) headers.Authorization = `Bearer ${cron}`;
-  const res = await fetch(investigationJobSelfUrl(), {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ jobId, token: job.token, mode }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error("kick investigation job", res.status, body.slice(0, 400));
+  if (!job) return false;
+  try {
+    const res = await fetch(investigationJobSelfUrl(), {
+      method: "POST",
+      headers: investigationJobHeaders(),
+      body: JSON.stringify({ jobId, token: job.token, mode }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("kick investigation job", res.status, body.slice(0, 400));
+      if (mode === "slice" && job.chatId) {
+        await telegramSendMessage(
+          job.chatId,
+          `Enquête : le relais interne a répondu HTTP ${res.status}. Le round en cours est sauvé, on n’abandonne pas.`,
+        ).catch(() => {});
+      }
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("kick investigation job", err);
+    if (mode === "slice" && job.chatId) {
+      await telegramSendMessage(
+        job.chatId,
+        `Enquête : relais interne en échec (${err instanceof Error ? err.message : "réseau"}).`,
+      ).catch(() => {});
+    }
+    return false;
   }
+}
+
+export async function resumeStuckInvestigationJobs(): Promise<number> {
+  const rows = await prisma.appSetting.findMany({
+    where: { key: { startsWith: "investigation:job:" } },
+  });
+  let n = 0;
+  for (const row of rows) {
+    let job: InvestigationJob;
+    try {
+      job = JSON.parse(row.value) as InvestigationJob;
+    } catch {
+      continue;
+    }
+    if (job.phase === "done" || job.phase === "failed") continue;
+    if (!investigationJobNeedsResume(job)) continue;
+    await kickInvestigationJob(job.id, "slice");
+    n += 1;
+  }
+  return n;
 }
 
 export function authorizeInvestigationJobRequest(

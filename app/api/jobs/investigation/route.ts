@@ -1,4 +1,4 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn } from "@/lib/auth";
 import {
   authorizeInvestigationJobRequest,
@@ -8,6 +8,7 @@ import {
   processInvestigationSlice,
   publicInvestigationJobStatus,
   runInvestigationWatchdog,
+  scheduleInvestigationContinuation,
 } from "@/lib/investigation-job";
 
 export const runtime = "nodejs";
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (investigationJobNeedsResume(job)) {
-    after(() => kickInvestigationJob(jobId, "slice"));
+    scheduleInvestigationContinuation(kickInvestigationJob(jobId, "slice"));
   }
 
   return NextResponse.json(publicInvestigationJobStatus(job));
@@ -54,20 +55,18 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.mode === "watchdog") {
-    after(() => runInvestigationWatchdog(jobId));
+    scheduleInvestigationContinuation(runInvestigationWatchdog(jobId));
     return NextResponse.json({ accepted: true, mode: "watchdog" }, { status: 202 });
   }
 
-  after(async () => {
-    try {
+  scheduleInvestigationContinuation(
+    (async () => {
       const result = await processInvestigationSlice(jobId);
       if (result.continue && !result.busy) {
         await kickInvestigationJob(jobId, "slice");
       }
-    } catch (err) {
-      console.error("investigation job slice after", err);
-    }
-  });
+    })(),
+  );
 
   return NextResponse.json({ accepted: true, mode: "slice" }, { status: 202 });
 }

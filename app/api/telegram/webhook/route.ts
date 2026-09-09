@@ -537,8 +537,12 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
                 : "Prompt reçu. Lancement de l’enquête. Recherche web réelle, pas de limite de durée, pas de raccourci sur le brief.",
             );
             try {
-              const { createInvestigationJob, kickInvestigationJob } =
-                await import("@/lib/investigation-job");
+              const {
+                createInvestigationJob,
+                kickInvestigationJob,
+                processInvestigationSlice,
+                scheduleInvestigationContinuation,
+              } = await import("@/lib/investigation-job");
               const job = await createInvestigationJob(
                 inv.replaceDossierId
                   ? {
@@ -558,8 +562,19 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
                     },
               );
               await clearInvestigationSession();
-              await kickInvestigationJob(job.id, "slice");
-              await kickInvestigationJob(job.id, "watchdog");
+              await telegramSendMessage(
+                chatId,
+                `C’est parti. Round 1 en cours — tu dois recevoir des updates, pas le silence.`,
+              );
+              scheduleInvestigationContinuation(
+                kickInvestigationJob(job.id, "watchdog"),
+              );
+              const result = await processInvestigationSlice(job.id);
+              if (result.continue && !result.busy) {
+                scheduleInvestigationContinuation(
+                  kickInvestigationJob(job.id, "slice"),
+                );
+              }
             } catch (err) {
               await telegramSendMessage(
                 chatId,

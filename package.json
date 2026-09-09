@@ -20,6 +20,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@stripe/react-stripe-js": "^6.8.0",
     "@stripe/stripe-js": "^9.12.1",
+    "@vercel/functions": "^3.9.6",
     "next": "^15.4.2",
     "openai": "^6.48.0",
     "react": "^19.1.0",

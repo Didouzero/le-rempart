@@ -32,6 +32,18 @@ export async function GET(req: NextRequest) {
     console.error("newsletter cron: rappel enquête", err);
   }
 
+  try {
+    const { resumeStuckInvestigationJobs } = await import(
+      "@/lib/investigation-job"
+    );
+    const resumed = await resumeStuckInvestigationJobs();
+    if (resumed > 0) {
+      console.info("newsletter cron: enquêtes relancées", resumed);
+    }
+  } catch (err) {
+    console.error("newsletter cron: reprise enquêtes", err);
+  }
+
   const items = await buildTenPointBrief();
   if (items.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, reason: "no_items" });
