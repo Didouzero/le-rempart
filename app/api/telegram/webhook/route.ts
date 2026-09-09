@@ -76,6 +76,7 @@ function commandsHelpText(): string {
     "2) Envoie le prompt : un message, ou un fichier .txt si c’est trop long",
     "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
     "/enquete_refaire — réécrire entièrement la dernière enquête (même lien, pas de FB)",
+    "/enquete_reprendre — reprendre une enquête coincée (garde les sources déjà lues)",
     "/enquete_cancel — abandonner",
     "",
     "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
@@ -331,7 +332,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       cmd === "/enquete_cancel" ||
       cmd === "/enquete_annuler" ||
       cmd === "/enquete_refaire" ||
-      cmd === "/enquete_redo"
+      cmd === "/enquete_redo" ||
+      cmd === "/enquete_reprendre" ||
+      cmd === "/enquete_resume"
     ) {
       if (!isTelegramUserAllowed(userId)) {
         await telegramSendMessage(
@@ -373,6 +376,32 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           chatId,
           "Pas besoin de /enquete_ok. Envoie le prompt : un message, ou un fichier .txt.",
         );
+        return;
+      }
+
+      if (cmd === "/enquete_reprendre" || cmd === "/enquete_resume") {
+        const {
+          continueInvestigationJobInProcess,
+          findActiveInvestigationJobForChat,
+          kickInvestigationJob,
+          scheduleInvestigationContinuation,
+        } = await import("@/lib/investigation-job");
+        const job = await findActiveInvestigationJobForChat(chatId);
+        if (!job) {
+          await telegramSendMessage(
+            chatId,
+            "Aucune enquête en cours à reprendre. Si tu relances /enquete_refaire, tu perds les sources déjà lues.",
+          );
+          return;
+        }
+        await telegramSendMessage(
+          chatId,
+          `Reprise du checkpoint (${job.checkpoint.sources.length} sources déjà lues, ${Math.round((Date.now() - job.startedAt) / 60000)} min).`,
+        );
+        scheduleInvestigationContinuation(
+          kickInvestigationJob(job.id, "watchdog"),
+        );
+        await continueInvestigationJobInProcess(job.id, Date.now() + 240_000);
         return;
       }
 
@@ -539,8 +568,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             try {
               const {
                 createInvestigationJob,
+                continueInvestigationJobInProcess,
                 kickInvestigationJob,
-                processInvestigationSlice,
                 scheduleInvestigationContinuation,
               } = await import("@/lib/investigation-job");
               const job = await createInvestigationJob(
@@ -569,12 +598,10 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               scheduleInvestigationContinuation(
                 kickInvestigationJob(job.id, "watchdog"),
               );
-              const result = await processInvestigationSlice(job.id);
-              if (result.continue && !result.busy) {
-                scheduleInvestigationContinuation(
-                  kickInvestigationJob(job.id, "slice"),
-                );
-              }
+              await continueInvestigationJobInProcess(
+                job.id,
+                Date.now() + 240_000,
+              );
             } catch (err) {
               await telegramSendMessage(
                 chatId,

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn } from "@/lib/auth";
 import {
   authorizeInvestigationJobRequest,
+  continueInvestigationJobInProcess,
   investigationJobNeedsResume,
   kickInvestigationJob,
   loadInvestigationJob,
-  processInvestigationSlice,
   publicInvestigationJobStatus,
   runInvestigationWatchdog,
   scheduleInvestigationContinuation,
@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
   }
 
   if (investigationJobNeedsResume(job)) {
-    scheduleInvestigationContinuation(kickInvestigationJob(jobId, "slice"));
+    scheduleInvestigationContinuation(
+      continueInvestigationJobInProcess(jobId, Date.now() + 240_000),
+    );
   }
 
   return NextResponse.json(publicInvestigationJobStatus(job));
@@ -60,12 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   scheduleInvestigationContinuation(
-    (async () => {
-      const result = await processInvestigationSlice(jobId);
-      if (result.continue && !result.busy) {
-        await kickInvestigationJob(jobId, "slice");
-      }
-    })(),
+    continueInvestigationJobInProcess(jobId, Date.now() + 240_000),
   );
 
   return NextResponse.json({ accepted: true, mode: "slice" }, { status: 202 });

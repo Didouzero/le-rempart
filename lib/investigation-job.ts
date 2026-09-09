@@ -126,9 +126,28 @@ function elapsedLabel(startedAt: number): string {
 }
 
 export function investigationJobSelfUrl(): string {
+  return investigationJobCandidateUrls()[0]!;
+}
+
+function investigationJobCandidateUrls(): string[] {
+  const urls: string[] = [];
+  const add = (raw: string) => {
+    const url = raw.replace(/\/$/, "");
+    if (url && !urls.includes(url)) urls.push(url);
+  };
+  add(absoluteUrl("/api/jobs/investigation"));
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (site) {
+    add(`${site.replace("://le-rempart.org", "://www.le-rempart.org")}/api/jobs/investigation`);
+  }
+  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL?.replace(
+    /^https?:\/\//,
+    "",
+  );
+  if (prod) add(`https://${prod}/api/jobs/investigation`);
   const vercel = process.env.VERCEL_URL?.replace(/^https?:\/\//, "");
-  if (vercel) return `https://${vercel}/api/jobs/investigation`;
-  return absoluteUrl("/api/jobs/investigation");
+  if (vercel) add(`https://${vercel}/api/jobs/investigation`);
+  return urls;
 }
 
 function investigationJobHeaders(): Record<string, string> {
@@ -296,35 +315,79 @@ export async function kickInvestigationJob(
 ): Promise<boolean> {
   const job = await loadInvestigationJob(jobId);
   if (!job) return false;
-  try {
-    const res = await fetch(investigationJobSelfUrl(), {
-      method: "POST",
-      headers: investigationJobHeaders(),
-      body: JSON.stringify({ jobId, token: job.token, mode }),
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("kick investigation job", res.status, body.slice(0, 400));
-      if (mode === "slice" && job.chatId) {
-        await telegramSendMessage(
-          job.chatId,
-          `Enquête : le relais interne a répondu HTTP ${res.status}. Le round en cours est sauvé, on n’abandonne pas.`,
-        ).catch(() => {});
-      }
-      return false;
+  const payload = JSON.stringify({ jobId, token: job.token, mode });
+  const headers = investigationJobHeaders();
+  let lastStatus = 0;
+  for (const url of investigationJobCandidateUrls()) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: payload,
+        cache: "no-store",
+      });
+      if (res.ok) return true;
+      lastStatus = res.status;
+      console.error(
+        "kick investigation job",
+        url,
+        res.status,
+        (await res.text().catch(() => "")).slice(0, 200),
+      );
+    } catch (err) {
+      console.error("kick investigation job", url, err);
     }
-    return true;
-  } catch (err) {
-    console.error("kick investigation job", err);
-    if (mode === "slice" && job.chatId) {
-      await telegramSendMessage(
-        job.chatId,
-        `Enquête : relais interne en échec (${err instanceof Error ? err.message : "réseau"}).`,
-      ).catch(() => {});
-    }
-    return false;
   }
+  if (mode === "slice" && job.chatId) {
+    await telegramSendMessage(
+      job.chatId,
+      `Enquête : relais interne HTTP ${lastStatus || "erreur"} (toutes les URL). Checkpoint sauvé — envoie /enquete_reprendre pour continuer sans perdre les sources.`,
+    ).catch(() => {});
+  }
+  return false;
+}
+
+export async function continueInvestigationJobInProcess(
+  jobId: string,
+  isolateDeadlineAt: number,
+): Promise<void> {
+  while (Date.now() + 80_000 < isolateDeadlineAt) {
+    const result = await processInvestigationSlice(jobId);
+    if (!result.continue || result.busy) return;
+  }
+  const latest = await loadInvestigationJob(jobId);
+  if (
+    latest &&
+    latest.phase !== "done" &&
+    latest.phase !== "failed"
+  ) {
+    await kickInvestigationJob(jobId, "slice");
+  }
+}
+
+export async function findActiveInvestigationJobForChat(
+  chatId: number,
+): Promise<InvestigationJob | null> {
+  const rows = await prisma.appSetting.findMany({
+    where: { key: { startsWith: "investigation:job:" } },
+  });
+  const jobs: InvestigationJob[] = [];
+  for (const row of rows) {
+    try {
+      const job = JSON.parse(row.value) as InvestigationJob;
+      if (
+        job.chatId === chatId &&
+        job.phase !== "done" &&
+        job.phase !== "failed"
+      ) {
+        jobs.push(job);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  jobs.sort((a, b) => b.startedAt - a.startedAt);
+  return jobs[0] ?? null;
 }
 
 export async function resumeStuckInvestigationJobs(): Promise<number> {
@@ -341,7 +404,15 @@ export async function resumeStuckInvestigationJobs(): Promise<number> {
     }
     if (job.phase === "done" || job.phase === "failed") continue;
     if (!investigationJobNeedsResume(job)) continue;
-    await kickInvestigationJob(job.id, "slice");
+    await processInvestigationSlice(job.id);
+    const latest = await loadInvestigationJob(job.id);
+    if (
+      latest &&
+      latest.phase !== "done" &&
+      latest.phase !== "failed"
+    ) {
+      await kickInvestigationJob(job.id, "slice");
+    }
     n += 1;
   }
   return n;
