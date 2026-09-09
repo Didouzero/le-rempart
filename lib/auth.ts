@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+
 const COOKIE_NAME = "le_rempart_admin";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -58,6 +60,15 @@ export async function verifySessionToken(
       mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
     }
     return mismatch === 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function isAdminLoggedIn(): Promise<boolean> {
+  try {
+    const jar = await cookies();
+    return verifySessionToken(jar.get(COOKIE_NAME)?.value);
   } catch {
     return false;
   }
