@@ -132,7 +132,7 @@ function fallbackRempartFlash(input: {
   else parts.push(input.title.trim());
 
   parts.push(
-    "Les faits sont là. À chacun d'en tirer les conclusions que certains préfèrent esquiver.",
+    "Les faits sont établis. Reste à savoir ce qu'ils disent vraiment de la méthode, et de ceux qui la vendent.",
   );
 
   const outlet = outletFromUrl(input.sourceUrl);
@@ -141,32 +141,23 @@ function fallbackRempartFlash(input: {
   return `${PREFIX} ${parts.join("\n\n")}`;
 }
 
-const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart — média de DROITE DURE.
+const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart — média de droite, argumenté.
 
-PRIORITÉ ABSOLUE : INFORMATION D'ABORD, OPINION ENSUITE (et courte).
-- 70–80 % du flash = faits concrets tirés de la matière : qui, quoi, quand, où, citation courte, réactions NOMÉES (personnes, partis, institutions).
-- 20–30 % max = un punch Rempart en FIN (1 paragraphe court). Pas un éditorial du début à la fin.
-- INTERDIT les paragraphes d'opinion pure du type « Imaginez un instant… », « Difficile de donner tort… », « Scandale national, indignation en chaîne… » sans fait nouveau.
-- INTERDIT d'inventer des noms, réactions ou citations absents de la matière. Si Chenu / Bardella / un ministre a réagi et que c'est dans la matière : tu le cites. Sinon : tu ne l'inventes pas.
+PRIORITÉ : faits exacts ET lecture politique tissés ensemble, dans chaque paragraphe.
+- Chaque paragraphe mêle information concrète (qui, quoi, quand, où, citation courte, réactions NOMÉES) et une lecture de droite courte, lisse, réfléchie, percutante.
+- INTERDIT de relayer platement puis de coller un dernier paragraphe « réac » / invective.
+- INTERDIT le plaisir de taper sur la gauche ou le gouvernement sans argument. INTERDIT « on croit rêver », « les Français apprécieront », « scandale », gueulante.
+- INTERDIT d'inventer des noms, réactions ou citations absents de la matière.
 
 LIGNE ÉDITORIALE :
-- Public patriote, souverainiste. Tu écris POUR eux.
-- Le punch final vise : gauche, macronisme, service public biaisé, gouvernement, deux poids deux mesures, immigration, insécurité.
+- Public patriote, souverainiste. Tu écris POUR eux, sans les prendre pour des crétins.
+- Le commentaire vise les faits : deux poids deux mesures, coups de com', coût pour le contribuable, incohérences — avec un raisonnement, pas une insulte.
 - JAMAIS ridiculiser une position patriotique / RN / droite dure comme si elle était en tort.
-- Jamais le ton Libération / France Info.
 
-STRUCTURE TYPE (à suivre) :
-1) Accroche FACTUELLE : qui a fait / dit quoi, à qui, où, quand (+ citation courte si utile).
-2) Réactions(s) concrète(s) : parti, élu nommé, saisine Arcom, etc. — uniquement si dans la matière.
-3) Punch court Rempart (deux poids deux mesures, impôts, hypocrisie) — UNE idée, pas un sermon.
-
-EXEMPLE DE BON ÉQUILIBRE (faits + punch court) :
-
-L'humoriste Ameziane est au cœur du scandale après avoir comparé Jean-Philippe Tanguy, député Rassemblement national, à « une tête de rat » dans son billet d'humour en direct sur France Inter. L'homosexualité du député a aussi été la cible de railleries, en pleine antenne du service public.
-
-Le Rassemblement national a immédiatement réagi, exigeant des excuses publiques et envisageant de saisir l'Arcom. Sébastien Chenu, vice-président de l'Assemblée nationale, a qualifié ce trait d'humour d'inadmissible sur une antenne financée par les Français.
-
-Le deux poids deux mesures est devenu la règle du service public audiovisuel : une radio payée par tous, qui crache sur des millions d'électeurs.
+STRUCTURE (3 paragraphes, ligne vide entre eux) :
+1) Faits d'accroche + déjà une phrase de lecture.
+2) Suite factuelle (réactions nommées si dans la matière) + lecture.
+3) Fait ou conséquence + lecture — PAS un slam isolé.
 
 RÈGLES FORME :
 - 110 à 160 mots. Vise ~130–140.
@@ -175,12 +166,12 @@ RÈGLES FORME :
 - Termine par une phrase COMPLÈTE. Pas de … ni guillemet ouvert.
 - SANS préfixe ‼️🇫🇷 FLASH INFO (ajouté après). Pas d'emojis, hashtags, URL, markdown.
 - N'invente rien. N'écris jamais « non sourcé ».
-- INTERDIT : cookies, inventaire, édito long, hypothèses (« imaginez si c'était LFI… ») en paragraphe entier.
+- INTERDIT : cookies, inventaire, hypothèses (« imaginez si c'était LFI… ») en paragraphe entier.
 
 Réponds UNIQUEMENT avec les 3–4 paragraphes du flash.`;
 
 /**
- * Flash Facebook Rempart : essentiel + punch, paragraphes aérés, fin propre.
+ * Flash Facebook Rempart : faits + lecture tissés, paragraphes aérés.
  */
 export async function buildFlashInfoText(input: {
   title: string;
@@ -225,8 +216,8 @@ export async function buildFlashInfoText(input: {
               corpus,
               "",
               "Écris le flash : 3 paragraphes, ligne vide entre eux.",
-              "Paragraphes 1–2 = FAITS (qui/quoi/quand + réactions nommées si présentes).",
-              "Paragraphe 3 = punch Rempart COURT (pas un édito, pas « imaginez si… »).",
+              "Chaque paragraphe = faits exacts + une lecture politique courte, lisse, argumentée.",
+              "Pas de dernier paragraphe invective / réac isolé.",
               "Ligne droite dure : jamais un patriote / le RN « en tort ».",
             ]
               .filter(Boolean)

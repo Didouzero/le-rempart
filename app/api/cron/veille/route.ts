@@ -18,6 +18,15 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  try {
+    const { maybeRemindInvestigation } = await import(
+      "@/lib/investigation-reminder"
+    );
+    await maybeRemindInvestigation();
+  } catch (err) {
+    console.error("veille cron: rappel enquête", err);
+  }
+
   // force=1 : saute seulement le check horaire (jamais la validation Telegram)
   const force =
     request.nextUrl.searchParams.get("force") === "1" ||

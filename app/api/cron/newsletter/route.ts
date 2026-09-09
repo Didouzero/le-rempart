@@ -23,6 +23,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  try {
+    const { maybeRemindInvestigation } = await import(
+      "@/lib/investigation-reminder"
+    );
+    await maybeRemindInvestigation();
+  } catch (err) {
+    console.error("newsletter cron: rappel enquête", err);
+  }
+
   const items = await buildTenPointBrief();
   if (items.length === 0) {
     return NextResponse.json({ ok: true, sent: 0, reason: "no_items" });

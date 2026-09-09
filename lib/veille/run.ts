@@ -5,7 +5,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { telegramNotifier } from "@/lib/publish-pipeline";
 import {
-  getAllowedTelegramUserIds,
+  getAdminTelegramChatId,
   telegramSendPhoto,
   veilleApprovalKeyboard,
 } from "@/lib/telegram";
@@ -31,10 +31,7 @@ export type VeilleRunResult = {
 };
 
 function adminChatId(): number | null {
-  const fromEnv = process.env.TELEGRAM_NOTIFY_CHAT_ID?.trim();
-  if (fromEnv && Number.isFinite(Number(fromEnv))) return Number(fromEnv);
-  const allowed = getAllowedTelegramUserIds();
-  return allowed[0] ?? null;
+  return getAdminTelegramChatId();
 }
 
 async function slotProposalCount(slotKey: string): Promise<number> {

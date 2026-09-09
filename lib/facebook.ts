@@ -214,8 +214,9 @@ async function publishCreativeAsStory(input: {
 
 async function commentAndPin(
   postId: string,
-  link: string,
+  message: string,
   token: string,
+  pin?: boolean,
 ): Promise<{ commentId: string; pinned: boolean; pinError?: string }> {
   const comment = await graphJson<{ id: string }>(
     `${GRAPH}/${postId}/comments`,
@@ -223,15 +224,16 @@ async function commentAndPin(
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        message: `➡️ ${link}`,
+        message,
         access_token: token,
       }),
     },
   );
 
   // Pin désactivé par défaut : +1/2 appels Graph qui aggravent le code 368.
-  // Opt-in : FACEBOOK_PIN_COMMENT=true
+  // Opt-in : FACEBOOK_PIN_COMMENT=true — forcé si pin === true (enquêtes).
   const pinOn =
+    pin === true ||
     process.env.FACEBOOK_PIN_COMMENT?.trim().toLowerCase() === "true" ||
     process.env.FACEBOOK_PIN_COMMENT?.trim() === "1";
   if (!pinOn) {
@@ -264,12 +266,18 @@ export async function commentArticleLinkOnPost(input: {
   postId: string;
   articleUrl: string;
   token: string;
+  message?: string;
+  pin?: boolean;
 }): Promise<{ commentId: string; pinned: boolean; pinError?: string }> {
   const url = input.articleUrl.replace(
     "://le-rempart.org",
     "://www.le-rempart.org",
   );
-  return commentAndPin(input.postId, url, input.token);
+  const message = (input.message || `➡️ ${url}`).replace(
+    "://le-rempart.org",
+    "://www.le-rempart.org",
+  );
+  return commentAndPin(input.postId, message, input.token, input.pin);
 }
 
 async function publishFeedWithPhoto(input: {

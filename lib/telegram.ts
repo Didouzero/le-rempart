@@ -22,6 +22,13 @@ export function isTelegramUserAllowed(userId: number): boolean {
   return allowed.includes(userId);
 }
 
+export function getAdminTelegramChatId(): number | null {
+  const fromEnv = process.env.TELEGRAM_NOTIFY_CHAT_ID?.trim();
+  if (fromEnv && Number.isFinite(Number(fromEnv))) return Number(fromEnv);
+  const allowed = getAllowedTelegramUserIds();
+  return allowed[0] ?? null;
+}
+
 export async function telegramSendMessage(
   chatId: number,
   text: string,

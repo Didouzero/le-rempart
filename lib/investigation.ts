@@ -1,5 +1,18 @@
 import { allocateNextAuthorName } from "@/lib/authors";
+import {
+  commentArticleLinkOnPost,
+  formatFacebookError,
+  isFacebookConfigured,
+  publishFacebookFeedPost,
+  publishFacebookStory,
+} from "@/lib/facebook";
 import { fetchSourceText } from "@/lib/fetch-source";
+import { buildFlashInfoText } from "@/lib/flash-info";
+import {
+  extraQueriesFromPrompt,
+  extractAllHttpUrls,
+  subjectFromInvestigationPrompt,
+} from "@/lib/investigation-draft";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
 import { prisma } from "@/lib/prisma";
@@ -7,11 +20,8 @@ import { absoluteUrl } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
 
-export type InvestigationDraft = {
-  subject: string;
-  urls: string[];
-  coverImageUrl?: string | null;
-};
+export const INVESTIGATION_COMMENT_PREFIX =
+  "notre enquête complète est disponible pour nos abonnés payants juste ici : 👉";
 
 async function uniqueDossierSlug(title: string): Promise<string> {
   const base = slugify(title);
@@ -34,7 +44,7 @@ export async function scrapeInvestigationSources(
 ): Promise<{ primaryUrl: string; sourceText: string }> {
   const unique = [...new Set(urls.map((u) => u.trim()).filter(Boolean))];
   if (unique.length === 0) {
-    throw new Error("Au moins un lien de référence est requis.");
+    return { primaryUrl: "", sourceText: "" };
   }
   const chunks: string[] = [];
   for (const url of unique.slice(0, 10)) {
@@ -48,50 +58,156 @@ export async function scrapeInvestigationSources(
       console.error("investigation scrape", url, err);
     }
   }
-  if (chunks.length === 0) {
-    throw new Error(
-      "Impossible de lire les liens. Vérifie qu’ils ne sont pas derrière un paywall.",
-    );
-  }
   return {
-    primaryUrl: unique[0]!,
+    primaryUrl: unique[0] || "",
     sourceText: chunks.join("\n\n").slice(0, 28000),
   };
 }
 
+async function publishInvestigationFacebook(input: {
+  title: string;
+  excerpt: string;
+  content: string;
+  articleUrl: string;
+  sourceText?: string;
+  creative?: { buffer: Buffer; mime: string };
+  notify: (text: string) => Promise<void>;
+}): Promise<void> {
+  const notify = input.notify;
+  if (!isFacebookConfigured()) {
+    await notify("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
+    return;
+  }
+  if (!input.creative) {
+    await notify("Facebook : pas de créative à envoyer.");
+    return;
+  }
+
+  const articleWww = input.articleUrl.replace(
+    "://le-rempart.org",
+    "://www.le-rempart.org",
+  );
+
+  await notify("Facebook : rédaction du flash…");
+  let flash: string;
+  try {
+    flash = await buildFlashInfoText({
+      title: input.title,
+      excerpt: input.excerpt,
+      sourceText: [input.sourceText, input.content].filter(Boolean).join("\n\n"),
+      articleUrl: articleWww,
+    });
+  } catch (err) {
+    console.error("investigation flash", err);
+    flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${input.excerpt}`;
+  }
+
+  await notify("Facebook : publication du post…");
+  try {
+    const feed = await Promise.race([
+      publishFacebookFeedPost({
+        imageUrl: "https://www.le-rempart.org/favicon.png",
+        caption: flash,
+        commentLink: articleWww,
+        image: input.creative,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Timeout post Facebook (45s)")),
+          45_000,
+        ),
+      ),
+    ]);
+
+    await notify(`✅ Post Facebook publié.\nID : ${feed.postId}`);
+
+    const commentBody = `${INVESTIGATION_COMMENT_PREFIX} ${articleWww}`;
+    try {
+      const commented = await commentArticleLinkOnPost({
+        postId: feed.postId,
+        articleUrl: articleWww,
+        token: feed.token,
+        message: commentBody,
+        pin: true,
+      });
+      await notify(
+        commented.pinned
+          ? `✅ Lien enquête en commentaire (épinglé).\n${commentBody}`
+          : `✅ Lien enquête en commentaire.\n${commentBody}`,
+      );
+    } catch (commentErr) {
+      console.error("investigation fb comment", commentErr);
+      await notify(
+        `❌ Commentaire lien : échec\n${
+          commentErr instanceof Error ? commentErr.message : "erreur"
+        }`,
+      );
+    }
+
+    await notify("Facebook : publication de la story…");
+    try {
+      const storyId = await Promise.race([
+        publishFacebookStory({
+          imageUrl: "https://www.le-rempart.org/favicon.png",
+          image: input.creative,
+          pageId: feed.pageId,
+          token: feed.token,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout story Facebook (40s)")),
+            40_000,
+          ),
+        ),
+      ]);
+      await notify(`✅ Story Facebook publiée.\nID : ${storyId}`);
+    } catch (storyErr) {
+      console.error("investigation fb story", storyErr);
+      await notify(
+        `❌ Story Facebook : échec\n${
+          storyErr instanceof Error ? storyErr.message : "erreur"
+        }`,
+      );
+    }
+  } catch (err) {
+    console.error("investigation fb post", err);
+    await notify(`❌ Post Facebook : échec\n${formatFacebookError(err)}`);
+  }
+}
+
 export async function publishInvestigation(input: {
-  subject: string;
-  urls: string[];
-  coverImageUrl?: string | null;
+  prompt: string;
+  headline?: string;
+  creative?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
 }): Promise<{ slug: string; title: string; url: string }> {
   const notify = input.notify || (async () => {});
-  const subject = input.subject.trim().slice(0, 280);
-  if (subject.length < 8) {
-    throw new Error("Sujet trop court. Ex. : Sébastien Delogu fins de mois");
+  const prompt = input.prompt.trim();
+  if (prompt.length < 40) {
+    throw new Error(
+      "Prompt trop court. Donne un brief complet : infos, liens, angle, directives de recherche.",
+    );
   }
 
+  const subject = subjectFromInvestigationPrompt(prompt, input.headline);
+  const urls = extractAllHttpUrls(prompt);
+
   await notify(
-    "Enquête : lecture des sources + recherche approfondie.\nÇa peut prendre 3 à 8 minutes.",
+    "Enquête : recherche autonome + lecture des liens du prompt.\nÇa peut prendre 3 à 8 minutes.",
   );
 
-  const { primaryUrl, sourceText } = await scrapeInvestigationSources(
-    input.urls,
-    notify,
+  const scraped = await scrapeInvestigationSources(urls, notify);
+  const sourceText = [prompt, scraped.sourceText].filter(Boolean).join("\n\n").slice(
+    0,
+    32000,
   );
-
-  const extraQueries = [
-    `${subject} patrimoine`,
-    `${subject} indemnités député`,
-    `${subject} déclaration HATVP`,
-    `${subject} biographie`,
-  ];
 
   const pipeline = await runEditorialPipeline(
     {
       title: subject,
-      sourceUrl: primaryUrl,
-      extraSourceUrls: input.urls.slice(1, 10),
+      caption: prompt.slice(0, 1500),
+      sourceUrl: scraped.primaryUrl || urls[0] || undefined,
+      extraSourceUrls: urls.slice(scraped.primaryUrl ? 1 : 0, 10),
       sourceText,
     },
     {
@@ -99,7 +215,7 @@ export async function publishInvestigation(input: {
       fast: false,
       sourceFirst: false,
       investigation: true,
-      extraQueries,
+      extraQueries: extraQueriesFromPrompt(prompt, subject),
       researchTimeoutMs: 200_000,
       writingTimeoutMs: 140_000,
       onProgress: notify,
@@ -111,17 +227,15 @@ export async function publishInvestigation(input: {
     throw new Error("La rédaction de l’enquête n’a rien produit.");
   }
 
-  await notify("Illustration…");
-  const cover =
-    input.coverImageUrl?.trim() ||
-    (await withTimeout(
-      resolveRelevantCoverUrl({
-        title: article.title,
-        excerpt: article.excerpt,
-      }),
-      28_000,
-      "Timeout illustration",
-    ).catch(() => null));
+  await notify("Illustration site…");
+  const cover = await withTimeout(
+    resolveRelevantCoverUrl({
+      title: article.title,
+      excerpt: article.excerpt,
+    }),
+    28_000,
+    "Timeout illustration",
+  ).catch(() => null);
 
   const slug = await uniqueDossierSlug(article.title);
   const author = await allocateNextAuthorName();
@@ -145,5 +259,16 @@ export async function publishInvestigation(input: {
 
   const url = absoluteUrl(`/dossiers/${slug}`);
   await notify(`Enquête publiée (Rempart+).\n${article.title}\n${url}`);
+
+  await publishInvestigationFacebook({
+    title: article.title,
+    excerpt: article.excerpt,
+    content: article.content,
+    articleUrl: url,
+    sourceText,
+    creative: input.creative,
+    notify,
+  });
+
   return { slug, title: article.title, url };
 }

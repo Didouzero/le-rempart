@@ -69,9 +69,10 @@ function commandsHelpText(): string {
     "/help ou /commandes — cette liste",
     "",
     "── Enquête Rempart+ (mercredi / samedi) ──",
-    "/enquete <sujet> — démarre une enquête approfondie",
-    "Puis envoie PLUSIEURS liens de référence (HATVP, articles, Assemblée…)",
-    "/enquete_ok — lancer la rédaction (3 à 8 min)",
+    "/enquete — démarre une enquête",
+    "1) Envoie la créative Facebook (PNG/JPG)",
+    "2) Envoie UN prompt complet (infos, liens, angle, directives de recherche)",
+    "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
     "/enquete_cancel — abandonner",
     "",
     "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
@@ -170,6 +171,14 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           chatId,
           `Accès non autorisé.\nTon id : ${userId}`,
         );
+        return;
+      }
+      const { clearInvestigationSession, getInvestigationSession } =
+        await import("@/lib/investigation-draft");
+      const inv = await getInvestigationSession(chatId);
+      if (inv) {
+        await clearInvestigationSession();
+        await telegramSendMessage(chatId, "Enquête annulée.");
         return;
       }
       const deleted = await deletePublishDraft(chatId);
@@ -343,62 +352,31 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         if (!session) {
           await telegramSendMessage(
             chatId,
-            "Aucune enquête en cours. Ex. :\n/enquete Sébastien Delogu fins de mois",
+            "Aucune enquête en cours. Envoie /enquete, puis la créative, puis le prompt.",
           );
           return;
         }
-        if (session.urls.length < 2) {
+        if (session.step === "awaiting_creative") {
           await telegramSendMessage(
             chatId,
-            `Pas assez de liens (${session.urls.length}). Envoie au moins 2 références, idéalement 5–8, puis /enquete_ok.`,
+            "J’attends d’abord la créative Facebook (PNG/JPG).",
           );
           return;
         }
         await telegramSendMessage(
           chatId,
-          `Lancement enquête : ${session.subject}\n${session.urls.length} sources. Patience (plusieurs minutes).`,
+          "Pas besoin de /enquete_ok. Envoie maintenant ton prompt complet (un seul message).",
         );
-        try {
-          const { publishInvestigation } = await import("@/lib/investigation");
-          await publishInvestigation({
-            subject: session.subject,
-            urls: session.urls,
-            notify: telegramNotifier(chatId),
-          });
-          await clearInvestigationSession();
-        } catch (err) {
-          await telegramSendMessage(
-            chatId,
-            `❌ Enquête : ${err instanceof Error ? err.message : "échec"}`,
-          );
-        }
         return;
       }
 
-      const subject = text.replace(/^\/enquete\S*/i, "").trim();
-      if (subject.length < 8) {
-        await telegramSendMessage(
-          chatId,
-          [
-            "Usage :",
-            "/enquete Sébastien Delogu fins de mois",
-            "",
-            "Ensuite colle plusieurs liens (un message ou plusieurs).",
-            "Quand c’est bon : /enquete_ok",
-          ].join("\n"),
-        );
-        return;
-      }
-      await startInvestigationSession(chatId, subject);
+      await startInvestigationSession(chatId);
       await telegramSendMessage(
         chatId,
         [
-          `Enquête prête : ${subject}`,
+          "Enquête : envoie maintenant la créative Facebook (PNG/JPG), comme d’habitude.",
           "",
-          "Envoie maintenant tes liens de référence (plusieurs URLs, autant que possible).",
-          "HATVP, articles de presse, Assemblée, déclarations…",
-          "",
-          "Puis /enquete_ok pour lancer la rédaction longue.",
+          "Ensuite je te demanderai un prompt complet.",
           "/enquete_cancel pour abandonner.",
         ].join("\n"),
       );
@@ -413,24 +391,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    {
-      const {
-        addInvestigationUrls,
-        extractAllHttpUrls,
-        getInvestigationSession,
-      } = await import("@/lib/investigation-draft");
-      const inv = await getInvestigationSession(chatId);
-      const invUrls = text ? extractAllHttpUrls(text) : [];
-      if (inv && invUrls.length && !cmd.startsWith("/")) {
-        const updated = await addInvestigationUrls(chatId, invUrls);
-        await telegramSendMessage(
-          chatId,
-          `+${invUrls.length} lien(s). Total : ${updated?.urls.length || invUrls.length}.\nEncore des sources ? Envoie-les. Sinon /enquete_ok.`,
-        );
-        return;
-      }
-    }
-
     let fileId: string | null = null;
     if (message.photo?.length) {
       fileId = pickLargestPhoto(message.photo);
@@ -442,6 +402,105 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     const manualCaption = (message.caption || "").trim();
+
+    {
+      const {
+        clearInvestigationSession,
+        getInvestigationSession,
+        setInvestigationCreative,
+      } = await import("@/lib/investigation-draft");
+      const inv = await getInvestigationSession(chatId);
+      if (inv) {
+        if (fileId) {
+          await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
+          const image = await telegramDownloadFile(fileId);
+          let headline = manualCaption;
+          if (!headline) {
+            try {
+              headline = await extractHeadlineFromCreative(image);
+              await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
+            } catch (err) {
+              console.error("investigation headline", err);
+              headline = "Enquête Le Rempart";
+              await telegramSendMessage(
+                chatId,
+                "Titre illisible sur la créative — on continue. Envoie le prompt.",
+              );
+            }
+          }
+          await setInvestigationCreative(chatId, {
+            fileId,
+            imageMime: image.mime,
+            headline,
+          });
+          await telegramSendMessage(
+            chatId,
+            [
+              "Tape un prompt complet sur ton enquête.",
+              "Donne-moi les infos que tu as en amont, les liens éventuels, donne-moi des directives pour que je cherche, un angle d’attaque du dossier, etc.",
+              "",
+              "Envoie tout d’un seul bloc.",
+              "/enquete_cancel pour abandonner.",
+            ].join("\n"),
+          );
+          return;
+        }
+
+        if (inv.step === "awaiting_creative") {
+          await telegramSendMessage(
+            chatId,
+            "J’attends d’abord la créative Facebook (PNG/JPG).\n/enquete_cancel pour abandonner.",
+          );
+          return;
+        }
+
+        if (inv.step === "awaiting_prompt" && text && !cmd.startsWith("/")) {
+          if (text.trim().length < 40) {
+            await telegramSendMessage(
+              chatId,
+              "Prompt trop court. Un seul message, avec infos, liens éventuels, angle et directives de recherche.",
+            );
+            return;
+          }
+          if (!inv.fileId) {
+            await telegramSendMessage(
+              chatId,
+              "Il me manque la créative. Renvoie une image PNG/JPG, puis le prompt.",
+            );
+            return;
+          }
+          await telegramSendMessage(
+            chatId,
+            "Prompt reçu. Lancement de l’enquête (recherche + rédaction, plusieurs minutes)…",
+          );
+          try {
+            const image = await telegramDownloadFile(inv.fileId);
+            const { publishInvestigation } = await import(
+              "@/lib/investigation"
+            );
+            await publishInvestigation({
+              prompt: text,
+              headline: inv.headline,
+              creative: { buffer: image.buffer, mime: image.mime },
+              notify: telegramNotifier(chatId),
+            });
+            await clearInvestigationSession();
+          } catch (err) {
+            await telegramSendMessage(
+              chatId,
+              `❌ Enquête : ${err instanceof Error ? err.message : "échec"}`,
+            );
+          }
+          return;
+        }
+
+        await telegramSendMessage(
+          chatId,
+          "J’attends le prompt complet de l’enquête (un seul message).\n/enquete_cancel pour abandonner.",
+        );
+        return;
+      }
+    }
 
     // ── Étape 1 : créative → demande URL illustration ──
     if (fileId) {

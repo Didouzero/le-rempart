@@ -4,8 +4,12 @@ import { newsletterShell } from "@/lib/email";
 import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { moonshotChat } from "@/lib/moonshot";
 import { prisma } from "@/lib/prisma";
-import { searchWebForSubject, type WebSearchHit } from "@/lib/research/web-search";
 import { absoluteUrl, SITE_NAME } from "@/lib/seo";
+import {
+  fetchSpittinVeille,
+  sameStory,
+  type SpittinVeilleArticle,
+} from "@/lib/spittin-veille";
 
 export type BriefItem = {
   title: string;
@@ -15,50 +19,71 @@ export type BriefItem = {
   kind: "site" | "veille";
 };
 
-const VEILLE_QUERIES = [
-  "actualité droite France aujourd'hui",
-  "scandale gouvernement France",
-  "polémique gauche France Assemblée",
-  "immigration France actualité",
-  "dépenses publiques gabegie France",
-];
-
-function fold(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function tooSimilar(a: string, b: string): boolean {
-  const ta = new Set(fold(a).split(" ").filter((w) => w.length > 4));
-  const tb = fold(b).split(" ").filter((w) => w.length > 4);
-  if (ta.size === 0) return false;
-  const hits = tb.filter((w) => ta.has(w)).length;
-  return hits >= 3;
-}
-
-async function fetchVeilleHits(): Promise<WebSearchHit[]> {
-  const batches = await Promise.all(
-    VEILLE_QUERIES.map((q) =>
-      searchWebForSubject({ subject: q, fast: true }).catch(
-        () => [] as WebSearchHit[],
-      ),
-    ),
-  );
-  const seen = new Set<string>();
-  const out: WebSearchHit[] = [];
-  for (const hits of batches) {
-    for (const h of hits) {
-      const key = (h.url.split("?")[0] || h.title).toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(h);
-    }
+function heuristicDedupe(
+  rows: SpittinVeilleArticle[],
+  blocked: string[],
+): SpittinVeilleArticle[] {
+  const out: SpittinVeilleArticle[] = [];
+  for (const row of rows) {
+    if (blocked.some((t) => sameStory(t, row.title))) continue;
+    if (out.some((x) => sameStory(x.title, row.title))) continue;
+    out.push(row);
   }
   return out;
+}
+
+async function pickDistinctVeille(
+  rows: SpittinVeilleArticle[],
+  blockedTitles: string[],
+  want: number,
+): Promise<SpittinVeilleArticle[]> {
+  const unique = heuristicDedupe(rows, blockedTitles);
+  if (unique.length <= want || !process.env.MOONSHOT_API_KEY) {
+    return unique.slice(0, want);
+  }
+
+  try {
+    const payload = unique
+      .slice(0, 40)
+      .map((r, i) => `#${i} [${r.source_name}] ${r.title}`);
+    const raw = await moonshotChat({
+      model: getKimiTextModel(),
+      maxTokens: 800,
+      timeoutMs: 25_000,
+      reasoningEffort: "low",
+      messages: [
+        {
+          role: "system",
+          content: `Tu sélectionnes des SUJETS DISTINCTS pour un brief d'actualité.
+Si plusieurs titres parlent de la MÊME affaire (même personne + même événement, sources différentes), n'en garde QU'UN (le plus informatif).
+Écarte tout ce qui est trop proche des titres déjà retenus (liste « déjà »).
+Réponds UNIQUEMENT JSON : {"keep":[0,3,5]} indices parmi la liste numérotée, au plus ${want} indices.`,
+        },
+        {
+          role: "user",
+          content: `Déjà retenus (ne pas répéter) :\n${blockedTitles.map((t) => `- ${t}`).join("\n") || "(aucun)"}\n\nCandidats :\n${payload.join("\n")}`,
+        },
+      ],
+    });
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    const parsed = JSON.parse(raw.slice(start, end + 1)) as { keep?: number[] };
+    const keep = [...new Set((parsed.keep || []).map((n) => Number(n)))].filter(
+      (n) => Number.isFinite(n) && n >= 0 && n < unique.length,
+    );
+    const picked: SpittinVeilleArticle[] = [];
+    for (const i of keep) {
+      const row = unique[i];
+      if (!row) continue;
+      if (picked.some((p) => sameStory(p.title, row.title))) continue;
+      picked.push(row);
+      if (picked.length >= want) break;
+    }
+    if (picked.length > 0) return picked.slice(0, want);
+  } catch (err) {
+    console.error("newsletter veille cluster", err);
+  }
+  return unique.slice(0, want);
 }
 
 async function blurbsForItems(
@@ -139,42 +164,38 @@ export async function buildTenPointBrief(): Promise<BriefItem[]> {
   }));
 
   const siteTitles = siteItems.map((s) => s.title);
-  const veille: BriefItem[] = [];
-  try {
-    const hits = await fetchVeilleHits();
-    for (const h of hits) {
-      if (veille.length >= 8) break;
-      if (siteTitles.some((t) => tooSimilar(t, h.title))) continue;
-      if (veille.some((v) => tooSimilar(v.title, h.title))) continue;
-      veille.push({
-        title: h.title.slice(0, 180),
-        blurb: (h.snippet || h.title).slice(0, 280),
-        href: h.url,
-        section: categoryLabel(
-          classifyArticleCategory({
-            title: h.title,
-            excerpt: h.snippet,
-          }),
-        ),
-        kind: "veille",
-      });
-    }
-  } catch (err) {
-    console.error("newsletter veille search", err);
-  }
-
   const needVeille = Math.max(0, 10 - siteItems.length);
-  const pickedVeille = veille.slice(0, Math.max(needVeille, 5)).slice(0, 10);
-  const combined = [...siteItems, ...pickedVeille].slice(0, 10);
-
-  if (combined.length === 0) return [];
-  while (combined.length < 10 && veille.length > combined.length - siteItems.length) {
-    const next = veille[combined.length - siteItems.length];
-    if (next) combined.push(next);
-    else break;
+  let veille: BriefItem[] = [];
+  try {
+    const feed = await fetchSpittinVeille(30);
+    const picked = await pickDistinctVeille(
+      feed,
+      siteTitles,
+      Math.max(needVeille, 5),
+    );
+    veille = picked.map((h) => ({
+      title: h.title.slice(0, 180),
+      blurb: h.title.slice(0, 280),
+      href: h.url,
+      section: categoryLabel(
+        classifyArticleCategory({
+          title: h.title,
+          excerpt: (h.keywords || []).join(" "),
+        }),
+      ),
+      kind: "veille" as const,
+    }));
+  } catch (err) {
+    console.error("newsletter spittin veille", err);
   }
 
-  return combined.slice(0, 10);
+  const combined: BriefItem[] = [];
+  for (const it of [...siteItems, ...veille]) {
+    if (combined.some((c) => sameStory(c.title, it.title))) continue;
+    combined.push(it);
+    if (combined.length >= 10) break;
+  }
+  return combined;
 }
 
 export async function renderBriefVariants(base: BriefItem[]): Promise<{
