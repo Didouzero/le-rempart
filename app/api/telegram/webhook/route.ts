@@ -533,8 +533,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             await telegramSendMessage(
               chatId,
               inv.replaceDossierId
-                ? "Prompt reçu. Réécriture intégrale (même lien). Recherche web réelle, jusqu’à 1 heure — pas de raccourci sur le brief."
-                : "Prompt reçu. Lancement de l’enquête. Recherche web réelle, jusqu’à 1 heure — pas de raccourci sur le brief.",
+                ? "Prompt reçu. Réécriture intégrale (même lien). Recherche web réelle, pas de limite de durée, pas de raccourci sur le brief."
+                : "Prompt reçu. Lancement de l’enquête. Recherche web réelle, pas de limite de durée, pas de raccourci sur le brief.",
             );
             try {
               const { createInvestigationJob, kickInvestigationJob } =

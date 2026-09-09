@@ -28,7 +28,7 @@ import { absoluteUrl } from "@/lib/seo";
 import { telegramDownloadFile, telegramSendMessage } from "@/lib/telegram";
 import { runWritingAgent } from "@/lib/writing/agent";
 
-export const INVESTIGATION_MAX_MS = 60 * 60 * 1000;
+/** Budget d’un round Vercel (maxDuration 300s) — pas une limite sur l’enquête. */
 const SLICE_MS = 230_000;
 const LOCK_STALE_MS = 280_000;
 const WATCHDOG_MS = 240_000;
@@ -272,10 +272,6 @@ export function authorizeInvestigationJobRequest(
   return Boolean(bodyToken && bodyToken === job.token);
 }
 
-function jobExpired(job: InvestigationJob): boolean {
-  return Date.now() - job.startedAt >= INVESTIGATION_MAX_MS;
-}
-
 function jobLocked(job: InvestigationJob): boolean {
   return Boolean(
     job.runningSince && Date.now() - job.runningSince < LOCK_STALE_MS,
@@ -316,17 +312,14 @@ function ensureDossierFromSources(job: InvestigationJob): void {
 function researchReadyToWrite(job: InvestigationJob): boolean {
   const web = webSources(job.checkpoint.sources);
   if (web.length < 2) return false;
-  if (jobExpired(job)) {
-    ensureDossierFromSources(job);
-  }
-  if (!job.checkpoint.dossier) return false;
-  if (job.checkpoint.researchComplete) return true;
-  if (job.checkpoint.researchPass >= MAX_RESEARCH_PASSES) return true;
-  if (job.checkpoint.emptyCollects >= 2 && job.checkpoint.researchPass >= 1) {
-    return true;
-  }
-  if (jobExpired(job)) return true;
-  return false;
+  const complete = Boolean(
+    job.checkpoint.researchComplete ||
+      job.checkpoint.researchPass >= MAX_RESEARCH_PASSES ||
+      (job.checkpoint.emptyCollects >= 2 && job.checkpoint.researchPass >= 1),
+  );
+  if (!complete) return false;
+  if (!job.checkpoint.dossier) ensureDossierFromSources(job);
+  return Boolean(job.checkpoint.dossier);
 }
 
 async function researchSlice(
@@ -343,7 +336,7 @@ async function researchSlice(
 
   await notifyJob(
     job,
-    `Recherche web réelle (round ${job.sliceIndex}, ${elapsedLabel(job.startedAt)}). Pas de raccourci sur le brief.`,
+    `Recherche web réelle (round ${job.sliceIndex}, ${elapsedLabel(job.startedAt)}). Pas de limite de durée, pas de raccourci sur le brief.`,
   );
 
   const collect = await collectDeepSources({
@@ -559,49 +552,16 @@ export async function processInvestigationSlice(
   job.sliceIndex += 1;
   await saveInvestigationJob(job);
 
-  const deadlineAt = Math.min(
-    Date.now() + SLICE_MS,
-    job.startedAt + INVESTIGATION_MAX_MS,
-  );
+  const deadlineAt = Date.now() + SLICE_MS;
 
   try {
-    if (jobExpired(job) && job.phase === "research") {
-      if (researchReadyToWrite(job)) {
-        job.checkpoint.researchComplete = true;
-        job.phase = "writing";
-        await notifyJob(
-          job,
-          "Plafond 1 h : on rédige maintenant avec les sources web déjà collectées (pas le brief seul).",
-        );
-      } else {
-        await failJob(
-          job,
-          "Délai d’une heure écoulé sans assez de recherche web. Rien n’a été rédigé à partir du brief.",
-        );
-        return { continue: false, phase: "failed" };
-      }
-    }
-
     if (job.phase === "research") {
       await researchSlice(job, deadlineAt);
       if (researchReadyToWrite(job)) {
         job.checkpoint.researchComplete = true;
         job.phase = "writing";
-      } else if (jobExpired(job)) {
-        await failJob(
-          job,
-          "Délai d’une heure écoulé sans assez de recherche web. Rien n’a été rédigé à partir du brief.",
-        );
-        return { continue: false, phase: "failed" };
       }
     } else if (job.phase === "writing") {
-      if (jobExpired(job) && !job.checkpoint.article) {
-        await failJob(
-          job,
-          "Délai d’une heure écoulé pendant la rédaction. L’enquête n’a pas été publiée.",
-        );
-        return { continue: false, phase: "failed" };
-      }
       await writingSlice(job, deadlineAt);
     }
 
@@ -633,13 +593,6 @@ export async function runInvestigationWatchdog(jobId: string): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, WATCHDOG_MS));
   const job = await loadInvestigationJob(jobId);
   if (!job || job.phase === "done" || job.phase === "failed") return;
-  if (jobExpired(job) && job.phase === "research" && !researchReadyToWrite(job)) {
-    await failJob(
-      job,
-      "Délai d’une heure écoulé sans assez de recherche web. Rien n’a été rédigé à partir du brief.",
-    );
-    return;
-  }
   if (investigationJobNeedsResume(job)) {
     await kickInvestigationJob(jobId, "slice");
   }

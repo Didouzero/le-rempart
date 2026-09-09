@@ -65,7 +65,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
   async function onRegenerate() {
     if (
       !window.confirm(
-        "Réécrire ENTIÈREMENT cette enquête (même lien) ? L’ancien texte sera remplacé. Recherche web réelle, jusqu’à 1 heure — tu peux laisser l’onglet ouvert.",
+        "Réécrire ENTIÈREMENT cette enquête (même lien) ? L’ancien texte sera remplacé. Recherche web réelle, sans limite de durée — tu peux laisser l’onglet ouvert.",
       )
     ) {
       return;
@@ -76,7 +76,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
     }
     setRegenerating(true);
     setError("");
-    setMessage("Régénération lancée (recherche web, jusqu’à 1 h). Tu peux laisser l’onglet ouvert.");
+    setMessage("Régénération lancée (recherche web, sans limite de durée). Tu peux laisser l’onglet ouvert.");
     try {
       const response = await fetch(
         `/api/admin/dossiers/${dossierId}/regenerate`,
@@ -95,8 +95,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
       if (!jobId || !token) {
         throw new Error("Job de régénération non créé");
       }
-      const deadline = Date.now() + 65 * 60 * 1000;
-      while (Date.now() < deadline) {
+      for (;;) {
         await new Promise((r) => setTimeout(r, 8000));
         const statusRes = await fetch(
           `/api/jobs/investigation?id=${encodeURIComponent(jobId)}&token=${encodeURIComponent(token)}`,
@@ -117,7 +116,6 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
           throw new Error(status.error || "Régénération échouée");
         }
       }
-      throw new Error("Toujours en cours après 1 h. Vérifie Telegram / recharge la page.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de régénération");
       setMessage("");
@@ -175,8 +173,8 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
       </button>
       <p className="text-xs text-muted">
         Même URL publique. Pas de nouveau post Facebook. Recherche web réelle,
-        jusqu’à 1 heure — jamais une rédaction à partir du seul brief. Cible :
-        4000 mots.
+        sans limite de durée — jamais une rédaction à partir du seul brief.
+        Cible : 4000 mots.
       </p>
       <label className="block text-sm font-semibold">
         Titre
