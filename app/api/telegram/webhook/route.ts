@@ -533,33 +533,33 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             await telegramSendMessage(
               chatId,
               inv.replaceDossierId
-                ? "Prompt reçu. Réécriture intégrale (même lien, plusieurs minutes)…"
-                : "Prompt reçu. Lancement de l’enquête (recherche + rédaction, plusieurs minutes)…",
+                ? "Prompt reçu. Réécriture intégrale (même lien). Recherche web réelle, jusqu’à 1 heure — pas de raccourci sur le brief."
+                : "Prompt reçu. Lancement de l’enquête. Recherche web réelle, jusqu’à 1 heure — pas de raccourci sur le brief.",
             );
             try {
-              if (inv.replaceDossierId) {
-                const { rewriteInvestigation } = await import(
-                  "@/lib/investigation"
-                );
-                await rewriteInvestigation({
-                  dossierId: inv.replaceDossierId,
-                  prompt,
-                  headline: inv.headline,
-                  notify: telegramNotifier(chatId),
-                });
-              } else {
-                const image = await telegramDownloadFile(inv.fileId!);
-                const { publishInvestigation } = await import(
-                  "@/lib/investigation"
-                );
-                await publishInvestigation({
-                  prompt,
-                  headline: inv.headline,
-                  creative: { buffer: image.buffer, mime: image.mime },
-                  notify: telegramNotifier(chatId),
-                });
-              }
+              const { createInvestigationJob, kickInvestigationJob } =
+                await import("@/lib/investigation-job");
+              const job = await createInvestigationJob(
+                inv.replaceDossierId
+                  ? {
+                      kind: "rewrite",
+                      prompt,
+                      headline: inv.headline,
+                      dossierId: inv.replaceDossierId,
+                      chatId,
+                    }
+                  : {
+                      kind: "create",
+                      prompt,
+                      headline: inv.headline,
+                      fileId: inv.fileId,
+                      imageMime: inv.imageMime,
+                      chatId,
+                    },
+              );
               await clearInvestigationSession();
+              await kickInvestigationJob(job.id, "slice");
+              await kickInvestigationJob(job.id, "watchdog");
             } catch (err) {
               await telegramSendMessage(
                 chatId,

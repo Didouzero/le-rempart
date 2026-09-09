@@ -19,6 +19,8 @@ export type WritingAgentInput = {
   investigation?: boolean;
   /** Prompt / .txt de l'éditeur : question centrale, angle, directives. */
   editorialBrief?: string;
+  /** Une seule tentative, bornée (job enquête multi-rounds). */
+  timeoutMs?: number;
 };
 
 export type { WritingAgentResult };
@@ -306,7 +308,14 @@ export async function runWritingAgent(
     .join("\n\n");
 
   const attempts: Array<{ timeoutMs: number; maxTokens: number; model?: string }> =
-    investigation
+    input.timeoutMs
+      ? [
+          {
+            timeoutMs: Math.max(60_000, input.timeoutMs),
+            maxTokens: investigation ? 20000 : 6500,
+          },
+        ]
+      : investigation
       ? [
           { timeoutMs: 165_000, maxTokens: 20000 },
           { timeoutMs: 150_000, maxTokens: 16000, model: "kimi-k2.6" },

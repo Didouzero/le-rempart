@@ -177,6 +177,7 @@ export async function buildDossierFromDocuments(input: {
   secondaryCaption?: string;
   /** Timeouts plus courts (chemin Telegram / Vercel). */
   fast?: boolean;
+  deadlineAt?: number;
 }): Promise<ResearchDossier> {
   const base = emptyResearchDossier(input.subject, input.sourceUrl);
   base.sources = input.sources;
@@ -228,7 +229,14 @@ export async function buildDossierFromDocuments(input: {
    * dossier compact abouti qu'un JSON riche coupé par le timeout : quand le
    * builder échoue, le pipeline retombe sur le legacy sans dossier du tout.
    */
-  const   attempts: Array<{
+  if (input.deadlineAt && input.deadlineAt - Date.now() < 55_000) {
+    base.missingInformation.push(
+      "Construction du dossier reportée : budget temps du round écoulé.",
+    );
+    return base;
+  }
+
+  const attempts: Array<{
     model: string;
     profile: BuildProfile;
     maxTokens: number;
@@ -281,6 +289,9 @@ export async function buildDossierFromDocuments(input: {
   for (let attempt = 0; attempt < attempts.length; attempt += 1) {
     const { model, profile, maxTokens, timeoutMs, corpusChars } =
       attempts[attempt]!;
+    if (input.deadlineAt && Date.now() + timeoutMs + 8_000 >= input.deadlineAt) {
+      continue;
+    }
     const perDoc = Math.max(1800, Math.floor(corpusChars / usable.length));
     const userContent = [
       `Sujet à documenter : ${input.subject}`,
@@ -322,6 +333,12 @@ export async function buildDossierFromDocuments(input: {
       lastErr = err;
       console.error("research build attempt failed", model, profile, err);
     }
+  }
+  if (!lastErr) {
+    base.missingInformation.push(
+      "Construction du dossier reportée : budget temps du round écoulé.",
+    );
+    return base;
   }
   throw lastErr instanceof Error
     ? lastErr

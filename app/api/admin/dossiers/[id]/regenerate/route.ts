@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDossierBrief } from "@/lib/investigation-draft";
-import { rewriteInvestigation } from "@/lib/investigation";
+import {
+  createInvestigationJob,
+  kickInvestigationJob,
+} from "@/lib/investigation-job";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -37,13 +40,20 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
-    const result = await rewriteInvestigation({
-      dossierId: id,
+    const job = await createInvestigationJob({
+      kind: "rewrite",
       prompt,
       headline: existing.title,
+      dossierId: id,
     });
-    const dossier = await prisma.specialDossier.findUnique({ where: { id } });
-    return NextResponse.json({ ...result, dossier });
+    await kickInvestigationJob(job.id, "slice");
+    await kickInvestigationJob(job.id, "watchdog");
+
+    return NextResponse.json({
+      jobId: job.id,
+      token: job.token,
+      accepted: true,
+    });
   } catch (err) {
     console.error("dossier regenerate", err);
     return NextResponse.json(

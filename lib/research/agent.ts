@@ -37,14 +37,23 @@ export type ResearchAgentInput = PipelineSubject & {
   sourceFirst?: boolean;
   extraQueries?: string[];
   investigation?: boolean;
+  /** Stopper proprement avant la limite Vercel pour enchaîner un autre round. */
+  deadlineAt?: number;
+  alreadyHaveUrls?: string[];
 };
 
 export type ResearchAgentResult = {
   dossier: ResearchDossier;
   quality: DossierQualityReport;
+  complete: boolean;
 };
 
 const DEFAULT_MAX_PASSES = 2;
+
+function remainingMs(deadlineAt?: number): number {
+  if (!deadlineAt) return Number.POSITIVE_INFINITY;
+  return deadlineAt - Date.now();
+}
 
 function applyQuality(
   dossier: ResearchDossier,
@@ -63,10 +72,7 @@ export async function runResearchAgent(
   const investigation = Boolean(input.investigation);
   const maxPasses = Math.max(
     1,
-    Math.min(
-      input.maxPasses ?? DEFAULT_MAX_PASSES,
-      investigation ? 1 : 3,
-    ),
+    Math.min(input.maxPasses ?? DEFAULT_MAX_PASSES, 3),
   );
 
   // Caption / titre seuls doivent suffire : recherche web → scrape ou snippets.
@@ -84,7 +90,9 @@ export async function runResearchAgent(
     extraQueries: input.extraQueries,
     fast: input.fast,
     skipWebSearch,
-    deepLimit: investigation ? 6 : undefined,
+    deepLimit: investigation ? 12 : undefined,
+    alreadyHaveUrls: input.alreadyHaveUrls,
+    deadlineAt: input.deadlineAt,
   });
 
   // Rattrapage entités : si presque rien ne parle du sujet, on relance
@@ -111,6 +119,7 @@ export async function runResearchAgent(
           extraQueries: focusedQueries,
           alreadyHaveUrls: firstCollect.sources.map((s) => s.url),
           fast: input.fast,
+          deadlineAt: input.deadlineAt,
         });
         for (const s of rescue.sources) {
           if (
@@ -133,6 +142,7 @@ export async function runResearchAgent(
     sources: firstCollect.sources,
     secondaryCaption: input.caption,
     fast: input.fast,
+    deadlineAt: input.deadlineAt,
   });
   dossier.researchPasses = 1;
 
@@ -140,6 +150,15 @@ export async function runResearchAgent(
   applyQuality(dossier, quality);
 
   for (let pass = 2; pass <= maxPasses; pass += 1) {
+    if (remainingMs(input.deadlineAt) < 25_000) {
+      dossier.qualityNotes = [
+        ...(dossier.qualityNotes || []),
+        "Enrichissement reporté : budget temps du round écoulé.",
+      ];
+      applyQuality(dossier, quality);
+      dossier.coverage = computeDossierCoverage(dossier);
+      return { dossier, quality, complete: false };
+    }
     if (!shouldEnrichDossier(quality)) break;
     if (quality.nextQueries.length === 0 && quality.missing.length === 0) break;
 
@@ -153,6 +172,7 @@ export async function runResearchAgent(
       ],
       alreadyHaveUrls: dossier.sources.map((s) => s.url),
       fast: input.fast,
+      deadlineAt: input.deadlineAt,
     });
 
     // Arrêt strict : uniquement des sources fiables (tier ≤ 8, scrapées).
@@ -173,6 +193,7 @@ export async function runResearchAgent(
       focusQueries: quality.nextQueries,
       secondaryCaption: input.caption,
       fast: input.fast,
+      deadlineAt: input.deadlineAt,
     });
     patch.researchPasses = 1;
 
@@ -186,7 +207,7 @@ export async function runResearchAgent(
   // Couverture finale même si quality déjà posée
   dossier.coverage = computeDossierCoverage(dossier);
 
-  return { dossier, quality };
+  return { dossier, quality, complete: true };
 }
 
 /** Sérialise le dossier pour le writer (consommateur du savoir). */

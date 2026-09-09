@@ -65,7 +65,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
   async function onRegenerate() {
     if (
       !window.confirm(
-        "Réécrire ENTIÈREMENT cette enquête (même lien) ? L’ancien texte sera remplacé. Ça prend plusieurs minutes : ne ferme pas l’onglet.",
+        "Réécrire ENTIÈREMENT cette enquête (même lien) ? L’ancien texte sera remplacé. Recherche web réelle, jusqu’à 1 heure — tu peux laisser l’onglet ouvert.",
       )
     ) {
       return;
@@ -76,7 +76,7 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
     }
     setRegenerating(true);
     setError("");
-    setMessage("Régénération en cours (recherche + rédaction, 5 à 10 min)…");
+    setMessage("Régénération lancée (recherche web, jusqu’à 1 h). Tu peux laisser l’onglet ouvert.");
     try {
       const response = await fetch(
         `/api/admin/dossiers/${dossierId}/regenerate`,
@@ -90,13 +90,34 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
       if (!response.ok) {
         throw new Error(data.error || "Régénération impossible");
       }
-      if (data.dossier) {
-        setTitle(data.dossier.title || title);
-        setExcerpt(data.dossier.excerpt || excerpt);
-        setContent(data.dossier.content || content);
+      const jobId = data.jobId as string;
+      const token = data.token as string;
+      if (!jobId || !token) {
+        throw new Error("Job de régénération non créé");
       }
-      setMessage("Enquête réécrite. Relis avant de partager le lien.");
-      router.refresh();
+      const deadline = Date.now() + 65 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 8000));
+        const statusRes = await fetch(
+          `/api/jobs/investigation?id=${encodeURIComponent(jobId)}&token=${encodeURIComponent(token)}`,
+        );
+        const status = await statusRes.json();
+        if (!statusRes.ok) {
+          throw new Error(status.error || "Suivi impossible");
+        }
+        if (status.progress) {
+          setMessage(status.progress);
+        }
+        if (status.phase === "done") {
+          setMessage("Enquête réécrite. Relis avant de partager le lien.");
+          router.refresh();
+          return;
+        }
+        if (status.phase === "failed") {
+          throw new Error(status.error || "Régénération échouée");
+        }
+      }
+      throw new Error("Toujours en cours après 1 h. Vérifie Telegram / recharge la page.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur de régénération");
       setMessage("");
@@ -149,12 +170,13 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
         onClick={onRegenerate}
       >
         {regenerating
-          ? "Régénération… ne ferme pas l’onglet"
+          ? "Régénération… tu peux laisser l’onglet ouvert"
           : "Réécrire entièrement avec Kimi"}
       </button>
       <p className="text-xs text-muted">
-        Même URL publique. Pas de nouveau post Facebook. Compte 5 à 10 minutes.
-        Cible : 4000 mots minimum.
+        Même URL publique. Pas de nouveau post Facebook. Recherche web réelle,
+        jusqu’à 1 heure — jamais une rédaction à partir du seul brief. Cible :
+        4000 mots.
       </p>
       <label className="block text-sm font-semibold">
         Titre

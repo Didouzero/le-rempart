@@ -64,7 +64,7 @@ export async function scrapeInvestigationSources(
   };
 }
 
-async function publishInvestigationFacebook(input: {
+export async function publishInvestigationFacebook(input: {
   title: string;
   excerpt: string;
   content: string;
@@ -241,6 +241,94 @@ export async function draftInvestigationArticle(input: {
   };
 }
 
+export async function persistRewrittenInvestigation(input: {
+  dossierId: string;
+  prompt: string;
+  title: string;
+  excerpt: string;
+  content: string;
+}): Promise<{ slug: string; title: string; url: string }> {
+  const existing = await prisma.specialDossier.findUnique({
+    where: { id: input.dossierId },
+  });
+  if (!existing) {
+    throw new Error("Enquête introuvable.");
+  }
+
+  const author = await allocateNextAuthorName();
+  const datedContent = [
+    input.content,
+    "",
+    `*Enquête Le Rempart — ${author}.*`,
+  ].join("\n");
+
+  await prisma.specialDossier.update({
+    where: { id: existing.id },
+    data: {
+      title: input.title,
+      excerpt: input.excerpt.slice(0, 1500),
+      content: datedContent,
+      publishedAt: existing.publishedAt ?? new Date(),
+    },
+  });
+  await saveDossierBrief(existing.id, input.prompt);
+
+  return {
+    slug: existing.slug,
+    title: input.title,
+    url: absoluteUrl(`/dossiers/${existing.slug}`),
+  };
+}
+
+export async function persistNewInvestigationDossier(input: {
+  prompt: string;
+  title: string;
+  excerpt: string;
+  content: string;
+}): Promise<{
+  id: string;
+  slug: string;
+  title: string;
+  url: string;
+}> {
+  const cover = await withTimeout(
+    resolveRelevantCoverUrl({
+      title: input.title,
+      excerpt: input.excerpt,
+    }),
+    28_000,
+    "Timeout illustration",
+  ).catch(() => null);
+
+  const slug = await uniqueDossierSlug(input.title);
+  const author = await allocateNextAuthorName();
+  const datedContent = [
+    input.content,
+    "",
+    `*Enquête Le Rempart — ${author}.*`,
+  ].join("\n");
+
+  const created = await prisma.specialDossier.create({
+    data: {
+      slug,
+      title: input.title,
+      excerpt: input.excerpt.slice(0, 1500),
+      content: datedContent,
+      coverImageUrl: cover,
+      membersOnly: true,
+      publishedAt: new Date(),
+    },
+  });
+  await saveDossierBrief(created.id, input.prompt);
+
+  return {
+    id: created.id,
+    slug,
+    title: input.title,
+    url: absoluteUrl(`/dossiers/${slug}`),
+  };
+}
+
 export async function rewriteInvestigation(input: {
   dossierId: string;
   prompt: string;
@@ -261,29 +349,15 @@ export async function rewriteInvestigation(input: {
     notify,
   });
 
-  const author = await allocateNextAuthorName();
-  const datedContent = [
-    drafted.content,
-    "",
-    `*Enquête Le Rempart — ${author}.*`,
-  ].join("\n");
-
-  await prisma.specialDossier.update({
-    where: { id: existing.id },
-    data: {
-      title: drafted.title,
-      excerpt: drafted.excerpt.slice(0, 1500),
-      content: datedContent,
-      publishedAt: existing.publishedAt ?? new Date(),
-    },
+  const saved = await persistRewrittenInvestigation({
+    dossierId: existing.id,
+    prompt: input.prompt,
+    title: drafted.title,
+    excerpt: drafted.excerpt,
+    content: drafted.content,
   });
-  await saveDossierBrief(existing.id, input.prompt);
-
-  const url = absoluteUrl(`/dossiers/${existing.slug}`);
-  await notify(
-    `Enquête réécrite (même lien).\n${drafted.title}\n${url}`,
-  );
-  return { slug: existing.slug, title: drafted.title, url };
+  await notify(`Enquête réécrite (même lien).\n${saved.title}\n${saved.url}`);
+  return saved;
 }
 
 export async function publishInvestigation(input: {
@@ -300,48 +374,23 @@ export async function publishInvestigation(input: {
   });
 
   await notify("Illustration site…");
-  const cover = await withTimeout(
-    resolveRelevantCoverUrl({
-      title: drafted.title,
-      excerpt: drafted.excerpt,
-    }),
-    28_000,
-    "Timeout illustration",
-  ).catch(() => null);
-
-  const slug = await uniqueDossierSlug(drafted.title);
-  const author = await allocateNextAuthorName();
-  const datedContent = [
-    drafted.content,
-    "",
-    `*Enquête Le Rempart — ${author}.*`,
-  ].join("\n");
-
-  const created = await prisma.specialDossier.create({
-    data: {
-      slug,
-      title: drafted.title,
-      excerpt: drafted.excerpt.slice(0, 1500),
-      content: datedContent,
-      coverImageUrl: cover,
-      membersOnly: true,
-      publishedAt: new Date(),
-    },
+  const saved = await persistNewInvestigationDossier({
+    prompt: input.prompt,
+    title: drafted.title,
+    excerpt: drafted.excerpt,
+    content: drafted.content,
   });
-  await saveDossierBrief(created.id, input.prompt);
-
-  const url = absoluteUrl(`/dossiers/${slug}`);
-  await notify(`Enquête publiée (Rempart+).\n${drafted.title}\n${url}`);
+  await notify(`Enquête publiée (Rempart+).\n${saved.title}\n${saved.url}`);
 
   await publishInvestigationFacebook({
     title: drafted.title,
     excerpt: drafted.excerpt,
     content: drafted.content,
-    articleUrl: url,
+    articleUrl: saved.url,
     sourceText: drafted.sourceText,
     creative: input.creative,
     notify,
   });
 
-  return { slug, title: drafted.title, url };
+  return saved;
 }

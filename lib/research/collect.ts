@@ -274,6 +274,7 @@ export async function collectDeepSources(input: {
   fast?: boolean;
   skipWebSearch?: boolean;
   deepLimit?: number;
+  deadlineAt?: number;
 }): Promise<{ sources: SourceDocument[]; seedNotes?: string }> {
   const seed = input.sourceText?.trim() || "";
   const isCaptionSeed =
@@ -349,6 +350,7 @@ export async function collectDeepSources(input: {
 
   // Scrape par vagues parallèles : même budget temps, plus de matière.
   for (let i = 0; i < selected.length; i += SCRAPE_CONCURRENCY) {
+    if (input.deadlineAt && Date.now() + 12_000 >= input.deadlineAt) break;
     const wave = selected.slice(i, i + SCRAPE_CONCURRENCY);
     const results = await Promise.all(
       wave.map((c) => scrapeCandidate(c).catch(() => null)),
