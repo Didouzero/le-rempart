@@ -142,6 +142,53 @@ export async function telegramDownloadFile(
   return { buffer, mime };
 }
 
+const PROMPT_FILE_MAX_BYTES = 400_000;
+
+export function isTelegramPromptDocument(doc?: {
+  file_id?: string;
+  mime_type?: string;
+  file_name?: string;
+  file_size?: number;
+}): boolean {
+  if (!doc?.file_id) return false;
+  const name = (doc.file_name || "").toLowerCase();
+  const mime = (doc.mime_type || "").toLowerCase();
+  if (name.endsWith(".txt") || name.endsWith(".md")) return true;
+  return (
+    mime === "text/plain" ||
+    mime === "text/markdown" ||
+    mime === "text/x-markdown"
+  );
+}
+
+/** Lit un .txt / .md Telegram en UTF-8 (prompt d'enquête trop long pour un message). */
+export async function telegramDownloadUtf8Text(input: {
+  fileId: string;
+  fileSize?: number;
+}): Promise<string> {
+  if (input.fileSize && input.fileSize > PROMPT_FILE_MAX_BYTES) {
+    throw new Error(
+      `Fichier trop lourd (${Math.round(input.fileSize / 1024)} Ko). Max ~400 Ko en .txt.`,
+    );
+  }
+  const { buffer } = await telegramDownloadFile(input.fileId);
+  if (buffer.length > PROMPT_FILE_MAX_BYTES) {
+    throw new Error("Fichier trop lourd. Max ~400 Ko en .txt.");
+  }
+  if (buffer.includes(0)) {
+    throw new Error("Ce fichier n’est pas du texte. Envoie un .txt (UTF-8).");
+  }
+  const text = buffer
+    .toString("utf8")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+  if (!text) {
+    throw new Error("Le fichier est vide.");
+  }
+  return text;
+}
+
 export type TelegramUpdate = {
   update_id: number;
   message?: {
@@ -166,6 +213,7 @@ export type TelegramUpdate = {
       file_id: string;
       mime_type?: string;
       file_name?: string;
+      file_size?: number;
     };
   };
   callback_query?: {

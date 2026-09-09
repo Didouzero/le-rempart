@@ -14,10 +14,12 @@ import {
   telegramNotifier,
 } from "@/lib/publish-pipeline";
 import {
+  isTelegramPromptDocument,
   isTelegramUserAllowed,
   pickLargestPhoto,
   telegramAnswerCallbackQuery,
   telegramDownloadFile,
+  telegramDownloadUtf8Text,
   telegramSendMessage,
   type TelegramUpdate,
 } from "@/lib/telegram";
@@ -71,7 +73,7 @@ function commandsHelpText(): string {
     "── Enquête Rempart+ (mercredi / samedi) ──",
     "/enquete — démarre une enquête",
     "1) Envoie la créative Facebook (PNG/JPG)",
-    "2) Envoie UN prompt complet (infos, liens, angle, directives de recherche)",
+    "2) Envoie le prompt : un message, ou un fichier .txt si c’est trop long",
     "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
     "/enquete_cancel — abandonner",
     "",
@@ -365,7 +367,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         }
         await telegramSendMessage(
           chatId,
-          "Pas besoin de /enquete_ok. Envoie maintenant ton prompt complet (un seul message).",
+          "Pas besoin de /enquete_ok. Envoie le prompt : un message, ou un fichier .txt.",
         );
         return;
       }
@@ -376,7 +378,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         [
           "Enquête : envoie maintenant la créative Facebook (PNG/JPG), comme d’habitude.",
           "",
-          "Ensuite je te demanderai un prompt complet.",
+          "Ensuite je te demanderai un prompt complet (message, ou fichier .txt si trop long).",
           "/enquete_cancel pour abandonner.",
         ].join("\n"),
       );
@@ -439,7 +441,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               "Tape un prompt complet sur ton enquête.",
               "Donne-moi les infos que tu as en amont, les liens éventuels, donne-moi des directives pour que je cherche, un angle d’attaque du dossier, etc.",
               "",
-              "Envoie tout d’un seul bloc.",
+              "Un seul message, ou un fichier .txt si c’est trop long pour Telegram.",
               "/enquete_cancel pour abandonner.",
             ].join("\n"),
           );
@@ -454,49 +456,77 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           return;
         }
 
-        if (inv.step === "awaiting_prompt" && text && !cmd.startsWith("/")) {
-          if (text.trim().length < 40) {
+        if (inv.step === "awaiting_prompt") {
+          let prompt = "";
+          const doc = message.document;
+          if (doc && isTelegramPromptDocument(doc)) {
+            try {
+              await telegramSendMessage(chatId, "Fichier reçu. Lecture du prompt…");
+              prompt = await telegramDownloadUtf8Text({
+                fileId: doc.file_id,
+                fileSize: doc.file_size,
+              });
+            } catch (err) {
+              await telegramSendMessage(
+                chatId,
+                `❌ Fichier : ${err instanceof Error ? err.message : "illisible"}\nEnvoie un .txt UTF-8, ou colle le texte.`,
+              );
+              return;
+            }
+          } else if (text && !cmd.startsWith("/")) {
+            prompt = text.trim();
+          } else if (doc) {
             await telegramSendMessage(
               chatId,
-              "Prompt trop court. Un seul message, avec infos, liens éventuels, angle et directives de recherche.",
+              "Pour le prompt, envoie un fichier .txt (ou .md), ou colle le texte.\n/enquete_cancel pour abandonner.",
             );
             return;
           }
-          if (!inv.fileId) {
+
+          if (prompt) {
+            if (prompt.length < 40) {
+              await telegramSendMessage(
+                chatId,
+                "Prompt trop court. Un message, ou un .txt, avec infos, liens éventuels, angle et directives de recherche.",
+              );
+              return;
+            }
+            if (!inv.fileId) {
+              await telegramSendMessage(
+                chatId,
+                "Il me manque la créative. Renvoie une image PNG/JPG, puis le prompt.",
+              );
+              return;
+            }
             await telegramSendMessage(
               chatId,
-              "Il me manque la créative. Renvoie une image PNG/JPG, puis le prompt.",
+              "Prompt reçu. Lancement de l’enquête (recherche + rédaction, plusieurs minutes)…",
             );
+            try {
+              const image = await telegramDownloadFile(inv.fileId);
+              const { publishInvestigation } = await import(
+                "@/lib/investigation"
+              );
+              await publishInvestigation({
+                prompt,
+                headline: inv.headline,
+                creative: { buffer: image.buffer, mime: image.mime },
+                notify: telegramNotifier(chatId),
+              });
+              await clearInvestigationSession();
+            } catch (err) {
+              await telegramSendMessage(
+                chatId,
+                `❌ Enquête : ${err instanceof Error ? err.message : "échec"}`,
+              );
+            }
             return;
           }
-          await telegramSendMessage(
-            chatId,
-            "Prompt reçu. Lancement de l’enquête (recherche + rédaction, plusieurs minutes)…",
-          );
-          try {
-            const image = await telegramDownloadFile(inv.fileId);
-            const { publishInvestigation } = await import(
-              "@/lib/investigation"
-            );
-            await publishInvestigation({
-              prompt: text,
-              headline: inv.headline,
-              creative: { buffer: image.buffer, mime: image.mime },
-              notify: telegramNotifier(chatId),
-            });
-            await clearInvestigationSession();
-          } catch (err) {
-            await telegramSendMessage(
-              chatId,
-              `❌ Enquête : ${err instanceof Error ? err.message : "échec"}`,
-            );
-          }
-          return;
         }
 
         await telegramSendMessage(
           chatId,
-          "J’attends le prompt complet de l’enquête (un seul message).\n/enquete_cancel pour abandonner.",
+          "J’attends le prompt de l’enquête : un message, ou un fichier .txt si c’est trop long.\n/enquete_cancel pour abandonner.",
         );
         return;
       }

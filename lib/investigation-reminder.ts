@@ -25,7 +25,7 @@ const REMINDER_TEXT = [
   "",
   "Quand tu veux : /enquete",
   "1) Envoie la créative Facebook",
-  "2) Envoie un prompt complet (infos, liens, angle, directives de recherche)",
+  "2) Envoie un prompt complet (message, ou fichier .txt si trop long)",
   "Je mène l’enquête, je publie le dossier Rempart+, et je poste la créative sur Facebook avec le lien en commentaire.",
   "",
   "/enquete_cancel pour abandonner un flux en cours.",
