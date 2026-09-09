@@ -142,7 +142,7 @@ export async function telegramDownloadFile(
   return { buffer, mime };
 }
 
-const PROMPT_FILE_MAX_BYTES = 400_000;
+const PROMPT_FILE_MAX_BYTES = 800_000;
 
 export function isTelegramPromptDocument(doc?: {
   file_id?: string;
@@ -168,12 +168,12 @@ export async function telegramDownloadUtf8Text(input: {
 }): Promise<string> {
   if (input.fileSize && input.fileSize > PROMPT_FILE_MAX_BYTES) {
     throw new Error(
-      `Fichier trop lourd (${Math.round(input.fileSize / 1024)} Ko). Max ~400 Ko en .txt.`,
+      `Fichier trop lourd (${Math.round(input.fileSize / 1024)} Ko). Max ~800 Ko en .txt.`,
     );
   }
   const { buffer } = await telegramDownloadFile(input.fileId);
   if (buffer.length > PROMPT_FILE_MAX_BYTES) {
-    throw new Error("Fichier trop lourd. Max ~400 Ko en .txt.");
+    throw new Error("Fichier trop lourd. Max ~800 Ko en .txt.");
   }
   if (buffer.includes(0)) {
     throw new Error("Ce fichier n’est pas du texte. Envoie un .txt (UTF-8).");

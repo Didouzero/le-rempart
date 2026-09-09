@@ -9,9 +9,8 @@ import {
 import { fetchSourceText } from "@/lib/fetch-source";
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
-  extraQueriesFromPrompt,
   extractAllHttpUrls,
-  subjectFromInvestigationPrompt,
+  extractInvestigationFocus,
 } from "@/lib/investigation-draft";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
@@ -189,23 +188,24 @@ export async function publishInvestigation(input: {
     );
   }
 
-  const subject = subjectFromInvestigationPrompt(prompt, input.headline);
+  const { subject, queries } = extractInvestigationFocus(prompt, input.headline);
   const urls = extractAllHttpUrls(prompt);
 
   await notify(
-    "Enquête : recherche autonome + lecture des liens du prompt.\nÇa peut prendre 3 à 8 minutes.",
+    `Sujet retenu : ${subject}\nRecherche autonome + lecture des liens du prompt.\nÇa peut prendre 3 à 8 minutes.`,
   );
 
   const scraped = await scrapeInvestigationSources(urls, notify);
-  const sourceText = [prompt, scraped.sourceText].filter(Boolean).join("\n\n").slice(
-    0,
-    32000,
-  );
+  const briefSlice = prompt.slice(0, 60000);
+  const scrapeBudget = Math.max(0, 80000 - briefSlice.length);
+  const sourceText = [briefSlice, scraped.sourceText.slice(0, scrapeBudget)]
+    .filter(Boolean)
+    .join("\n\n");
 
   const pipeline = await runEditorialPipeline(
     {
       title: subject,
-      caption: prompt.slice(0, 1500),
+      caption: prompt.slice(0, 4000),
       sourceUrl: scraped.primaryUrl || urls[0] || undefined,
       extraSourceUrls: urls.slice(scraped.primaryUrl ? 1 : 0, 10),
       sourceText,
@@ -215,7 +215,8 @@ export async function publishInvestigation(input: {
       fast: false,
       sourceFirst: false,
       investigation: true,
-      extraQueries: extraQueriesFromPrompt(prompt, subject),
+      extraQueries: queries,
+      editorialBrief: briefSlice,
       researchTimeoutMs: 200_000,
       writingTimeoutMs: 140_000,
       onProgress: notify,

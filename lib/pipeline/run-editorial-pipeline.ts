@@ -29,6 +29,8 @@ export type RunEditorialPipelineOptions = {
   sourceFirst?: boolean;
   extraQueries?: string[];
   investigation?: boolean;
+  /** Brief éditorial (prompt Telegram / .txt) — angle et question centrale. */
+  editorialBrief?: string;
   onProgress?: (message: string) => void | Promise<void>;
 };
 
@@ -87,6 +89,7 @@ export async function runEditorialPipeline(
           subjectTitle: subject.title,
           fast: opts?.fast,
           investigation: opts?.investigation,
+          editorialBrief: opts?.editorialBrief,
         }),
         writingTimeoutMs,
         "Timeout writing",

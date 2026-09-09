@@ -88,35 +88,119 @@ export function extractAllHttpUrls(text: string): string[] {
   ];
 }
 
+const BRIEF_BOILERPLATE =
+  /^(tu es|vous [eê]tes|je veux|je ne veux|j['’]aimerais|objectif\b|mission\b|consignes?\b|contexte\b|important\b|r[eè]gles?\b|attention\b|note\b|n\.b\.|#+\s)/i;
+
+function isBoilerplateLine(line: string): boolean {
+  const t = line.trim();
+  if (t.length < 8) return true;
+  if (/^https?:\/\//i.test(t)) return true;
+  return BRIEF_BOILERPLATE.test(t);
+}
+
+function quotedSpans(prompt: string): string[] {
+  const out: string[] = [];
+  const re = /[«"]([^»"]{16,220})[»"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(prompt))) {
+    const q = m[1].replace(/\s+/g, " ").trim();
+    if (q.length >= 16) out.push(q);
+  }
+  return out;
+}
+
+/**
+ * Sujet de recherche + requêtes, extraits d'un brief long
+ * (« Tu es un journaliste… », question centrale, affaire X, rôle de Y).
+ */
+export function extractInvestigationFocus(
+  prompt: string,
+  headline?: string,
+): { subject: string; queries: string[] } {
+  const quotes = quotedSpans(prompt);
+  const centralQ = quotes.find(
+    (q) =>
+      /[?]/.test(q) ||
+      /que savait|pourquoi|comment|quel\b|r[oô]le|affaire/i.test(q),
+  );
+
+  const affaire = prompt
+    .match(/l['’]affaire\s+(?:de\s+|du\s+|des\s+)?([^.,\n«"]{3,60})/i)?.[1]
+    ?.replace(/\s+/g, " ")
+    .trim();
+  const roleDe = prompt
+    .match(/r[oô]le de\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ][^.,\n]{3,55})/i)?.[1]
+    ?.replace(/\s+/g, " ")
+    .trim();
+  const enqueteSur = prompt
+    .match(
+      /enqu[eê]te[^\n]{0,90}?\ssur\s+(?:l['’]affaire\s+(?:de\s+)?)?([^.,\n]{6,90})/i,
+    )?.[1]
+    ?.replace(/\s+/g, " ")
+    .trim();
+
+  let subject = "";
+  if (centralQ) subject = centralQ.replace(/[?]+$/, "").trim();
+  else if (roleDe && affaire) subject = `${roleDe} — affaire ${affaire}`;
+  else if (enqueteSur) subject = enqueteSur;
+  else if (affaire) subject = `affaire ${affaire}`;
+  else if (roleDe) subject = roleDe;
+
+  const head = headline?.replace(/\s+/g, " ").trim() || "";
+  if (!subject && head.length > 12 && !/^enqu[eê]te le rempart$/i.test(head)) {
+    subject = head;
+  }
+  if (!subject) {
+    const first = prompt
+      .split(/\n/)
+      .map((l) => l.trim())
+      .find((l) => !isBoilerplateLine(l) && l.length > 12);
+    subject = (first || prompt).replace(/\s+/g, " ");
+  }
+  subject = subject.slice(0, 180).trim() || "Enquête Le Rempart";
+
+  const directiveLines = prompt
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        !isBoilerplateLine(l) &&
+        l.length > 24 &&
+        /(cherche|fouille|v[eé]rifie|chronologie|documents?|t[eé]moignages?|hatvp|assembl[eé]e|question centrale|angle)/i.test(
+          l,
+        ),
+    )
+    .map((l) => l.slice(0, 140));
+
+  const queries = [
+    ...new Set(
+      [
+        subject,
+        affaire && roleDe ? `${roleDe} ${affaire}` : "",
+        affaire ? `${affaire} enquête` : "",
+        centralQ?.slice(0, 140) || "",
+        `${subject} enquête`,
+        `${subject} chronologie`,
+        `${subject} documents officiels`,
+        ...directiveLines.slice(0, 5),
+      ]
+        .map((q) => q.replace(/\s+/g, " ").trim())
+        .filter((q) => q.length >= 8),
+    ),
+  ].slice(0, 10);
+
+  return { subject, queries };
+}
+
 export function subjectFromInvestigationPrompt(
   prompt: string,
   headline?: string,
 ): string {
-  const first = prompt
-    .split(/\n/)
-    .map((l) => l.trim())
-    .find((l) => l.length > 8 && !/^https?:\/\//i.test(l));
-  const raw = (
-    headline && headline.length > 12 ? headline : first || prompt
-  ).replace(/\s+/g, " ");
-  return raw.slice(0, 280).trim() || "Enquête Le Rempart";
+  return extractInvestigationFocus(prompt, headline).subject;
 }
 
 export function extraQueriesFromPrompt(prompt: string, subject: string): string[] {
-  const lines = prompt
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 18 && !/^https?:\/\//i.test(l))
-    .map((l) => l.slice(0, 140));
-  return [
-    ...new Set(
-      [
-        subject,
-        `${subject} enquête`,
-        `${subject} révélations`,
-        `${subject} documents officiels`,
-        ...lines.slice(0, 6),
-      ].filter((q) => q.trim().length >= 8),
-    ),
-  ].slice(0, 10);
+  const { queries } = extractInvestigationFocus(prompt);
+  if (queries[0] === subject) return queries;
+  return [...new Set([subject, ...queries])].slice(0, 10);
 }

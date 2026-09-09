@@ -17,6 +17,8 @@ export type WritingAgentInput = {
   fast?: boolean;
   /** Enquête mercredi/samedi : plus long, plus documenté. */
   investigation?: boolean;
+  /** Prompt / .txt de l'éditeur : question centrale, angle, directives. */
+  editorialBrief?: string;
 };
 
 export type { WritingAgentResult };
@@ -253,7 +255,9 @@ export async function runWritingAgent(
     investigation
       ? [
           "MODE ENQUÊTE (Rempart+, recherche autonome) :",
-          "Tu mènes l'enquête à partir du brief éditorial et du dossier de recherche web.",
+          "Tu mènes l'enquête à partir du BRIEF ÉDITORIAL (si fourni) et du dossier de recherche web.",
+          "Le brief dicte la question centrale, l'angle, ce qu'il ne faut PAS faire (ex. simple résumé).",
+          "Le dossier fournit les FAITS. Suis le brief ; n'invente rien hors dossier.",
           "Tu ne relais pas un article unique : tu fouilles, recoupes, cites tes sources.",
           "Questions à traiter SI le dossier le permet : qui, parcours, argent, contradictions discours/faits,",
           "sources nommées, chiffres, dates. Si une info manque : le dire clairement.",
@@ -278,6 +282,12 @@ export async function runWritingAgent(
     cautious ? null : namedMaterialBlock(input.dossier),
     coverage
       ? `Coverage dossier (%): faits ${coverage.facts}, chrono ${coverage.chronology}, primaires ${coverage.primarySources}, contexte ${coverage.context}, réactions ${coverage.reactions}, historique ${coverage.history}, juridique ${coverage.legal}, stats ${coverage.statistics}, overall ${coverage.overall}`
+      : null,
+    investigation && input.editorialBrief?.trim()
+      ? [
+          "BRIEF ÉDITORIAL (angle, question centrale, directives — à suivre) :",
+          input.editorialBrief.trim().slice(0, 24000),
+        ].join("\n")
       : null,
     lengthLine,
     "RESEARCH DOSSIER (seule source autorisée) :",
