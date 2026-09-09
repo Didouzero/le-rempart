@@ -172,6 +172,20 @@ export function extractInvestigationFocus(
     )
     .map((l) => l.slice(0, 140));
 
+  const core = (affaire || roleDe || subject).slice(0, 60);
+  const auditions = [
+    ...prompt.matchAll(/[Aa]udition d[e'’]\s+([^.\n,]{4,55})/g),
+  ].map((m) => `${m[1]!.trim()} ${core}`.slice(0, 140));
+  const docs = [
+    /IFJD/i.test(prompt) ? `${core} rapport IFJD` : "",
+    /assembl[eé]e nationale|commission d['’]enqu[eê]te/i.test(prompt)
+      ? `${core} commission enquête Assemblée nationale`
+      : "",
+    /Chancellerie|DACG|Le Mesle/i.test(prompt)
+      ? `${core} Laurent Le Mesle 26 mai 1998`
+      : "",
+  ];
+
   const queries = [
     ...new Set(
       [
@@ -180,14 +194,16 @@ export function extractInvestigationFocus(
         affaire ? `${affaire} enquête` : "",
         centralQ?.slice(0, 140) || "",
         `${subject} enquête`,
-        `${subject} chronologie`,
-        `${subject} documents officiels`,
-        ...directiveLines.slice(0, 5),
+        `${core} chronologie`,
+        `${core} documents officiels`,
+        ...docs,
+        ...auditions.slice(0, 6),
+        ...directiveLines.slice(0, 8),
       ]
         .map((q) => q.replace(/\s+/g, " ").trim())
         .filter((q) => q.length >= 8),
     ),
-  ].slice(0, 10);
+  ].slice(0, 16);
 
   return { subject, queries };
 }
@@ -202,5 +218,5 @@ export function subjectFromInvestigationPrompt(
 export function extraQueriesFromPrompt(prompt: string, subject: string): string[] {
   const { queries } = extractInvestigationFocus(prompt);
   if (queries[0] === subject) return queries;
-  return [...new Set([subject, ...queries])].slice(0, 10);
+  return [...new Set([subject, ...queries])].slice(0, 16);
 }

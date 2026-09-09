@@ -192,7 +192,7 @@ export async function publishInvestigation(input: {
   const urls = extractAllHttpUrls(prompt);
 
   await notify(
-    `Sujet retenu : ${subject}\nRecherche autonome + lecture des liens du prompt.\nÇa peut prendre 3 à 8 minutes.`,
+    `Sujet retenu : ${subject}\nEnquête longue (dossier payant) : recherche + rédaction exhaustive, plusieurs minutes.`,
   );
 
   const scraped = await scrapeInvestigationSources(urls, notify);
@@ -217,8 +217,8 @@ export async function publishInvestigation(input: {
       investigation: true,
       extraQueries: queries,
       editorialBrief: briefSlice,
-      researchTimeoutMs: 200_000,
-      writingTimeoutMs: 140_000,
+      researchTimeoutMs: 105_000,
+      writingTimeoutMs: 175_000,
       onProgress: notify,
     },
   );

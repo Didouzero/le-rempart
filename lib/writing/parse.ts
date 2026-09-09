@@ -140,11 +140,12 @@ export function parseWritingResponse(
       : null;
 
   const h2Count = (content.match(/^##\s+/gm) || []).length;
-  const minH2 = opts.cautious ? 2 : opts.investigation ? 4 : 3;
+  const minH2 = opts.cautious ? 2 : opts.investigation ? 8 : 3;
+  const maxH2 = opts.investigation ? 28 : 10;
   if (h2Count < minH2) {
     throw new Error(`Writing Agent : trop peu de H2 (${h2Count})`);
   }
-  if (h2Count > 10) {
+  if (h2Count > maxH2) {
     throw new Error(`Writing Agent : trop de H2 (${h2Count})`);
   }
 

@@ -273,6 +273,7 @@ export async function collectDeepSources(input: {
   alreadyHaveUrls?: string[];
   fast?: boolean;
   skipWebSearch?: boolean;
+  deepLimit?: number;
 }): Promise<{ sources: SourceDocument[]; seedNotes?: string }> {
   const seed = input.sourceText?.trim() || "";
   const isCaptionSeed =
@@ -290,7 +291,7 @@ export async function collectDeepSources(input: {
       type: input.sourceUrl ? classifySourceType(input.sourceUrl) : "primary",
       scraped: true,
       confidence: 0,
-      excerpt: seed.slice(0, MAX_EXCERPT),
+      excerpt: seed.slice(0, 20000),
       notes: "subject.sourceText",
     });
     const extraUrls = (input.extraSourceUrls || [])
@@ -342,7 +343,7 @@ export async function collectDeepSources(input: {
     })
   ).filter((c) => !have.has(c.url.split("?")[0]!));
 
-  const maxDeep = input.fast ? 4 : MAX_DEEP_SOURCES;
+  const maxDeep = input.deepLimit ?? (input.fast ? 4 : MAX_DEEP_SOURCES);
   const selected = candidates.slice(0, maxDeep + 2);
   const docs: SourceDocument[] = [];
 
@@ -369,7 +370,7 @@ export async function collectDeepSources(input: {
         type: input.sourceUrl ? classifySourceType(input.sourceUrl) : "primary",
         scraped: true,
         confidence: 0,
-        excerpt: seed.slice(0, MAX_EXCERPT),
+        excerpt: seed.slice(0, 20000),
         notes: "subject.sourceText",
       }),
     );

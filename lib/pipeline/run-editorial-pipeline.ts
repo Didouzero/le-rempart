@@ -70,6 +70,7 @@ export async function runEditorialPipeline(
         extraQueries: opts?.extraQueries,
         fast: opts?.fast,
         sourceFirst: opts?.sourceFirst,
+        investigation: opts?.investigation,
       }),
       researchTimeoutMs,
       "Timeout research",
@@ -124,6 +125,11 @@ export async function runEditorialPipeline(
         observability,
       };
     } catch (writeErr) {
+      if (opts?.investigation) {
+        throw writeErr instanceof Error
+          ? writeErr
+          : new Error("Échec rédaction enquête");
+      }
       console.error(
         "Writing Agent failed — fallback legacy with dossier",
         writeErr,
@@ -181,6 +187,9 @@ export async function runEditorialPipeline(
       };
     }
   } catch (err) {
+    if (opts?.investigation) {
+      throw err instanceof Error ? err : new Error("Échec recherche enquête");
+    }
     console.error("editorial pipeline research failed — fallback legacy", err);
     // Mode sourceFirst : pas d'invention hors source — on remonte l'erreur.
     if (opts?.sourceFirst && subject.sourceText) {

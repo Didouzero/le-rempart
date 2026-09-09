@@ -27,8 +27,9 @@ export default function AdminSecureLayout({
           </Link>
           <nav className="flex items-center gap-4 text-sm text-white/85">
             <Link href="/">Site</Link>
-            <Link href="/rubriques/enquetes">Enquêtes</Link>
+            <Link href="/rubriques/enquetes">Lire enquêtes</Link>
             <Link href="/admin">Articles</Link>
+            <Link href="/admin/dossiers">Éditer enquêtes</Link>
             <Link href="/admin/abonnes">Abonnés</Link>
             <Link href="/admin/new">Nouveau</Link>
             <form action="/api/admin/logout" method="POST">

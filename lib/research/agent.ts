@@ -36,6 +36,7 @@ export type ResearchAgentInput = PipelineSubject & {
   /** Ancrage URL : skip recherche web si le scrape est déjà riche. */
   sourceFirst?: boolean;
   extraQueries?: string[];
+  investigation?: boolean;
 };
 
 export type ResearchAgentResult = {
@@ -59,7 +60,11 @@ function applyQuality(
 export async function runResearchAgent(
   input: ResearchAgentInput,
 ): Promise<ResearchAgentResult> {
-  const maxPasses = Math.max(1, Math.min(input.maxPasses ?? DEFAULT_MAX_PASSES, 3));
+  const investigation = Boolean(input.investigation);
+  const maxPasses = Math.max(
+    1,
+    Math.min(input.maxPasses ?? DEFAULT_MAX_PASSES, investigation ? 3 : 3),
+  );
 
   // Caption / titre seuls doivent suffire : recherche web → scrape ou snippets.
   // Mode sourceFirst : URL scrapée = matière principale, web optionnel.
@@ -76,6 +81,7 @@ export async function runResearchAgent(
     extraQueries: input.extraQueries,
     fast: input.fast,
     skipWebSearch,
+    deepLimit: investigation ? 12 : undefined,
   });
 
   // Rattrapage entités : si presque rien ne parle du sujet, on relance

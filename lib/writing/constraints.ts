@@ -18,11 +18,11 @@ export const ARTICLE_LENGTH = {
   targetMinWords: 700,
   targetMaxWords: 1200,
   hardMaxWords: 2000,
-  investigationHardMaxWords: 4000,
-  /** Enquête mercredi / samedi : plus long, plus documenté. */
-  investigationMinWords: 900,
-  investigationTargetMin: 1600,
-  investigationTargetMax: 2800,
+  investigationHardMaxWords: 14000,
+  /** Enquête Rempart+ : dossier payant, exhaustif. */
+  investigationMinWords: 2800,
+  investigationTargetMin: 4500,
+  investigationTargetMax: 9000,
 } as const;
 
 /**

@@ -254,15 +254,19 @@ export async function runWritingAgent(
     `Sujet : ${input.subjectTitle || input.dossier.subject}`,
     investigation
       ? [
-          "MODE ENQUÊTE (Rempart+, recherche autonome) :",
-          "Tu mènes l'enquête à partir du BRIEF ÉDITORIAL (si fourni) et du dossier de recherche web.",
-          "Le brief dicte la question centrale, l'angle, ce qu'il ne faut PAS faire (ex. simple résumé).",
-          "Le dossier fournit les FAITS. Suis le brief ; n'invente rien hors dossier.",
-          "Tu ne relais pas un article unique : tu fouilles, recoupes, cites tes sources.",
-          "Questions à traiter SI le dossier le permet : qui, parcours, argent, contradictions discours/faits,",
-          "sources nommées, chiffres, dates. Si une info manque : le dire clairement.",
-          "Mise en page soignée : 4 à 7 ##, listes courtes si utiles, citations en *« … »*.",
-          "Ton argumenté, sans sarcasme. Ne pas inventer de capture d'écran : décrire les documents du dossier.",
+          "MODE ENQUÊTE REMPART+ (dossier PAYANT — le lecteur paie pour l'exhaustivité) :",
+          "INTERDIT un résumé de 4–8 paragraphes. INTERDIT de condenser le brief en 'voici ce qui est établi'.",
+          "Tu dois produire une ENQUÊTE COMPLÈTE, CHRONOLOGIQUE, SECTION PAR SECTION.",
+          "Si le brief donne un FORMAT FINAL / un plan numéroté : SUIS-LE (titres ## correspondants).",
+          "Si le brief demande des TABLEAUX (chronologie, preuves, contradictions) : fais-les en Markdown GFM.",
+          "Le BRIEF ÉDITORIAL n'est pas qu'un angle : il contient des FAITS et des NIVEAUX DE PREUVE que l'éditeur a déjà posés.",
+          "Tu DOIS les reprendre (dates, noms, citations, documents) en les étiquetant :",
+          "document / plusieurs témoignages / une seule personne / contradictoire / hypothèse / inconnu.",
+          "Le dossier web sert à CORROBORER, sourcer, actualiser. N'invente rien hors brief + dossier.",
+          "Si une piste du brief n'est pas dans le dossier web : dis-le ('non retrouvé dans les sources ouvertes') au lieu d'effacer le chapitre.",
+          "Chaque grande séquence (année, document, témoin) a SA section, pas un paragraphe fourre-tout.",
+          "Citations en *« … »* avec attribution. Listes et tableaux autorisés.",
+          "Chapô (excerpt) : 3 à 4 phrases. Ton sérieux, incisif, factuel — pas de sensationnalisme.",
         ].join("\n")
       : cautious
         ? [
@@ -295,7 +299,7 @@ export async function runWritingAgent(
     cautious
       ? "Rédige la brève JSON prudente. Métadonnées Editor obligatoires."
       : investigation
-        ? "Rédige l'enquête JSON : faits, parcours, argent, contradictions, sources. Citations *« … »*. Métadonnées Editor obligatoires."
+        ? "Rédige l'enquête JSON EXHAUSTIVE : toutes les sections du brief, tableaux demandés, sources. Pas un condensé. Citations *« … »*. Métadonnées Editor obligatoires."
         : "Rédige l'article JSON : faits nommés et chiffrés d'abord, mécanismes ensuite, puis analyse Rempart argumentée (pas sarcastique). Citations en *« … »*. Métadonnées Editor obligatoires.",
   ]
     .filter(Boolean)
@@ -304,8 +308,8 @@ export async function runWritingAgent(
   const attempts: Array<{ timeoutMs: number; maxTokens: number; model?: string }> =
     investigation
       ? [
-          { timeoutMs: 120_000, maxTokens: 8500 },
-          { timeoutMs: 110_000, maxTokens: 8000, model: "kimi-k2.6" },
+          { timeoutMs: 165_000, maxTokens: 20000 },
+          { timeoutMs: 150_000, maxTokens: 16000, model: "kimi-k2.6" },
         ]
       : input.fast
       ? [
@@ -342,7 +346,7 @@ export async function runWritingAgent(
               cautious
                 ? `OBLIGATOIRE : au moins ${minWords} mots, et rien d'inventé. La prudence prime sur la longueur.`
                 : investigation
-                  ? `OBLIGATOIRE ENQUÊTE : vise au moins ${minWords} mots, sections documentées, rien d'inventé.`
+                  ? `OBLIGATOIRE ENQUÊTE PAYANTE : vise ${ARTICLE_LENGTH.investigationTargetMin}–${ARTICLE_LENGTH.investigationTargetMax} mots (minimum ${minWords}). Développe CHAQUE chapitre du brief. Un condensé de 800 mots = échec.`
                   : `OBLIGATOIRE : vise au moins ${minWords} mots en exploitant chronologie, acteurs, montants, citations et contexte du dossier (sans jamais inventer).`,
             ]
               .filter(Boolean)

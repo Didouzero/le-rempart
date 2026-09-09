@@ -383,7 +383,7 @@ export function buildWebSearchQueries(
     ...new Set(
       queries.map((q) => q.replace(/\s+/g, " ").trim()).filter((q) => q.length >= 5),
     ),
-  ].slice(0, 8);
+  ].slice(0, extra.length >= 4 ? 14 : 8);
 }
 
 /**
@@ -1078,7 +1078,7 @@ export async function searchWebForSubject(input: {
   if (queries.length === 0) return [];
 
   const primary = queries[0]!;
-  const secondary = queries.slice(1, input.fast ? 4 : 5);
+  const secondary = queries.slice(1, input.fast ? 4 : 8);
 
   /** Moteurs directs : quelques secondes, aucun token consommé. */
   const runFreeEngines = async (): Promise<WebSearchHit[]> => {
