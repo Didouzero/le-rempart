@@ -63,7 +63,10 @@ export async function runResearchAgent(
   const investigation = Boolean(input.investigation);
   const maxPasses = Math.max(
     1,
-    Math.min(input.maxPasses ?? DEFAULT_MAX_PASSES, investigation ? 3 : 3),
+    Math.min(
+      input.maxPasses ?? DEFAULT_MAX_PASSES,
+      investigation ? 1 : 3,
+    ),
   );
 
   // Caption / titre seuls doivent suffire : recherche web → scrape ou snippets.
@@ -81,7 +84,7 @@ export async function runResearchAgent(
     extraQueries: input.extraQueries,
     fast: input.fast,
     skipWebSearch,
-    deepLimit: investigation ? 12 : undefined,
+    deepLimit: investigation ? 6 : undefined,
   });
 
   // Rattrapage entités : si presque rien ne parle du sujet, on relance

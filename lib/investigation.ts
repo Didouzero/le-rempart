@@ -200,7 +200,7 @@ export async function draftInvestigationArticle(input: {
     `Sujet retenu : ${subject}\nEnquête longue (dossier payant, 4000 mots visés) : recherche + rédaction exhaustive.`,
   );
 
-  const scraped = await scrapeInvestigationSources(urls, notify);
+  const scraped = await scrapeInvestigationSources(urls.slice(0, 4), notify);
   const briefSlice = prompt.slice(0, 60000);
   const scrapeBudget = Math.max(0, 80000 - briefSlice.length);
   const sourceText = [briefSlice, scraped.sourceText.slice(0, scrapeBudget)]
@@ -212,18 +212,18 @@ export async function draftInvestigationArticle(input: {
       title: subject,
       caption: prompt.slice(0, 4000),
       sourceUrl: scraped.primaryUrl || urls[0] || undefined,
-      extraSourceUrls: urls.slice(scraped.primaryUrl ? 1 : 0, 10),
+      extraSourceUrls: urls.slice(scraped.primaryUrl ? 1 : 0, 4),
       sourceText,
     },
     {
-      maxResearchPasses: 3,
-      fast: false,
+      maxResearchPasses: 1,
+      fast: true,
       sourceFirst: false,
       investigation: true,
-      extraQueries: queries,
+      extraQueries: queries.slice(0, 6),
       editorialBrief: briefSlice,
-      researchTimeoutMs: 105_000,
-      writingTimeoutMs: 175_000,
+      researchTimeoutMs: 70_000,
+      writingTimeoutMs: 190_000,
       onProgress: notify,
     },
   );

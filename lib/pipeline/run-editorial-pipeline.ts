@@ -63,18 +63,63 @@ export async function runEditorialPipeline(
         ? "Lecture de la source + construction du dossier…"
         : "Recherche web + construction du dossier…",
     );
-    const { dossier, quality } = await withTimeout(
-      runResearchAgent({
-        ...subject,
-        maxPasses: opts?.maxResearchPasses,
-        extraQueries: opts?.extraQueries,
-        fast: opts?.fast,
-        sourceFirst: opts?.sourceFirst,
-        investigation: opts?.investigation,
-      }),
-      researchTimeoutMs,
-      "Timeout research",
-    );
+    const { dossier, quality } = await (async () => {
+      try {
+        return await withTimeout(
+          runResearchAgent({
+            ...subject,
+            maxPasses: opts?.maxResearchPasses,
+            extraQueries: opts?.extraQueries,
+            fast: opts?.fast,
+            sourceFirst: opts?.sourceFirst,
+            investigation: opts?.investigation,
+          }),
+          researchTimeoutMs,
+          "Timeout research",
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const seedText = opts?.editorialBrief || subject.sourceText;
+        if (!opts?.investigation || !seedText || seedText.trim().length < 40) {
+          throw err;
+        }
+        console.error("investigation research failed — brief-only", err);
+        await progress(
+          /timeout/i.test(msg)
+            ? "Recherche web trop lente. Rédaction à partir du brief (et des liens déjà lus)."
+            : "Recherche web en échec. Rédaction à partir du brief.",
+        );
+        const { collectDeepSources } = await import("@/lib/research/collect");
+        const { buildDossierFromDocuments } = await import(
+          "@/lib/research/build-dossier"
+        );
+        const { evaluateDossierQuality } = await import(
+          "@/lib/research/quality"
+        );
+        const seedCollect = await collectDeepSources({
+          title: subject.title,
+          sourceUrl: subject.sourceUrl,
+          extraSourceUrls: subject.extraSourceUrls,
+          sourceText: subject.sourceText || seedText,
+          skipWebSearch: true,
+        });
+        const dossier = await buildDossierFromDocuments({
+          subject: subject.title,
+          sourceUrl: subject.sourceUrl,
+          sources: seedCollect.sources,
+          secondaryCaption: subject.caption,
+          fast: true,
+        });
+        const quality = evaluateDossierQuality(dossier);
+        dossier.quality = quality.scores;
+        dossier.qualityNotes = [
+          ...(quality.notes || []),
+          `Recherche web interrompue : ${msg}`,
+        ];
+        dossier.coverage = quality.coverage;
+        return { dossier, quality };
+      }
+    })();
     timer.end("research");
     stagesRun.push("research", "quality_gate");
     await progress(
