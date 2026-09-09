@@ -27,7 +27,13 @@ import {
 } from "@/lib/research/types";
 import { absoluteUrl } from "@/lib/seo";
 import { telegramDownloadFile, telegramSendMessage } from "@/lib/telegram";
-import { runWritingAgent } from "@/lib/writing/agent";
+import { ARTICLE_LENGTH } from "@/lib/writing/constraints";
+import {
+  assembleInvestigationArticle,
+  investigationWritingDone,
+  startInvestigationWritingDraft,
+  writeNextInvestigationSection,
+} from "@/lib/writing/investigation-chunks";
 
 /** Budget d’un round Vercel (maxDuration 300s) — pas une limite sur l’enquête. */
 const SLICE_MS = 230_000;
@@ -78,6 +84,7 @@ export type InvestigationJob = {
     researchPass: number;
     emptyCollects: number;
     researchComplete?: boolean;
+    writingDraft?: import("@/lib/writing/investigation-chunks").InvestigationWritingDraft;
     article?: InvestigationJobArticle;
     url?: string;
     slug?: string;
@@ -582,35 +589,83 @@ async function writingSlice(
     return;
   }
   const remaining = deadlineAt - Date.now();
-  if (remaining < 70_000) return;
-
-  await notifyJob(
-    job,
-    `Rédaction de l’enquête (${elapsedLabel(job.startedAt)}, ${webSources(job.checkpoint.sources).length} sources web)…`,
-  );
+  if (remaining < 95_000) return;
 
   try {
-    const written = await runWritingAgent({
-      dossier,
-      subjectTitle: job.checkpoint.subject,
-      investigation: true,
-      editorialBrief: job.prompt.slice(0, 24000),
-      timeoutMs: Math.min(200_000, remaining - 15_000),
-    });
-    if (!written.article?.title || !written.article.content) {
-      throw new Error("La rédaction n’a rien produit.");
+    if (!job.checkpoint.writingDraft) {
+      await notifyJob(
+        job,
+        `Rédaction par sections (${elapsedLabel(job.startedAt)}, ${webSources(job.checkpoint.sources).length} sources). Plus de pavé unique qui timeout à 200s.`,
+      );
+      job.checkpoint.writingDraft = await startInvestigationWritingDraft({
+        prompt: job.prompt,
+        subject: job.checkpoint.subject,
+        dossier,
+        timeoutMs: Math.min(50_000, remaining - 40_000),
+      });
+      await saveInvestigationJob(job);
+      await notifyJob(
+        job,
+        `Plan : ${job.checkpoint.writingDraft.plan.length} sections. On les rédige une par une.`,
+      );
+      if (deadlineAt - Date.now() < 95_000) return;
     }
-    job.checkpoint.article = {
-      title: written.article.title,
-      excerpt: written.article.excerpt,
-      content: written.article.content,
-    };
-    job.phase = "save";
+
+    const draft = job.checkpoint.writingDraft;
+    const extra = draft.plan.filter((p) =>
+      /^Compléments documentés/i.test(p),
+    ).length;
+    if (
+      draft.sections.every((s) => s.trim()) &&
+      assembleInvestigationArticle(draft).wordCount <
+        ARTICLE_LENGTH.investigationMinWords &&
+      extra < 4
+    ) {
+      draft.plan.push(
+        extra === 0
+          ? "Compléments documentés"
+          : `Compléments documentés (${extra + 1})`,
+      );
+      draft.sections.push("");
+    }
+
+    if (!investigationWritingDone(draft)) {
+      const next = draft.sections.findIndex((s) => !s.trim());
+      const label = draft.plan[next] || `section ${next + 1}`;
+      const doneCount = draft.sections.filter((s) => s.trim()).length;
+      await notifyJob(
+        job,
+        `Rédaction ${doneCount + 1}/${draft.plan.length} : ${label}`,
+      );
+      job.checkpoint.writingDraft = await writeNextInvestigationSection({
+        prompt: job.prompt,
+        subject: job.checkpoint.subject,
+        dossier,
+        draft,
+        timeoutMs: Math.min(90_000, deadlineAt - Date.now() - 8_000),
+      });
+      await saveInvestigationJob(job);
+    }
+
+    const assembled = assembleInvestigationArticle(job.checkpoint.writingDraft);
+    if (investigationWritingDone(job.checkpoint.writingDraft)) {
+      job.checkpoint.article = {
+        title: assembled.title,
+        excerpt: assembled.excerpt,
+        content: assembled.content,
+      };
+      job.phase = "save";
+      await notifyJob(
+        job,
+        `Rédaction terminée (${assembled.wordCount} mots, ${job.checkpoint.writingDraft.plan.length} sections). Enregistrement…`,
+      );
+    }
   } catch (err) {
     console.error("investigation writing", err);
+    const msg = err instanceof Error ? err.message : "échec";
     await notifyJob(
       job,
-      `Rédaction incomplète (${err instanceof Error ? err.message : "échec"}). On réessaie, toujours avec la recherche web.`,
+      `Section interrompue (${msg.replace(/ — réessaie.*/, "")}). On reprend cette section au round suivant, sans jeter le reste.`,
     );
   }
 }
