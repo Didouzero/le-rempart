@@ -4,6 +4,7 @@ import { CrownCircleIcon, CrownIcon } from "@/components/BrandIcons";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
+import { PublishedAt } from "@/components/PublishedAt";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { buildPageMetadata, collectionPageJsonLd } from "@/lib/seo";
@@ -34,15 +35,6 @@ const PLACEHOLDERS = [
     coverImageUrl: null as string | null,
   },
 ];
-
-function formatDate(value: Date | null): string {
-  if (!value) return "Bientôt";
-  return new Intl.DateTimeFormat("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(value);
-}
 
 export default async function EnquetesPage({
   searchParams,
@@ -129,7 +121,12 @@ export default async function EnquetesPage({
             {dossiers.map((d) => (
               <li key={d.slug} className="border-b border-ink/10 pb-8">
                 <p className="text-xs uppercase tracking-[0.14em] text-muted">
-                  {formatDate(d.publishedAt)}
+                  <PublishedAt
+                    value={d.publishedAt}
+                    weekday
+                    year={false}
+                    empty="Bientôt"
+                  />
                 </p>
                 <h2 className="font-display mt-2 text-2xl tracking-[0.06em]">
                   <Link
@@ -158,7 +155,13 @@ export default async function EnquetesPage({
                 aria-hidden={i > 0}
               >
                 <p className="font-display text-xs tracking-[0.16em] text-accent-deep">
-                  {formatDate(d.publishedAt)} · exclusif
+                  <PublishedAt
+                    value={d.publishedAt}
+                    weekday
+                    year={false}
+                    empty="Bientôt"
+                  />{" "}
+                  · exclusif
                 </p>
                 <h2 className="font-display mt-2 text-2xl tracking-[0.06em]">
                   {d.title}

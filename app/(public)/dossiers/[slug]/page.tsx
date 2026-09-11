@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleBody } from "@/components/ArticleBody";
+import { PublishedAt } from "@/components/PublishedAt";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
@@ -90,16 +91,11 @@ export default async function DossierPage({ params }: Props) {
         <span className="live-dot" aria-hidden />
         Enquête &amp; révélations
       </p>
-      <time className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted">
-        {dossier.publishedAt
-          ? new Intl.DateTimeFormat("fr-FR", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }).format(dossier.publishedAt)
-          : ""}
-      </time>
+      <PublishedAt
+        value={dossier.publishedAt}
+        weekday
+        className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"
+      />
       <h1 className="font-display mt-3 text-[1.85rem] leading-[1.08] sm:text-4xl md:text-[2.6rem]">
         {dossier.title}
       </h1>

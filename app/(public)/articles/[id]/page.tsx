@@ -7,6 +7,7 @@ import { ArticleSideAds } from "@/components/ArticleSideAds";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
+import { PublishedAt } from "@/components/PublishedAt";
 import { authorFromPublicId } from "@/lib/authors";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
 import {
@@ -123,15 +124,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-function formatDate(value: Date | null): string {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(value);
-}
-
 export default async function ArticlePage({ params }: Props) {
   const { id } = await params;
   const asNumber = Number(id);
@@ -241,12 +233,10 @@ export default async function ArticlePage({ params }: Props) {
             {section}
           </Link>
         </p>
-        <time
+        <PublishedAt
+          value={article.publishedAt}
           className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"
-          dateTime={article.publishedAt?.toISOString()}
-        >
-          {formatDate(article.publishedAt)}
-        </time>
+        />
         <h1 className="font-display mt-3 text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
           {article.title}
         </h1>

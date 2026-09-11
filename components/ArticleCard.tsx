@@ -5,6 +5,7 @@ import {
   categoryPath,
   type ArticleCategory,
 } from "@/lib/categories";
+import { PublishedAt } from "@/components/PublishedAt";
 
 type ArticleCardProps = {
   id?: string;
@@ -18,16 +19,6 @@ type ArticleCardProps = {
   featured?: boolean;
   index?: number;
 };
-
-function formatDate(value: Date | string | null): string {
-  if (!value) return "";
-  const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
 
 export function ArticleCard({
   id,
@@ -80,9 +71,7 @@ export function ArticleCard({
               </>
             ) : null}
             <span aria-hidden>•</span>
-            <time dateTime={publishedAt ? new Date(publishedAt).toISOString() : undefined}>
-              {formatDate(publishedAt)}
-            </time>
+            <PublishedAt value={publishedAt} />
           </div>
           <h2 className="font-display mt-3 text-2xl leading-[1.05] sm:text-3xl md:text-4xl">
             <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
@@ -123,11 +112,7 @@ export function ArticleCard({
             </Link>
           ) : null}
           {cat && catLabel ? <span aria-hidden>•</span> : null}
-          <time
-            dateTime={publishedAt ? new Date(publishedAt).toISOString() : undefined}
-          >
-            {formatDate(publishedAt)}
-          </time>
+          <PublishedAt value={publishedAt} />
         </div>
         <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
           <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
