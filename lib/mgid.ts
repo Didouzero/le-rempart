@@ -25,8 +25,13 @@ export function mgidRightWidgetId(): string | undefined {
  * Widget In-Article mobile. ID distinct obligatoire : réutiliser
  * under-article / rails ferait double-remplissage du même unit.
  */
+/** Widget In-Article mobile (dashboard MGID, distinct des rails / under-article). */
+const MGID_IN_ARTICLE_WIDGET_ID = "2081657";
+
 export function mgidInArticleWidgetId(): string | undefined {
-  const id = process.env.NEXT_PUBLIC_MGID_WIDGET_ID_IN_ARTICLE?.trim();
+  const id =
+    process.env.NEXT_PUBLIC_MGID_WIDGET_ID_IN_ARTICLE?.trim() ||
+    MGID_IN_ARTICLE_WIDGET_ID;
   if (!id) return undefined;
   const used = new Set(
     [mgidUnderArticleWidgetId(), mgidLeftWidgetId(), mgidRightWidgetId()].filter(
