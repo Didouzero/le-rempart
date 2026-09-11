@@ -21,6 +21,22 @@ export function mgidRightWidgetId(): string | undefined {
   return process.env.NEXT_PUBLIC_MGID_WIDGET_ID_RIGHT?.trim() || undefined;
 }
 
+/**
+ * Widget In-Article mobile. ID distinct obligatoire : réutiliser
+ * under-article / rails ferait double-remplissage du même unit.
+ */
+export function mgidInArticleWidgetId(): string | undefined {
+  const id = process.env.NEXT_PUBLIC_MGID_WIDGET_ID_IN_ARTICLE?.trim();
+  if (!id) return undefined;
+  const used = new Set(
+    [mgidUnderArticleWidgetId(), mgidLeftWidgetId(), mgidRightWidgetId()].filter(
+      Boolean,
+    ),
+  );
+  if (used.has(id)) return undefined;
+  return id;
+}
+
 export function mgidSideRailsEnabled(): boolean {
   return mgidEnabled() && Boolean(mgidLeftWidgetId() || mgidRightWidgetId());
 }

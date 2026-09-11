@@ -1,12 +1,15 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ReactNode } from "react";
+import { MgidInArticle } from "@/components/MgidInArticle";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 type ArticleBodyProps = {
   content: string;
   /** Insère le CTA newsletter juste avant le dernier paragraphe. */
   showNewsletterCta?: boolean;
+  /** Widget MGID In-Article mobile après le 1er paragraphe. */
+  showInArticleAd?: boolean;
 };
 
 /**
@@ -196,7 +199,26 @@ function MarkdownChunk({ source }: { source: string }) {
   );
 }
 
-/** Coupe le markdown juste avant le dernier bloc (dernier paragraphe). */
+/** Premier bloc éditorial (hors titres seuls), pour insérer MGID après le 1er paragraphe. */
+function splitAfterFirstParagraph(markdown: string): [string, string] {
+  const blocks = markdown
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+  if (blocks.length < 2) return [markdown, ""];
+
+  let i = 0;
+  while (i < blocks.length && isNonParagraphLead(blocks[i]!)) i += 1;
+  if (i >= blocks.length - 1) return [markdown, ""];
+
+  const cut = i + 1;
+  return [blocks.slice(0, cut).join("\n\n"), blocks.slice(cut).join("\n\n")];
+}
+
+function isNonParagraphLead(block: string): boolean {
+  return /^(#{1,6}\s|---+$|\*\*\*+$)/.test(block);
+}
+
 function splitMarkdownBeforeLast(markdown: string): [string, string] {
   const blocks = markdown
     .split(/\n{2,}/)
@@ -208,28 +230,47 @@ function splitMarkdownBeforeLast(markdown: string): [string, string] {
   return [blocks.slice(0, -1).join("\n\n"), blocks[blocks.length - 1] ?? ""];
 }
 
+function ProseBlock({ source }: { source: string }) {
+  if (!source.trim()) return null;
+  return (
+    <div className="prose-article">
+      <MarkdownChunk source={source} />
+    </div>
+  );
+}
+
 export function ArticleBody({
   content,
   showNewsletterCta = true,
+  showInArticleAd = false,
 }: ArticleBodyProps) {
   const md = autolinkBareUrls(markStandaloneVideos(content));
-  const [first, rest] = showNewsletterCta
-    ? splitMarkdownBeforeLast(md)
-    : [md, ""];
+
+  let lead = "";
+  let remaining = md;
+  let insertAd = false;
+  if (showInArticleAd) {
+    const [first, after] = splitAfterFirstParagraph(md);
+    if (after) {
+      lead = first;
+      remaining = after;
+      insertAd = true;
+    }
+  }
+
+  const [beforeLast, last] = showNewsletterCta
+    ? splitMarkdownBeforeLast(remaining)
+    : [remaining, ""];
 
   return (
     <>
-      <div className="prose-article">
-        <MarkdownChunk source={first} />
-      </div>
+      {insertAd ? <ProseBlock source={lead} /> : null}
+      {insertAd ? <MgidInArticle /> : null}
+      <ProseBlock source={beforeLast} />
       {showNewsletterCta ? (
         <NewsletterSignup source="article-before-last" />
       ) : null}
-      {rest ? (
-        <div className="prose-article">
-          <MarkdownChunk source={rest} />
-        </div>
-      ) : null}
+      {last ? <ProseBlock source={last} /> : null}
     </>
   );
 }

@@ -271,7 +271,11 @@ export default async function ArticlePage({ params }: Props) {
       ) : null}
 
       <ArticleSideAds show={!plus}>
-        <ArticleBody content={article.content} showNewsletterCta />
+        <ArticleBody
+          content={article.content}
+          showNewsletterCta
+          showInArticleAd={!plus}
+        />
       </ArticleSideAds>
 
       <AdSlot slot="article-bottom" />
