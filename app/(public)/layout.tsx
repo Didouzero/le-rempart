@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { SiteFooter } from "@/components/SiteFooter";
 import { hasActiveRempartPlus } from "@/lib/membership";
-import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
+import { organizationJsonLd } from "@/lib/seo";
 
 export default async function PublicLayout({
   children,
@@ -17,7 +17,6 @@ export default async function PublicLayout({
   return (
     <div className="site-shell flex min-h-screen flex-col">
       <JsonLd data={organizationJsonLd()} />
-      <JsonLd data={websiteJsonLd()} />
       <Header isPlus={plus} />
       <div
         className={`mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 gap-0 xl:px-4 ${

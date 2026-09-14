@@ -70,7 +70,10 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
               />
             </Link>
             <div className="animate-line-grow mx-auto mt-3 h-[3px] w-28 bg-accent" />
-            <p className="font-tagline mx-auto mt-3 max-w-xl text-[0.925rem] text-white">
+            <p className="font-display mx-auto mt-3 text-[1.05rem] tracking-[0.18em] text-accent">
+              Le Rempart
+            </p>
+            <p className="font-tagline mx-auto mt-1.5 max-w-xl text-[0.925rem] text-white">
               Le média de droite radicale
             </p>
           </div>

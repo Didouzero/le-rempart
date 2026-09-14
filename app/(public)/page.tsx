@@ -3,6 +3,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { ArticleCard } from "@/components/ArticleCard";
 import { ListPageHeader } from "@/components/ArticleSearch";
 import { CategoryTiles } from "@/components/CategoryTiles";
+import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { Pagination } from "@/components/Pagination";
 import { RempartPlusOffer } from "@/components/RempartPlusOffer";
@@ -15,8 +16,10 @@ import {
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import {
+  SITE_DEFAULT_TITLE,
   SITE_DESCRIPTION,
   buildPageMetadata,
+  websiteJsonLd,
 } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +39,10 @@ export async function generateMetadata({
 
   if (!isPaged && !hasSearch) {
     return buildPageMetadata({
-      title: "L'ACTUALITÉ À LA UNE",
+      title: SITE_DEFAULT_TITLE,
       description: SITE_DESCRIPTION,
       path: "/",
+      absoluteTitle: true,
     });
   }
 
@@ -119,6 +123,7 @@ export default async function HomePage({ searchParams }: Props) {
 
   return (
     <div>
+      {!q && page === 1 ? <JsonLd data={websiteJsonLd()} /> : null}
       <AdSlot slot="home-below-header" />
 
       <ListPageHeader

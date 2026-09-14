@@ -85,7 +85,7 @@ export function organizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "NewsMediaOrganization",
     name: SITE_NAME,
-    alternateName: [SITE_TAGLINE, SITE_DOMAIN],
+    alternateName: "Rempart",
     url,
     logo: {
       "@type": "ImageObject",
@@ -105,17 +105,17 @@ export function organizationJsonLd() {
 }
 
 /**
- * Schema WebSite — signal principal pour le « site name » Google.
- * Preferé : Le Rempart ; secours : tagline puis domaine (minuscules).
+ * Schema WebSite — signal principal du « site name » Google.
+ * Ne pas mettre le domaine en alternateName : Google le choisit alors
+ * à la place de la marque (c’est exactement le fallback documenté).
  */
 export function websiteJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
-    alternateName: [SITE_TAGLINE, SITE_DOMAIN],
+    alternateName: "Rempart",
     url: absoluteUrl("/"),
-    description: SITE_DESCRIPTION,
     inLanguage: "fr-FR",
     publisher: {
       "@type": "NewsMediaOrganization",
