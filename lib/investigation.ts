@@ -89,18 +89,14 @@ export async function publishInvestigationFacebook(input: {
   );
 
   await notify("Facebook : rédaction du flash…");
-  let flash: string;
-  try {
-    flash = await buildFlashInfoText({
-      title: input.title,
-      excerpt: input.excerpt,
-      sourceText: [input.sourceText, input.content].filter(Boolean).join("\n\n"),
-      articleUrl: articleWww,
-    });
-  } catch (err) {
-    console.error("investigation flash", err);
-    flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${input.excerpt}`;
-  }
+  const flash = await buildFlashInfoText({
+    title: input.title,
+    excerpt: input.excerpt,
+    sourceText: [input.sourceText, input.content].filter(Boolean).join("\n\n"),
+    articleUrl: articleWww,
+    onRetry: (n, reason) =>
+      notify(`Facebook : Kimi n’a pas fini (${reason}) — essai ${n}…`),
+  });
 
   await notify("Facebook : publication du post…");
   try {

@@ -3,6 +3,8 @@ import { getKimiTextModel } from "@/lib/kimi";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
+const MIN_CHARS = 80;
+const MIN_WORDS = 90;
 
 function outletFromUrl(url?: string): string | null {
   if (!url) return null;
@@ -53,7 +55,6 @@ function ensureParagraphs(text: string): string {
       .join("\n\n");
   }
 
-  // Une phrase par ligne
   const lines = cleaned
     .split(/\n+/)
     .map((l) => l.trim())
@@ -62,7 +63,6 @@ function ensureParagraphs(text: string): string {
     return lines.join("\n\n");
   }
 
-  // Pavé unique → découpe en phrases, regroupées en ~3 paragraphes
   const sentences = cleaned
     .replace(/\s+/g, " ")
     .split(/(?<=[.!?…»])\s+(?=[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ«"])/)
@@ -84,6 +84,10 @@ function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Coupe à une fin de phrase complète, sans guillemet ouvert ni « … » orphelin. */
 function trimToCompleteSentences(text: string, maxWords: number): string {
   const words = text.split(/\s+/).filter(Boolean);
@@ -92,7 +96,6 @@ function trimToCompleteSentences(text: string, maxWords: number): string {
   }
 
   let cut = words.slice(0, maxWords).join(" ");
-  // Remonter jusqu'à une fin de phrase claire
   const endMatch = cut.match(/^([\s\S]*[.!?…])(?:\s+[^.!?…]+)?$/u);
   if (endMatch?.[1] && wordCount(endMatch[1]) >= 80) {
     cut = endMatch[1];
@@ -109,7 +112,6 @@ function trimToCompleteSentences(text: string, maxWords: number): string {
   }
 
   cut = cut.replace(/\s*…+\s*$/u, "").trim();
-  // Guillemet ouvert sans fermeture → enlever la citation tronquée
   const opens = (cut.match(/[«"]/g) || []).length;
   const closes = (cut.match(/[»"]/g) || []).length;
   if (opens > closes) {
@@ -120,25 +122,6 @@ function trimToCompleteSentences(text: string, maxWords: number): string {
     }
   }
   return cut;
-}
-
-function fallbackRempartFlash(input: {
-  title: string;
-  excerpt: string;
-  sourceUrl?: string;
-}): string {
-  const parts: string[] = [];
-  if (input.excerpt?.trim()) parts.push(input.excerpt.trim());
-  else parts.push(input.title.trim());
-
-  parts.push(
-    "Les faits sont établis. Reste à savoir ce qu'ils disent vraiment de la méthode, et de ceux qui la vendent.",
-  );
-
-  const outlet = outletFromUrl(input.sourceUrl);
-  if (outlet) parts.push(`(Source : ${outlet})`);
-
-  return `${PREFIX} ${parts.join("\n\n")}`;
 }
 
 const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart — média de droite, argumenté.
@@ -171,7 +154,7 @@ RÈGLES FORME :
 Réponds UNIQUEMENT avec les 3–4 paragraphes du flash.`;
 
 /**
- * Flash Facebook Rempart : faits + lecture tissés, paragraphes aérés.
+ * Flash Facebook Rempart. Réessaie Kimi jusqu'à un vrai flash — jamais de texte de secours.
  */
 export async function buildFlashInfoText(input: {
   title: string;
@@ -179,71 +162,79 @@ export async function buildFlashInfoText(input: {
   sourceText?: string;
   sourceUrl?: string;
   articleUrl?: string;
+  onRetry?: (attempt: number, reason: string) => void | Promise<void>;
 }): Promise<string> {
-  const fallback = () =>
-    fallbackRempartFlash({
-      title: input.title,
-      excerpt: input.excerpt,
-      sourceUrl: input.sourceUrl,
-    });
+  if (!process.env.MOONSHOT_API_KEY) {
+    throw new Error("MOONSHOT_API_KEY manquante — flash Facebook impossible");
+  }
 
-  if (!process.env.MOONSHOT_API_KEY) return fallback();
-
-  // Moins de matière = moins de tentation d'inventaire
   const corpus = scrubBoilerplate(
     [input.excerpt, (input.sourceText || "").slice(0, 3500)]
       .filter(Boolean)
       .join("\n\n"),
   ).slice(0, 4000);
   const outlet = outletFromUrl(input.sourceUrl);
+  const userContent = [
+    `Titre : ${input.title}`,
+    outlet ? `Source presse : ${outlet}` : null,
+    "",
+    "Matière (EXTRAIS les faits : noms, citations, réactions — n'invente rien) :",
+    corpus,
+    "",
+    "Écris le flash : 3 paragraphes, ligne vide entre eux.",
+    "Chaque paragraphe = faits exacts + une lecture politique courte, lisse, argumentée.",
+    "Pas de dernier paragraphe invective / réac isolé.",
+    "Ligne droite dure : jamais un patriote / le RN « en tort ».",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  try {
-    const text = await Promise.race([
-      moonshotChat({
-        model: getKimiTextModel(),
-        maxTokens: 450,
-        timeoutMs: 18_000,
-        reasoningEffort: "low",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              `Titre : ${input.title}`,
-              outlet ? `Source presse : ${outlet}` : null,
-              "",
-              "Matière (EXTRAIS les faits : noms, citations, réactions — n'invente rien) :",
-              corpus,
-              "",
-              "Écris le flash : 3 paragraphes, ligne vide entre eux.",
-              "Chaque paragraphe = faits exacts + une lecture politique courte, lisse, argumentée.",
-              "Pas de dernier paragraphe invective / réac isolé.",
-              "Ligne droite dure : jamais un patriote / le RN « en tort ».",
-            ]
-              .filter(Boolean)
-              .join("\n"),
-          },
-        ],
-      }),
-      new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error("flash kimi timeout")), 20_000),
-      ),
-    ]);
+  let attempt = 0;
+  for (;;) {
+    attempt += 1;
+    try {
+      const text = await Promise.race([
+        moonshotChat({
+          model: getKimiTextModel(),
+          maxTokens: 450,
+          timeoutMs: 18_000,
+          reasoningEffort: "low",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent },
+          ],
+        }),
+        new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error("flash kimi timeout")), 20_000),
+        ),
+      ]);
 
-    let body = scrubFlashOutput(ensureParagraphs(stripFlashPrefix(text || "")));
-    if (body.length < 80) return fallback();
+      let body = scrubFlashOutput(ensureParagraphs(stripFlashPrefix(text || "")));
+      const words = wordCount(body);
+      if (body.length < MIN_CHARS || words < MIN_WORDS) {
+        throw new Error(
+          `flash trop court (${body.length} car., ~${words} mots)`,
+        );
+      }
 
-    body = ensureParagraphs(trimToCompleteSentences(body, 180));
-    body = ensureParagraphs(scrubFlashOutput(body));
+      body = ensureParagraphs(trimToCompleteSentences(body, 180));
+      body = ensureParagraphs(scrubFlashOutput(body));
+      if (wordCount(body) < MIN_WORDS) {
+        throw new Error("flash trop court après coupe");
+      }
 
-    if (outlet && !/\(Source\s*:/i.test(body)) {
-      body = `${body}\n\n(Source : ${outlet})`;
+      if (outlet && !/\(Source\s*:/i.test(body)) {
+        body = `${body}\n\n(Source : ${outlet})`;
+      }
+
+      console.log("flash word count ~", wordCount(body), "attempt", attempt);
+      return `${PREFIX} ${body}`;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error("flash kimi retry", attempt, reason);
+      await input.onRetry?.(attempt + 1, reason);
+      const waitMs = Math.min(15_000, 2000 * attempt);
+      await sleep(waitMs);
     }
-
-    console.log("flash word count ~", wordCount(body));
-    return `${PREFIX} ${body}`;
-  } catch (err) {
-    console.error("flash info kimi skipped", err);
-    return scrubFlashOutput(fallback());
   }
 }

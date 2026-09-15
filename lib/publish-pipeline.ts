@@ -47,19 +47,15 @@ export async function publishFacebookForArticle(input: {
   );
 
   await input.notify("Facebook : rédaction du flash…");
-  let flash: string;
-  try {
-    flash = await buildFlashInfoText({
-      title: input.title,
-      excerpt: input.excerpt,
-      sourceText: input.sourceText || undefined,
-      sourceUrl: input.sourceUrl || undefined,
-      articleUrl: articleWww,
-    });
-  } catch (flashErr) {
-    console.error(flashErr);
-    flash = `‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 — ${input.excerpt}`;
-  }
+  const flash = await buildFlashInfoText({
+    title: input.title,
+    excerpt: input.excerpt,
+    sourceText: input.sourceText || undefined,
+    sourceUrl: input.sourceUrl || undefined,
+    articleUrl: articleWww,
+    onRetry: (n, reason) =>
+      input.notify(`Facebook : Kimi n’a pas fini (${reason}) — essai ${n}…`),
+  });
 
   await input.notify("Facebook : publication du post…");
 
