@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CrownCircleIcon, CrownIcon } from "@/components/BrandIcons";
 import { JsonLd } from "@/components/JsonLd";
-import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
 import { PublishedAt } from "@/components/PublishedAt";
 import { hasActiveRempartPlus } from "@/lib/membership";
@@ -192,8 +191,6 @@ export default async function EnquetesPage({
           </div>
         </div>
       )}
-
-      {isPlus ? null : <NativeAdsRail />}
     </div>
   );
 }

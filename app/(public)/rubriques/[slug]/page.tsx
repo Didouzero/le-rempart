@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ArticleCard } from "@/components/ArticleCard";
 import { ListPageHeader } from "@/components/ArticleSearch";
 import { JsonLd } from "@/components/JsonLd";
-import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { Pagination } from "@/components/Pagination";
 import {
   ARTICLE_PAGE_SIZE,
@@ -17,7 +16,6 @@ import {
   type ArticleCategory,
 } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
-import { hasActiveRempartPlus } from "@/lib/membership";
 import {
   absoluteUrl,
   buildPageMetadata,
@@ -128,7 +126,6 @@ export default async function RubriquePage({ params, searchParams }: Props) {
 
   const featured = page === 1 && !q ? articles[0] : null;
   const list = featured ? articles.slice(1) : articles;
-  const plus = await hasActiveRempartPlus();
   const resultLine = q
     ? total === 0
       ? `Aucun résultat pour « ${q} » dans ${meta.label}.`
@@ -200,8 +197,6 @@ export default async function RubriquePage({ params, searchParams }: Props) {
           />
         </div>
       )}
-
-      {plus ? null : <NativeAdsRail />}
     </div>
   );
 }

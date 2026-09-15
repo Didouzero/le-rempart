@@ -4,7 +4,6 @@ import { ArticleCard } from "@/components/ArticleCard";
 import { ListPageHeader } from "@/components/ArticleSearch";
 import { CategoryTiles } from "@/components/CategoryTiles";
 import { JsonLd } from "@/components/JsonLd";
-import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { Pagination } from "@/components/Pagination";
 import { RempartPlusOffer } from "@/components/RempartPlusOffer";
 import {
@@ -210,8 +209,6 @@ export default async function HomePage({ searchParams }: Props) {
           titleAs="h2"
         />
       </section>
-
-      {plus ? null : <NativeAdsRail />}
     </div>
   );
 }
