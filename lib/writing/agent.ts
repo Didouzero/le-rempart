@@ -4,6 +4,7 @@ import type { ResearchDossier } from "@/lib/research/types";
 import {
   ARTICLE_LENGTH,
   CONFIDENCE_VOCAB,
+  INVESTIGATION_ANGLE_RULES,
   WRITING_HARD_RULES,
 } from "@/lib/writing/constraints";
 import { parseWritingResponse } from "@/lib/writing/parse";
@@ -35,12 +36,12 @@ avec une lecture politique tissée dans le déroulé, pas collée à la fin.
 RÈGLES ABSOLUES :
 ${WRITING_HARD_RULES.map((r) => `- ${r}`).join("\n")}
 
-VOCABULAIRE DE CONFIANCE (obligatoire) :
+ATTRIBUTION (pas un audit « établi / pas établi ») :
 - confirmed → ${CONFIDENCE_VOCAB.confirmed.join(" / ")}
 - probable → ${CONFIDENCE_VOCAB.probable.join(" / ")}
 - contested → ${CONFIDENCE_VOCAB.contested.join(" / ")}
 - unverifiable → ${CONFIDENCE_VOCAB.unverifiable.join(" / ")}
-Jamais une info incertaine présentée comme certaine.
+Jamais une rumeur présentée comme un fait. Jamais un article qui passe son temps à dire ce qui n'est pas établi.
 
 TITRE :
 - Précis et factuel : QUI + QUOI + OÙ, avec le chiffre clé s'il existe.
@@ -55,8 +56,9 @@ CORPS DE L'ARTICLE :
 - Les ## H2 sont dictés par la matière du dossier, pas par un gabarit. Selon ce qui existe :
   les faits et le montant en jeu, la structure concernée et son périmètre, les dirigeants et leurs
   rémunérations, la chronologie de la procédure, les conséquences concrètes (salariés, usagers,
-  collectivités, contribuable), le débat politique et les réactions, ce qui reste inconnu.
+  collectivités, contribuable), le débat politique et les réactions.
 - Un H2 = un angle réellement documenté. Pas de section creuse pour faire nombre.
+- INTERDIT les H2 « ce qui est établi », « ce que l'on ne sait pas », « ce qui manque pour trancher ».
 - Nomme : personnes (nom complet + fonction + étiquette politique si le dossier la donne),
   organisations avec leur périmètre exact, communes, juridictions, dates, montants au chiffre près.
 - Attribue explicitement : "selon l'enquête de <média du dossier>", "d'après <média>". N'utilise QUE
@@ -67,12 +69,11 @@ CORPS DE L'ARTICLE :
   qui décide quoi. Le lecteur doit comprendre l'enchaînement, pas seulement le résultat.
 - Explique les notions de conceptsToExplain / glossary quand elles servent la compréhension.
 - Réponds aux naiveQuestions et articleQuestions du dossier quand la réponse existe.
-- Une section "ce que l'on ne sait pas encore" est bienvenue si missingInformation / uncertainties
-  contiennent de la matière.
+- Si missingInformation / uncertainties : ne PAS en faire une section. Omettre ce qui n'est pas dans le dossier.
 
 LISTES :
 - Les listes à puces sont AUTORISÉES et recommandées quand elles clarifient : jalons de chronologie,
-  décomposition d'un montant, liste de conséquences, points encore inconnus.
+  décomposition d'un montant, liste de conséquences.
 - Maximum 2 blocs de listes, 3 à 6 puces chacun, chaque puce factuelle et sourcée par le dossier.
 - Le reste doit rester rédigé : une liste ne remplace pas l'analyse.
 
@@ -88,8 +89,8 @@ ANGLE REMPART (tissé, pas un slam final) :
 
 DOSSIER FAIBLE OU VIDE :
 - Si keyFacts est vide ou ne contient rien de vérifiable sur le sujet : écris une brève courte
-  (${ARTICLE_LENGTH.cautiousMinWords}–350 mots), 2 H2 suffisent, qui dit franchement ce qui circule,
-  ce qui n'est pas vérifié, et ce qu'il faudrait pour l'établir.
+  (${ARTICLE_LENGTH.cautiousMinWords}–350 mots), 2 H2 suffisent, sur ce qui circule — sans inventer
+  et sans catalogue « ce qu'il faudrait pour l'établir ».
 - Dans ce cas : AUCUN nom de personne, AUCUN montant, AUCUN média cité qui ne soit pas dans le dossier.
   Mieux vaut trois paragraphes honnêtes qu'un article inventé.
 
@@ -131,8 +132,6 @@ function dossierPayload(dossier: ResearchDossier): string {
     legalContext: dossier.legalContext,
     reactions: dossier.reactions,
     verification: dossier.verification,
-    uncertainties: dossier.uncertainties,
-    missingInformation: dossier.missingInformation,
     conceptsToExplain: dossier.conceptsToExplain,
     glossary: dossier.glossary,
     naiveQuestions: dossier.naiveQuestions,
@@ -257,25 +256,23 @@ export async function runWritingAgent(
     investigation
       ? [
           "MODE ENQUÊTE REMPART+ (dossier PAYANT — le lecteur paie pour l'exhaustivité) :",
-          "INTERDIT un résumé de 4–8 paragraphes. INTERDIT de condenser le brief en 'voici ce qui est établi'.",
+          "ANGLE : le même que le FLASH Facebook. Tu racontes l'affaire. Tu ne grades pas les preuves.",
+          ...INVESTIGATION_ANGLE_RULES,
+          "INTERDIT un résumé de 4–8 paragraphes. INTERDIT de condenser le brief en audit 'voici ce qui est établi'.",
           "Tu dois produire une ENQUÊTE COMPLÈTE, CHRONOLOGIQUE, SECTION PAR SECTION.",
-          "Si le brief donne un FORMAT FINAL / un plan numéroté : SUIS-LE (titres ## correspondants).",
+          "Si le brief donne un FORMAT FINAL / un plan numéroté : SUIS-LE, SAUF les sections « établi / pas établi / on ne sait pas ».",
           "Si le brief demande des TABLEAUX (chronologie, preuves, contradictions) : fais-les en Markdown GFM.",
-          "Le BRIEF ÉDITORIAL n'est pas qu'un angle : il contient des FAITS et des NIVEAUX DE PREUVE que l'éditeur a déjà posés.",
-          "Tu DOIS les reprendre (dates, noms, citations, documents) en les étiquetant :",
-          "document / plusieurs témoignages / une seule personne / contradictoire / hypothèse / inconnu.",
+          "Le BRIEF ÉDITORIAL contient des FAITS : dates, noms, citations, documents. Reprends-les dans le récit.",
           "Le dossier web sert à CORROBORER, sourcer, actualiser. N'invente rien hors brief + dossier.",
-          "Si une piste du brief n'est pas dans le dossier web : dis-le ('non retrouvé dans les sources ouvertes') au lieu d'effacer le chapitre.",
           "Chaque grande séquence (année, document, témoin) a SA section, pas un paragraphe fourre-tout.",
           "Citations en *« … »* avec attribution. Listes et tableaux autorisés.",
-          "Chapô (excerpt) : 3 à 4 phrases. Ton sérieux, incisif, factuel — pas de sensationnalisme.",
+          "Chapô (excerpt) : 3 à 4 phrases. Ton sérieux, incisif — comme le flash, pas un disclaimer.",
         ].join("\n")
       : cautious
         ? [
-            "DOSSIER INSUFFISANT : la recherche n'a pas établi les faits de ce sujet.",
-            `Écris une BRÈVE PRUDENTE de ${ARTICLE_LENGTH.cautiousMinWords} à 350 mots, 2 H2 suffisent :`,
-            "1) ce qui circule et sous quelle forme, présenté comme non vérifié ;",
-            "2) ce qui manque pour l'établir (documents, décision de justice, chiffres officiels).",
+            "DOSSIER INSUFFISANT : la recherche n'a pas les faits de ce sujet.",
+            `Écris une BRÈVE de ${ARTICLE_LENGTH.cautiousMinWords} à 350 mots, 2 H2 suffisent,`,
+            "sur ce qui circule, sans inventer et sans section « ce qui manque pour l'établir ».",
             "INTERDIT ABSOLU : citer un nom de personne, un montant, une date précise ou un média",
             "qui ne figure pas dans le dossier. Pas d'éditorial, pas de montée en généralité militante.",
           ].join("\n")
@@ -291,7 +288,8 @@ export async function runWritingAgent(
       : null,
     investigation && input.editorialBrief?.trim()
       ? [
-          "BRIEF ÉDITORIAL (angle, question centrale, directives — à suivre) :",
+          "BRIEF ÉDITORIAL (faits, angle, directives) : suis les faits et la ligne politique.",
+          "Ignore les consignes du brief qui demandent d'inventorier ce qui n'est pas établi.",
           input.editorialBrief.trim().slice(0, 24000),
         ].join("\n")
       : null,
@@ -301,7 +299,7 @@ export async function runWritingAgent(
     cautious
       ? "Rédige la brève JSON prudente. Métadonnées Editor obligatoires."
       : investigation
-        ? "Rédige l'enquête JSON EXHAUSTIVE : toutes les sections du brief, tableaux demandés, sources. Pas un condensé. Citations *« … »*. Métadonnées Editor obligatoires."
+        ? "Rédige l'enquête JSON EXHAUSTIVE : le récit de l'affaire, section par section, comme le flash Facebook en version longue. Pas d'audit « établi / pas établi ». Citations *« … »*. Métadonnées Editor obligatoires."
         : "Rédige l'article JSON : faits nommés et chiffrés d'abord, mécanismes ensuite, puis analyse Rempart argumentée (pas sarcastique). Citations en *« … »*. Métadonnées Editor obligatoires.",
   ]
     .filter(Boolean)
@@ -346,7 +344,12 @@ export async function runWritingAgent(
             ? undefined
             : "low",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "system",
+            content: investigation
+              ? `${SYSTEM_PROMPT}\n\nANGLE ENQUÊTE (identique au flash Facebook) :\n${INVESTIGATION_ANGLE_RULES.map((r) => `- ${r}`).join("\n")}`
+              : SYSTEM_PROMPT,
+          },
           {
             role: "user",
             content: [

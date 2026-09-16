@@ -1,6 +1,9 @@
 import type { ArticleArtifact } from "@/lib/pipeline/types";
 import { italicizeCitations } from "@/lib/italicize-citations";
-import { ARTICLE_LENGTH } from "@/lib/writing/constraints";
+import {
+  ARTICLE_LENGTH,
+  sanitizeInvestigationMarkdown,
+} from "@/lib/writing/constraints";
 import type { WritingMetadata } from "@/lib/writing/types";
 
 function humanizeCopy(text: string): string {
@@ -97,7 +100,13 @@ export function parseWritingResponse(
   }
 
   const content = italicizeCitations(
-    dedupeParagraphs(humanizeCopy(String(parsed.content).trim())),
+    dedupeParagraphs(
+      humanizeCopy(
+        opts.investigation
+          ? sanitizeInvestigationMarkdown(String(parsed.content).trim())
+          : String(parsed.content).trim(),
+      ),
+    ),
   );
 
   if (

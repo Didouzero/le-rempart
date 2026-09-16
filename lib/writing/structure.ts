@@ -20,7 +20,6 @@ const VARIANTS: StructureVariant[] = [
     suggestedPlan: [
       "Chapô factuel",
       "Les faits",
-      "Ce que l'on sait",
       "Pourquoi c'est important",
       "Le contexte",
       "Les réactions",
@@ -38,7 +37,7 @@ const VARIANTS: StructureVariant[] = [
     suggestedPlan: [
       "Chapô",
       "Comment on en est arrivé là",
-      "Les faits établis",
+      "Les faits",
       "Le cadre (politique / juridique)",
       "Réactions",
       "Ce qui change",
@@ -60,7 +59,7 @@ const VARIANTS: StructureVariant[] = [
       "Analyse du Rempart",
     ],
     openingHint: "Ouvre en posant la question naïve la plus utile du dossier, puis réponds avec les faits.",
-    closingHint: "Termine en listant ce qui reste inconnu (missingInformation).",
+    closingHint: "Referme sur la conséquence concrète, sans catalogue de trous.",
   },
   {
     id: "stakes_bridge",
@@ -75,7 +74,7 @@ const VARIANTS: StructureVariant[] = [
       "Analyse du Rempart",
     ],
     openingHint: "Après un chapô factuel court, enchaîne sur l'importance (dossier.importance) AVANT l'analyse.",
-    closingHint: "Conclusion courte : enjeu + ce qui manque encore.",
+    closingHint: "Conclusion courte sur l'enjeu, sans « ce qui manque encore ».",
   },
   {
     id: "actors_map",

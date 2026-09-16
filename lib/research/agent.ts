@@ -227,8 +227,6 @@ export function serializeDossierForWriter(dossier: ResearchDossier): string {
     legalContext: dossier.legalContext,
     reactions: dossier.reactions,
     verification: dossier.verification,
-    uncertainties: dossier.uncertainties,
-    missingInformation: dossier.missingInformation,
     conceptsToExplain: dossier.conceptsToExplain,
     glossary: dossier.glossary,
     naiveQuestions: dossier.naiveQuestions,
@@ -251,7 +249,7 @@ export function serializeDossierForWriter(dossier: ResearchDossier): string {
   return [
     "=== RESEARCH DOSSIER (base de connaissances — faits uniquement) ===",
     "INTERDIT d'inventer hors de ce dossier. Respecte confidence + traçabilité (sourceUrls).",
-    "Si une info manque ou est unverifiable : le dire. Ne comble jamais les trous.",
+    "Si une info n'est pas dans le dossier : ne pas l'écrire. Ne pas cataloguer les absences.",
     "Aucun ton éditorial dans ces données : l'angle Rempart est ta responsabilité seule.",
     JSON.stringify(slim),
   ].join("\n");

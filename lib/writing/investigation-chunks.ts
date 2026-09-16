@@ -2,7 +2,13 @@ import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { moonshotChat } from "@/lib/moonshot";
 import { serializeDossierForWriter } from "@/lib/research/agent";
 import type { ResearchDossier } from "@/lib/research/types";
-import { ARTICLE_LENGTH } from "@/lib/writing/constraints";
+import {
+  ARTICLE_LENGTH,
+  INVESTIGATION_ANGLE_RULES,
+  isInvestigationDropHeading,
+  rewriteInvestigationHeading,
+  sanitizeInvestigationMarkdown,
+} from "@/lib/writing/constraints";
 
 export type InvestigationWritingDraft = {
   title: string;
@@ -16,8 +22,11 @@ function uniqueHeadings(items: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of items) {
-    const t = raw.replace(/^#+\s*/, "").replace(/\s+/g, " ").trim();
+    const t = rewriteInvestigationHeading(
+      raw.replace(/^#+\s*/, "").replace(/\s+/g, " ").trim(),
+    );
     if (t.length < 8 || t.length > 160) continue;
+    if (isInvestigationDropHeading(t)) continue;
     const key = t.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -51,7 +60,7 @@ export function extractPlanFromBrief(prompt: string): string[] {
 
 function planFromDossier(dossier: ResearchDossier, subject: string): string[] {
   const plan: string[] = [];
-  plan.push(`Ce qui est établi — ${subject}`.slice(0, 120));
+  plan.push("Les faits");
   if (dossier.chronology.length >= 2) plan.push("Chronologie");
   if (dossier.actors.length >= 2) plan.push("Les acteurs et leurs responsabilités");
   if ((dossier.legalContext.investigations?.length || 0) > 0) {
@@ -60,7 +69,9 @@ function planFromDossier(dossier: ResearchDossier, subject: string): string[] {
   if (dossier.reactions && Object.values(dossier.reactions).some((x) => x.length)) {
     plan.push("Réactions et contradictions");
   }
-  plan.push("Ce que l’on ne sait pas encore");
+  plan.push("Le mécanisme");
+  plan.push(`L'enjeu : ${subject}`.slice(0, 120));
+  plan.push("Ce que ça révèle");
   return uniqueHeadings(plan).slice(0, 16);
 }
 
@@ -94,8 +105,9 @@ export async function startInvestigationWritingDraft(input: {
           role: "user",
           content: [
             `Sujet : ${input.subject}`,
-            "Propose 10 à 16 titres ## pour une enquête payante exhaustive.",
-            "Si le brief a un plan, SUIS-LE. JSON : {\"title\":\"...\",\"excerpt\":\"2-4 phrases\",\"plan\":[\"H2\",...]}",
+            "Propose 10 à 16 titres ## pour une enquête Rempart (angle flash Facebook : raconter l'affaire).",
+            "INTERDIT les titres « ce qui est établi », « ce que l'on ne sait pas », « ce qui manque pour trancher ».",
+            "Si le brief a un plan, SUIS-LE sauf ces sections-là. JSON : {\"title\":\"...\",\"excerpt\":\"2-4 phrases\",\"plan\":[\"H2\",...]}",
             input.prompt.slice(0, 12000),
           ].join("\n\n"),
         },
@@ -167,7 +179,16 @@ export async function writeNextInvestigationSection(input: {
   const index = input.draft.sections.findIndex((s) => !s.trim());
   if (index < 0) return input.draft;
 
-  const heading = input.draft.plan[index] || `Section ${index + 1}`;
+  const heading = rewriteInvestigationHeading(
+    input.draft.plan[index] || `Section ${index + 1}`,
+  );
+  if (isInvestigationDropHeading(heading)) {
+    return {
+      ...input.draft,
+      plan: input.draft.plan.filter((_, i) => i !== index),
+      sections: input.draft.sections.filter((_, i) => i !== index),
+    };
+  }
   const already = input.draft.plan
     .map((h, i) => (input.draft.sections[i]?.trim() ? `✓ ${h}` : `… ${h}`))
     .join("\n");
@@ -182,6 +203,8 @@ export async function writeNextInvestigationSection(input: {
         role: "system",
         content: [
           "Tu es rédacteur en chef du Rempart, enquête payante.",
+          "Même angle que le FLASH Facebook : tu racontes l'affaire, tu ne grades pas les preuves.",
+          ...INVESTIGATION_ANGLE_RULES,
           "Tu rédiges UNE seule section ##, dense, sourcée, 400 à 700 mots.",
           "Pas de JSON. Markdown uniquement. Commence par ## titre.",
           "Faits d'abord, lecture de droite argumentée ensuite (pas d'invective).",
@@ -217,7 +240,9 @@ export async function writeNextInvestigationSection(input: {
 export function assembleInvestigationArticle(
   draft: InvestigationWritingDraft,
 ): { title: string; excerpt: string; content: string; wordCount: number; remaining: number } {
-  const content = draft.sections.filter((s) => s.trim()).join("\n\n");
+  const content = sanitizeInvestigationMarkdown(
+    draft.sections.filter((s) => s.trim()).join("\n\n"),
+  );
   const wordCount = content.split(/\s+/).filter(Boolean).length;
   const remaining = draft.sections.filter((s) => !s.trim()).length;
   return {
