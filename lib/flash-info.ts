@@ -1,5 +1,4 @@
 import { moonshotChat } from "@/lib/moonshot";
-import { getKimiTextModel } from "@/lib/kimi";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
@@ -169,10 +168,10 @@ export async function buildFlashInfoText(input: {
   }
 
   const corpus = scrubBoilerplate(
-    [input.excerpt, (input.sourceText || "").slice(0, 3500)]
+    [input.excerpt, (input.sourceText || "").slice(0, 2200)]
       .filter(Boolean)
       .join("\n\n"),
-  ).slice(0, 4000);
+  ).slice(0, 2500);
   const outlet = outletFromUrl(input.sourceUrl);
   const userContent = [
     `Titre : ${input.title}`,
@@ -193,21 +192,17 @@ export async function buildFlashInfoText(input: {
   for (;;) {
     attempt += 1;
     try {
-      const text = await Promise.race([
-        moonshotChat({
-          model: getKimiTextModel(),
-          maxTokens: 450,
-          timeoutMs: 18_000,
-          reasoningEffort: "low",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userContent },
-          ],
-        }),
-        new Promise<string>((_, reject) =>
-          setTimeout(() => reject(new Error("flash kimi timeout")), 20_000),
-        ),
-      ]);
+      // k2.6 + thinking off : un flash de 130 mots. k3 « réfléchit » et
+      // dépasse 18 s, d’où la boucle de timeouts.
+      const text = await moonshotChat({
+        model: "kimi-k2.6",
+        maxTokens: 450,
+        timeoutMs: 45_000,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userContent },
+        ],
+      });
 
       let body = scrubFlashOutput(ensureParagraphs(stripFlashPrefix(text || "")));
       const words = wordCount(body);
@@ -233,8 +228,7 @@ export async function buildFlashInfoText(input: {
       const reason = err instanceof Error ? err.message : String(err);
       console.error("flash kimi retry", attempt, reason);
       await input.onRetry?.(attempt + 1, reason);
-      const waitMs = Math.min(15_000, 2000 * attempt);
-      await sleep(waitMs);
+      await sleep(Math.min(4_000, 1000 * attempt));
     }
   }
 }
