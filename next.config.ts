@@ -5,15 +5,7 @@ const nextConfig: NextConfig = {
     // TikTok WIP must not block ads.txt / site deploys.
     ignoreBuildErrors: true,
   },
-  serverExternalPackages: [
-    "sharp",
-    "@prisma/client",
-    "@resvg/resvg-js",
-    "tesseract.js",
-  ],
-  outputFileTracingIncludes: {
-    "/api/telegram/webhook": ["./ocr-data/**"],
-  },
+  serverExternalPackages: ["sharp", "@prisma/client", "@resvg/resvg-js"],
   async headers() {
     return [
       {

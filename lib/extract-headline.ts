@@ -1,90 +1,71 @@
-import path from "path";
 import sharp from "sharp";
-import { createWorker, PSM, type Worker } from "tesseract.js";
-import { withTimeout } from "@/lib/with-timeout";
+import { moonshotChat, type MoonshotMessage } from "@/lib/moonshot";
 
-const OCR_MAX_MS = 8_000;
-const TESSDATA = path.join(process.cwd(), "ocr-data");
+/** k2.6 thinking-off sur un JPEG léger : quelques secondes, pas 28. */
+const VISION_MODEL = "kimi-k2.6";
+const VISION_TIMEOUT_MS = 12_000;
+const VISION_MAX_EDGE = 960;
 
-let workerPromise: Promise<Worker> | null = null;
+async function jpegForVision(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer, { failOn: "none" })
+    .rotate()
+    .resize(VISION_MAX_EDGE, VISION_MAX_EDGE, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 72, mozjpeg: true })
+    .toBuffer();
+}
 
-function getWorker(): Promise<Worker> {
-  if (!workerPromise) {
-    workerPromise = createWorker("fra", 1, {
-      langPath: TESSDATA,
-      gzip: false,
-      cachePath: "/tmp",
-      cacheMethod: "none",
-    }).catch((err) => {
-      workerPromise = null;
-      throw err;
-    });
-  }
-  return workerPromise;
+function cleanTitle(raw: string): string {
+  return raw
+    .replace(/^["«»]|["«»]$/g, "")
+    .replace(/^titre\s*[:\-–]\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
- * Tesseract lit mieux du noir sur blanc. Les créatives Rempart
- * (titre Impact blanc/or sur fond sombre) sont donc inversées.
- */
-async function pngForOcr(buffer: Buffer): Promise<Buffer> {
-  const base = sharp(buffer, { failOn: "none" }).rotate().resize(900, 1200, {
-    fit: "inside",
-    withoutEnlargement: true,
-  });
-  const stats = await base.clone().stats();
-  const channels = stats.channels.slice(0, 3);
-  const mean =
-    channels.reduce((sum, c) => sum + c.mean, 0) / Math.max(channels.length, 1);
-  const pipeline = base.clone().greyscale().normalise().sharpen();
-  if (mean < 140) {
-    pipeline.negate({ alpha: false });
-  }
-  return pipeline.png().toBuffer();
-}
-
-function cleanOcrText(text: string): string {
-  const lines = text
-    .split(/\n+/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter((line) => line.length >= 3)
-    .filter((line) => !/^(le\s+)?rempart\.?$/i.test(line))
-    .filter((line) => /[A-Za-zÀ-ÿ]{3,}/.test(line));
-  return lines.join(" ").replace(/\s+/g, " ").trim();
-}
-
-async function ocrHeadline(png: Buffer): Promise<string> {
-  const worker = await getWorker();
-  await worker.setParameters({
-    tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-  });
-  const { data } = await worker.recognize(png);
-  const fromLines = (data.lines || [])
-    .filter((line) => (line.confidence ?? 0) >= 40)
-    .map((line) => line.text)
-    .join("\n");
-  const title = cleanOcrText(fromLines || data.text || "");
-  if (title.length >= 8) return title.slice(0, 200);
-  throw new Error("Titre extrait trop court");
-}
-
-/**
- * Lit le titre écrit sur la créative — OCR local, pas Kimi.
+ * Lit le titre / accroche écrite sur la créative Canva.
+ * Image d’abord réduite : un PNG 4 Mo faisait timeout, un JPEG 960px passe.
  */
 export async function extractHeadlineFromCreative(input: {
   buffer: Buffer;
   mime: string;
 }): Promise<string> {
-  const png = await pngForOcr(input.buffer);
-  try {
-    return await withTimeout(ocrHeadline(png), OCR_MAX_MS, "Lecture du titre");
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/timeout/i.test(msg) || /trop court/i.test(msg)) {
-      throw new Error(
-        "Titre illisible sur la créative. Envoie-la avec le titre en légende.",
-      );
-    }
-    throw err instanceof Error ? err : new Error(msg);
+  if (!process.env.MOONSHOT_API_KEY) {
+    throw new Error("MOONSHOT_API_KEY is not set");
   }
+
+  const jpeg = await jpegForVision(input.buffer);
+  const dataUrl = `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+
+  const messages: MoonshotMessage[] = [
+    {
+      role: "system",
+      content:
+        "Tu extrais le titre principal d'une créative d'actualité (image Canva). Réponds UNIQUEMENT avec le texte du titre, sans guillemets, sans commentaire.",
+    },
+    {
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: dataUrl } },
+        {
+          type: "text",
+          text: "Quel est le titre / accroche principale écrite sur cette image ?",
+        },
+      ],
+    },
+  ];
+
+  const raw = await moonshotChat({
+    model: VISION_MODEL,
+    maxTokens: 80,
+    timeoutMs: VISION_TIMEOUT_MS,
+    messages,
+  });
+
+  const title = cleanTitle(raw);
+  if (title.length >= 6) return title.slice(0, 200);
+  throw new Error("Titre extrait trop court");
 }

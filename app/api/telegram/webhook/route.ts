@@ -7,6 +7,7 @@ import {
   extractHttpUrl,
   getActivePublishDraft,
   setPublishDraftCoverUrl,
+  setPublishDraftHeadline,
   upsertPublishDraft,
 } from "@/lib/publish-draft";
 import {
@@ -692,11 +693,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
         } catch (err) {
           console.error("flash headline", err);
-          await telegramSendMessage(
-            chatId,
-            "Je n’arrive pas à lire le titre. Renvoie la créative avec le titre en légende.",
-          );
-          return;
+          headline = "";
         }
       }
 
@@ -706,6 +703,19 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         headline,
         image,
       });
+
+      if (!headline) {
+        await telegramSendMessage(
+          chatId,
+          [
+            "Créative enregistrée. Tape le titre (un message texte).",
+            "Pas besoin de renvoyer l’image.",
+            "",
+            "/cancel pour annuler.",
+          ].join("\n"),
+        );
+        return;
+      }
 
       await telegramSendMessage(
         chatId,
@@ -721,9 +731,40 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    // ── Étapes 2–3 : URLs alors qu’un brouillon attend ──
+    // ── Étapes 2–3 : titre manquant, puis URLs ──
     const draft = await getActivePublishDraft(chatId);
     const url = text ? extractHttpUrl(text) : null;
+
+    if (draft && !draft.headline.trim()) {
+      const typed = (text || "").trim();
+      if (typed && !url && !cmd.startsWith("/")) {
+        const saved = await setPublishDraftHeadline(chatId, typed);
+        if (!saved) {
+          await telegramSendMessage(
+            chatId,
+            "Titre trop court. Envoie le titre en un message texte.\n/cancel pour annuler.",
+          );
+          return;
+        }
+        await telegramSendMessage(
+          chatId,
+          [
+            `Titre enregistré : ${saved.headline}`,
+            "",
+            "Envoie maintenant l’URL de l’image à mettre dans l’article (http/https).",
+            "Idéal : 1600×900 (16:9), sujet au centre.",
+            "",
+            "/cancel pour annuler.",
+          ].join("\n"),
+        );
+        return;
+      }
+      await telegramSendMessage(
+        chatId,
+        "La créative est déjà là. Tape le titre (un message texte), pas une URL.\n/cancel pour annuler.",
+      );
+      return;
+    }
 
     if (draft && url && !draft.coverImageUrl) {
       await setPublishDraftCoverUrl(chatId, url);
@@ -772,7 +813,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           draft.coverImageUrl
             ? "J’attends encore le lien de la source (URL complète http/https)."
             : "J’attends encore l’URL de l’image d’illustration (http/https).",
-          `Titre en attente : ${draft.headline.slice(0, 120)}`,
+          draft.headline.trim()
+            ? `Titre en attente : ${draft.headline.slice(0, 120)}`
+            : "Il me manque encore le titre (un message texte).",
           "",
           "/cancel pour annuler.",
         ].join("\n"),

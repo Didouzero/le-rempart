@@ -68,6 +68,23 @@ export async function upsertPublishDraft(input: {
   return toRecord(row);
 }
 
+export async function setPublishDraftHeadline(
+  chatId: number,
+  headline: string,
+): Promise<PublishDraftRecord | null> {
+  const trimmed = headline.replace(/\s+/g, " ").trim().slice(0, 500);
+  if (trimmed.length < 6) return null;
+  try {
+    const row = await prisma.publishDraft.update({
+      where: { chatId: BigInt(chatId) },
+      data: { headline: trimmed },
+    });
+    return toRecord(row);
+  } catch {
+    return null;
+  }
+}
+
 export async function setPublishDraftCoverUrl(
   chatId: number,
   coverImageUrl: string,
