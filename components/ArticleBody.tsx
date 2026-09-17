@@ -8,7 +8,7 @@ type ArticleBodyProps = {
   content: string;
   /** Insère le CTA newsletter juste avant le dernier paragraphe. */
   showNewsletterCta?: boolean;
-  /** Widget MGID In-Article mobile après le 1er paragraphe. */
+  /** Widget MGID In-Article mobile après le 3e paragraphe. */
   showInArticleAd?: boolean;
 };
 
@@ -199,24 +199,34 @@ function MarkdownChunk({ source }: { source: string }) {
   );
 }
 
-/** Premier bloc éditorial (hors titres seuls), pour insérer MGID après le 1er paragraphe. */
-function splitAfterFirstParagraph(markdown: string): [string, string] {
+/** Titres / filets : ne comptent pas comme paragraphes pour l’insertion MGID. */
+function isHeadingOrRule(block: string): boolean {
+  return /^(#{1,6}\s|---+$|\*\*\*+$)/.test(block);
+}
+
+/** Coupe après le n-ième paragraphe (hors titres), s’il reste du texte après. */
+function splitAfterNthParagraph(
+  markdown: string,
+  n: number,
+): [string, string] {
   const blocks = markdown
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean);
   if (blocks.length < 2) return [markdown, ""];
 
-  let i = 0;
-  while (i < blocks.length && isNonParagraphLead(blocks[i]!)) i += 1;
-  if (i >= blocks.length - 1) return [markdown, ""];
-
-  const cut = i + 1;
+  let paragraphs = 0;
+  let cut = -1;
+  for (let i = 0; i < blocks.length; i += 1) {
+    if (isHeadingOrRule(blocks[i]!)) continue;
+    paragraphs += 1;
+    if (paragraphs === n) {
+      cut = i + 1;
+      break;
+    }
+  }
+  if (cut < 0 || cut >= blocks.length) return [markdown, ""];
   return [blocks.slice(0, cut).join("\n\n"), blocks.slice(cut).join("\n\n")];
-}
-
-function isNonParagraphLead(block: string): boolean {
-  return /^(#{1,6}\s|---+$|\*\*\*+$)/.test(block);
 }
 
 function splitMarkdownBeforeLast(markdown: string): [string, string] {
@@ -250,9 +260,9 @@ export function ArticleBody({
   let remaining = md;
   let insertAd = false;
   if (showInArticleAd) {
-    const [first, after] = splitAfterFirstParagraph(md);
+    const [before, after] = splitAfterNthParagraph(md, 3);
     if (after) {
-      lead = first;
+      lead = before;
       remaining = after;
       insertAd = true;
     }
