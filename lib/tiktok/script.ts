@@ -53,22 +53,21 @@ function parseJsonScript(raw: string): TiktokScript {
     throw new Error("Script TikTok trop court");
   }
   const scenesRaw = Array.isArray(obj.scenes) ? obj.scenes : [];
-  const scenes: TiktokScene[] = scenesRaw
-    .map((s) => {
-      if (!s || typeof s !== "object") return null;
-      const rec = s as Record<string, unknown>;
-      const visualQuery = String(rec.visualQuery || rec.query || "").trim();
-      if (!visualQuery) return null;
-      const person = String(rec.person || "").trim();
-      return {
-        text: String(rec.text || "").trim(),
-        visualQuery,
-        kind: rec.kind === "photo" ? "photo" : "video",
-        person: person || undefined,
-      } satisfies TiktokScene;
-    })
-    .filter((s): s is TiktokScene => s !== null)
-    .slice(0, 12);
+  const scenes: TiktokScene[] = [];
+  for (const s of scenesRaw) {
+    if (!s || typeof s !== "object") continue;
+    const rec = s as Record<string, unknown>;
+    const visualQuery = String(rec.visualQuery || rec.query || "").trim();
+    if (!visualQuery) continue;
+    const person = String(rec.person || "").trim();
+    scenes.push({
+      text: String(rec.text || "").trim(),
+      visualQuery,
+      kind: rec.kind === "photo" ? "photo" : "video",
+      person: person || undefined,
+    });
+    if (scenes.length >= 12) break;
+  }
   if (scenes.length < 6) {
     throw new Error("Script TikTok : pas assez de scènes visuelles");
   }
