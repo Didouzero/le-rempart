@@ -20,7 +20,7 @@ function Cover({
   featured?: boolean;
 }) {
   const frame = featured
-    ? "media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]"
+    ? "media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)] sm:aspect-[21/9]"
     : "media-frame aspect-[16/10] w-full";
 
   if (src) {
@@ -35,7 +35,7 @@ function Cover({
   return (
     <div
       className={`flex w-full items-end rounded-lg bg-ink p-6 ${
-        featured ? "aspect-[16/9]" : "aspect-[16/10]"
+        featured ? "aspect-[16/9] sm:aspect-[21/9]" : "aspect-[16/10]"
       }`}
     >
       <span className="inline-flex items-center gap-2 font-display tracking-[0.14em] text-accent">
