@@ -126,7 +126,7 @@ export async function runTiktokJob(jobId: string): Promise<void> {
       sourceText,
     });
     let durationMs = 0;
-    let audio = Buffer.alloc(0);
+    let audio: Buffer = Buffer.alloc(0) as Buffer;
     let mime = "audio/mpeg";
 
     await setPhase(jobId, "voice", {
@@ -140,7 +140,7 @@ export async function runTiktokJob(jobId: string): Promise<void> {
 
     for (let attempt = 1; attempt <= TIKTOK_TTS_MAX_ATTEMPTS; attempt++) {
       const voice = await synthesizeJournalistVoice(script.script);
-      audio = voice.audio;
+      audio = Buffer.from(voice.audio);
       mime = voice.mime;
       durationMs = voice.durationMs;
       if (isDurationInTarget(durationMs)) break;
