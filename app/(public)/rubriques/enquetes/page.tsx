@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CrownCircleIcon, CrownIcon } from "@/components/BrandIcons";
+import { CrownCircleIcon } from "@/components/BrandIcons";
+import { DossierCard, type DossierTeaser } from "@/components/DossierCard";
 import { JsonLd } from "@/components/JsonLd";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
-import { PublishedAt } from "@/components/PublishedAt";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { buildPageMetadata, collectionPageJsonLd } from "@/lib/seo";
@@ -16,22 +16,22 @@ export const metadata: Metadata = buildPageMetadata({
   path: PREMIUM_CATEGORY.path,
 });
 
-const PLACEHOLDERS = [
+const PLACEHOLDERS: DossierTeaser[] = [
   {
     slug: "mercredi",
     title: "Enquête du mercredi",
     excerpt:
       "Révélation documentée — première livraison mercredi. Réservée aux abonnés Rempart+.",
-    publishedAt: null as Date | null,
-    coverImageUrl: null as string | null,
+    publishedAt: null,
+    coverImageUrl: null,
   },
   {
     slug: "samedi",
     title: "Enquête du samedi",
     excerpt:
       "Dossier exclusif — prochaine livraison samedi. Réservée aux abonnés Rempart+.",
-    publishedAt: null as Date | null,
-    coverImageUrl: null as string | null,
+    publishedAt: null,
+    coverImageUrl: null,
   },
 ];
 
@@ -42,13 +42,7 @@ export default async function EnquetesPage({
 }) {
   const params = await searchParams;
   const isPlus = await hasActiveRempartPlus();
-  let dossiers: Array<{
-    slug: string;
-    title: string;
-    excerpt: string;
-    publishedAt: Date | null;
-    coverImageUrl: string | null;
-  }> = [];
+  let dossiers: DossierTeaser[] = [];
 
   try {
     dossiers = await withDbTimeout(
@@ -73,6 +67,7 @@ export default async function EnquetesPage({
     dossiers.length >= 2
       ? dossiers.slice(0, 2)
       : [...dossiers, ...PLACEHOLDERS.slice(dossiers.length)];
+  const [featured, ...rest] = dossiers;
 
   return (
     <div className="animate-fade-up">
@@ -88,9 +83,8 @@ export default async function EnquetesPage({
           <span className="live-dot" aria-hidden />
           Rempart+
         </p>
-        <h1 className="font-display mt-2 flex flex-wrap items-center gap-3 text-4xl tracking-[0.08em] sm:text-5xl">
+        <h1 className="font-display mt-2 text-4xl tracking-[0.08em] sm:text-5xl">
           {PREMIUM_CATEGORY.label}
-          <CrownIcon className="h-8 w-8 text-accent sm:h-9 sm:w-9" />
         </h1>
         <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
         <p className="mt-4 max-w-2xl text-base text-muted">
@@ -116,61 +110,39 @@ export default async function EnquetesPage({
             Rempart+ est déjà ouvert.
           </p>
         ) : (
-          <ul className="mt-4 list-none space-y-8 p-0">
-            {dossiers.map((d) => (
-              <li key={d.slug} className="border-b border-ink/10 pb-8">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted">
-                  <PublishedAt
-                    value={d.publishedAt}
-                    weekday
-                    year={false}
-                    empty="Bientôt"
-                  />
-                </p>
-                <h2 className="font-display mt-2 text-2xl tracking-[0.06em]">
-                  <Link
-                    href={`/dossiers/${d.slug}`}
-                    className="no-underline hover:text-accent-deep"
-                  >
-                    {d.title}
-                  </Link>
-                </h2>
-                <p className="mt-2 text-muted">{d.excerpt}</p>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-4 space-y-12">
+            {featured ? <DossierCard dossier={featured} featured /> : null}
+            {rest.length > 0 ? (
+              <ul className="grid list-none gap-8 p-0 sm:grid-cols-2">
+                {rest.map((d, i) => (
+                  <li key={d.slug}>
+                    <DossierCard dossier={d} index={i + 1} />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         )
       ) : (
-        <div className="relative overflow-hidden">
-          <div className="pointer-events-none select-none space-y-5">
-            {lockedCards.map((d, i) => (
-              <article
-                key={d.slug}
-                className="rounded-lg border border-ink/10 bg-white/55 p-5 shadow-[var(--shadow-soft)]"
-                style={{
-                  opacity: i === 0 ? 0.72 : 0.28,
-                  filter: i === 0 ? "none" : "blur(0.4px)",
-                }}
-                aria-hidden={i > 0}
-              >
-                <p className="font-display text-xs tracking-[0.16em] text-accent-deep">
-                  <PublishedAt
-                    value={d.publishedAt}
-                    weekday
-                    year={false}
-                    empty="Bientôt"
-                  />{" "}
-                  · exclusif
-                </p>
-                <h2 className="font-display mt-2 text-2xl tracking-[0.06em]">
-                  {d.title}
-                </h2>
-                <p className="mt-2 text-muted">{d.excerpt}</p>
-              </article>
-            ))}
+        <div>
+          <div className="relative overflow-hidden">
+            <div className="space-y-10">
+              {lockedCards[0] ? (
+                <DossierCard dossier={lockedCards[0]} featured locked />
+              ) : null}
+              {lockedCards[1] ? (
+                <div
+                  className="pointer-events-none select-none"
+                  style={{ opacity: 0.38, filter: "blur(0.6px)" }}
+                  aria-hidden
+                >
+                  <DossierCard dossier={lockedCards[1]} locked index={1} />
+                </div>
+              ) : null}
+            </div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--color-paper)]" />
           </div>
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[color-mix(in_srgb,var(--color-paper)_35%,transparent)] to-[var(--color-paper)]" />
-          <div className="relative z-10 -mt-28 flex flex-col items-center px-4 pb-4 text-center sm:-mt-32">
+          <div className="relative z-10 -mt-8 flex flex-col items-center px-4 pb-4 text-center">
             <p className="font-display max-w-lg text-2xl tracking-[0.08em] text-ink sm:text-3xl">
               Abonnez-vous au Rempart+ pour découvrir l&apos;envers du décor
             </p>

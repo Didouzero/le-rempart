@@ -290,10 +290,13 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
               <input
                 className="admin-input mt-2"
                 type="url"
-                placeholder="https://…"
+                placeholder="https://… — 1600×900 (16:9)"
                 value={coverImageUrl}
                 onChange={(e) => setCoverImageUrl(e.target.value)}
               />
+              <span className="mt-1 block text-xs font-normal text-muted">
+                Format maître : 1600×900 (16:9), sujet centré.
+              </span>
             </label>
             <div className="flex flex-wrap gap-3">
               <button

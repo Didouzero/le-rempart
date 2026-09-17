@@ -48,7 +48,7 @@ function commandsHelpText(): string {
     "",
     "── Manuel (toujours dispo) ──",
     "1) Envoie une créative PNG/JPG",
-    "2) Envoie l’URL de l’image d’illustration (site)",
+    "2) Envoie l’URL de l’image d’illustration (site) — 1600×900, 16:9",
     "3) Envoie le lien de l’article source",
     "→ article site + Facebook",
     "/cancel — annuler la créative en attente",
@@ -711,6 +711,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         chatId,
         [
           "Envoie maintenant l’URL de l’image à mettre dans l’article (http/https).",
+          "Idéal : 1600×900 (16:9), sujet au centre.",
           "Exemple : lien direct vers un .jpg / .png (Wikimedia, agence, etc.).",
           "",
           "Ensuite je te demanderai le lien de l’article source.",

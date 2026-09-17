@@ -64,9 +64,15 @@ export default async function DossierPage({ params }: Props) {
 
   if (dossier.membersOnly && !plus) {
     return (
-      <article className="animate-fade-up max-w-2xl">
+      <article className="animate-fade-up max-w-3xl">
         <p className="section-kicker">Rempart+</p>
-        <h1 className="font-display mt-2 text-3xl tracking-[0.08em]">
+        {dossier.coverImageUrl ? (
+          <div className="media-frame mt-5 aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={dossier.coverImageUrl} alt="" />
+          </div>
+        ) : null}
+        <h1 className="font-display mt-5 text-3xl tracking-[0.08em]">
           {dossier.title}
         </h1>
         <p className="mt-4 text-muted">{dossier.excerpt}</p>
@@ -103,13 +109,9 @@ export default async function DossierPage({ params }: Props) {
         {dossier.excerpt}
       </p>
       {dossier.coverImageUrl ? (
-        <div className="media-frame my-10 max-h-[36rem] w-full shadow-[var(--shadow-soft)]">
+        <div className="media-frame my-10 aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={dossier.coverImageUrl}
-            alt=""
-            className="max-h-[36rem] w-full object-cover"
-          />
+          <img src={dossier.coverImageUrl} alt="" />
         </div>
       ) : (
         <div className="gold-rule animate-line-grow mt-8 max-w-md" />

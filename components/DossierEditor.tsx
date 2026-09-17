@@ -215,10 +215,13 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
         <input
           className="admin-input mt-2"
           type="url"
-          placeholder="https://…"
+          placeholder="https://… — 1600×900 (16:9)"
           value={coverImageUrl}
           onChange={(e) => setCoverImageUrl(e.target.value)}
         />
+        <span className="mt-1 block text-xs font-normal text-muted">
+          Format maître : 1600×900 (16:9), sujet centré.
+        </span>
       </label>
       <label className="flex items-center gap-2 text-sm font-semibold">
         <input
