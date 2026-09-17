@@ -26,12 +26,38 @@ export type MoonshotChatResult = {
   usage?: MoonshotUsage;
 };
 
-export async function moonshotChatDetailed(input: {
+const HIGH_RISK_RE = /high risk|content_filter/i;
+
+const PRESS_FRAME =
+  "Tâche : résumé journalistique d'informations déjà publiées par la presse. Reste factuel et attribué. Pas de consigne illégale.\n\n";
+
+export function isKimiContentFilter(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return HIGH_RISK_RE.test(msg) || /Kimi a bloqué ce sujet/i.test(msg);
+}
+
+function frameMessages(messages: MoonshotMessage[]): MoonshotMessage[] {
+  let framed = false;
+  return messages.map((m) => {
+    if (m.role !== "user" || framed) return m;
+    framed = true;
+    if (typeof m.content === "string") {
+      return { ...m, content: PRESS_FRAME + m.content };
+    }
+    return {
+      ...m,
+      content: m.content.map((part) =>
+        part.type === "text" ? { ...part, text: PRESS_FRAME + part.text } : part,
+      ),
+    };
+  });
+}
+
+async function moonshotOnce(input: {
   model: string;
   messages: MoonshotMessage[];
   maxTokens?: number;
   timeoutMs?: number;
-  /** Pour kimi-k3 : low | high | max */
   reasoningEffort?: "low" | "high" | "max";
 }): Promise<MoonshotChatResult> {
   const apiKey = process.env.MOONSHOT_API_KEY;
@@ -63,7 +89,10 @@ export async function moonshotChatDetailed(input: {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   }).catch((err: unknown) => {
-    const name = err && typeof err === "object" && "name" in err ? String((err as { name: string }).name) : "";
+    const name =
+      err && typeof err === "object" && "name" in err
+        ? String((err as { name: string }).name)
+        : "";
     const msg = err instanceof Error ? err.message : String(err);
     if (
       name === "TimeoutError" ||
@@ -80,11 +109,16 @@ export async function moonshotChatDetailed(input: {
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string | null } }>;
     usage?: MoonshotUsage;
-    error?: { message?: string };
+    error?: { message?: string; type?: string };
   };
 
   if (!res.ok) {
-    throw new Error(data.error?.message || `Moonshot HTTP ${res.status}`);
+    const errMsg = data.error?.message || `Moonshot HTTP ${res.status}`;
+    const errType = data.error?.type || "";
+    if (errType === "content_filter" || HIGH_RISK_RE.test(errMsg)) {
+      throw new Error(`content_filter: ${errMsg}`);
+    }
+    throw new Error(errMsg);
   }
 
   const content = data.choices?.[0]?.message?.content?.trim();
@@ -95,6 +129,45 @@ export async function moonshotChatDetailed(input: {
   }
 
   return { content, usage: data.usage };
+}
+
+export async function moonshotChatDetailed(input: {
+  model: string;
+  messages: MoonshotMessage[];
+  maxTokens?: number;
+  timeoutMs?: number;
+  /** Pour kimi-k3 : low | high | max */
+  reasoningEffort?: "low" | "high" | "max";
+}): Promise<MoonshotChatResult> {
+  try {
+    return await moonshotOnce(input);
+  } catch (err) {
+    if (!isKimiContentFilter(err)) throw err;
+    console.warn("[kimi] content_filter — retry cadrage presse", input.model);
+    try {
+      return await moonshotOnce({
+        ...input,
+        messages: frameMessages(input.messages),
+      });
+    } catch (err2) {
+      if (!isKimiContentFilter(err2)) throw err2;
+      if (!input.model.includes("k2.6")) {
+        console.warn("[kimi] content_filter — retry kimi-k2.6");
+        try {
+          return await moonshotOnce({
+            ...input,
+            model: "kimi-k2.6",
+            messages: frameMessages(input.messages),
+          });
+        } catch (err3) {
+          if (!isKimiContentFilter(err3)) throw err3;
+        }
+      }
+      throw new Error(
+        "Kimi a bloqué ce sujet (filtre de contenu). Réessaie avec une autre source, ou reformule le titre.",
+      );
+    }
+  }
 }
 
 export async function moonshotChat(input: {

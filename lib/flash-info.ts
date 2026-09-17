@@ -1,4 +1,4 @@
-import { moonshotChat } from "@/lib/moonshot";
+import { moonshotChat, isKimiContentFilter } from "@/lib/moonshot";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
@@ -227,6 +227,7 @@ export async function buildFlashInfoText(input: {
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       console.error("flash kimi retry", attempt, reason);
+      if (isKimiContentFilter(err) && attempt >= 2) throw err;
       await input.onRetry?.(attempt + 1, reason);
       await sleep(Math.min(4_000, 1000 * attempt));
     }

@@ -782,7 +782,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         raw,
       )
         ? "Timeout (opération trop longue). Renvoie le lien une fois, sans spammer."
-        : raw;
+        : /high risk|content_filter|Kimi a bloqué/i.test(raw)
+          ? "Kimi a bloqué ce sujet (filtre de contenu). Réessaie avec une autre source, ou reformule le titre."
+          : raw;
       await telegramSendMessage(chatId, `Erreur : ${friendly}`);
     } catch {
       // ignore
