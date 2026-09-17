@@ -90,12 +90,20 @@ export type TiktokAssetRow = {
   job?: { fileToken: string };
 };
 
-export function tiktokModels(): TiktokDelegates {
+export function tiktokModels(): {
+  draft: TiktokDelegates["tiktokDraft"];
+  job: TiktokDelegates["tiktokJob"];
+  asset: TiktokDelegates["tiktokAsset"];
+} {
   const p = prisma as unknown as Partial<TiktokDelegates>;
   if (!p.tiktokDraft || !p.tiktokJob || !p.tiktokAsset) {
     throw new Error(
       "Client Prisma trop ancien pour TikTok. Lance `npx prisma generate` puis `npx prisma migrate deploy`.",
     );
   }
-  return p as TiktokDelegates;
+  return {
+    draft: p.tiktokDraft,
+    job: p.tiktokJob,
+    asset: p.tiktokAsset,
+  };
 }
