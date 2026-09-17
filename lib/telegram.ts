@@ -215,6 +215,15 @@ export type TelegramUpdate = {
       file_name?: string;
       file_size?: number;
     };
+    video?: {
+      file_id: string;
+      mime_type?: string;
+      file_name?: string;
+      file_size?: number;
+      duration?: number;
+      width?: number;
+      height?: number;
+    };
   };
   callback_query?: {
     id: string;

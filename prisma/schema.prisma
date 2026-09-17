@@ -152,3 +152,60 @@ model SpecialDossier {
 
   @@index([publishedAt])
 }
+
+/// Brouillon Telegram /tiktok : lien article + médias optionnels.
+model TiktokDraft {
+  id         String   @id @default(cuid())
+  chatId     BigInt   @unique
+  userId     BigInt
+  /// awaiting_url | awaiting_media
+  step       String   @default("awaiting_url")
+  sourceUrl  String?
+  extraMedia Json     @default("[]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+/// Job de montage / publication TikTok Droitocratie.
+model TiktokJob {
+  id              String        @id @default(cuid())
+  chatId          BigInt
+  userId          BigInt
+  sourceUrl       String
+  extraMedia      Json          @default("[]")
+  /// scrape | script | voice | media | render | preview | posting | posted | failed | cancelled
+  phase           String        @default("scrape")
+  progress        String?
+  error           String?
+  title           String?
+  scriptText      String?
+  caption         String?
+  scenes          Json?
+  durationMs      Int?
+  renderUrl       String?
+  creatomateId    String?
+  fileToken       String        @unique
+  tiktokPublishId String?
+  tiktokMode      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  assets          TiktokAsset[]
+
+  @@index([chatId, createdAt])
+  @@index([phase, createdAt])
+}
+
+/// Audio TTS, photos/vidéos user, éventuellement proxy.
+model TiktokAsset {
+  id        String    @id @default(cuid())
+  jobId     String
+  kind      String
+  mime      String
+  data      Bytes
+  createdAt DateTime  @default(now())
+  job       TiktokJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, kind])
+}
