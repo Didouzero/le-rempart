@@ -687,8 +687,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
       let headline = manualCaption;
       if (!headline) {
-        headline = await extractHeadlineFromCreative(image);
-        await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
+        try {
+          headline = await extractHeadlineFromCreative(image);
+          await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
+        } catch (err) {
+          console.error("flash headline", err);
+          await telegramSendMessage(
+            chatId,
+            "Je n’arrive pas à lire le titre. Renvoie la créative avec le titre en légende.",
+          );
+          return;
+        }
       }
 
       await upsertPublishDraft({

@@ -10,9 +10,10 @@ export function getKimiTextModel(): string {
 }
 
 export function getKimiVisionModels(): string[] {
-  const primary =
-    process.env.KIMI_VISION_MODEL || process.env.KIMI_MODEL || "kimi-k2.6";
-  return [...new Set([primary, "kimi-k2.6"])];
+  // k3 + reasoning dépasse souvent le timeout OCR des créatives Telegram.
+  const primary = process.env.KIMI_VISION_MODEL || "kimi-k2.6";
+  const models = [primary, "kimi-k2.6"].filter((m) => !m.includes("k3"));
+  return [...new Set(models.length ? models : ["kimi-k2.6"])];
 }
 
 export type GeneratedArticle = {
