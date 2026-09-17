@@ -121,7 +121,7 @@ async function moonshotOnce(input: {
     throw new Error(errMsg);
   }
 
-  const content = data.choices?.[0]?.message?.content?.trim();
+  const content = data.choices?.[0]?.message?.content?.trim()?.replace(/\u0000/g, "");
   if (!content) throw new Error("Réponse Kimi vide");
 
   if (data.usage) {

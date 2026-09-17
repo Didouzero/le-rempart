@@ -19,6 +19,7 @@ async function jpegForVision(buffer: Buffer): Promise<Buffer> {
 
 function cleanTitle(raw: string): string {
   return raw
+    .replace(/\u0000/g, "")
     .replace(/^["«»]|["«»]$/g, "")
     .replace(/^titre\s*[:\-–]\s*/i, "")
     .replace(/\s+/g, " ")

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { utf8Text } from "@/lib/utf8";
 
 /** Brouillon créative → image → lien : expire après 30 min. */
 export const PUBLISH_DRAFT_TTL_MS = 30 * 60 * 1000;
@@ -52,16 +53,16 @@ export async function upsertPublishDraft(input: {
     create: {
       chatId: BigInt(input.chatId),
       userId: BigInt(input.userId),
-      headline: input.headline.slice(0, 500),
+      headline: utf8Text(input.headline, 500),
       imageMime: input.image.mime,
-      imageData: new Uint8Array(input.image.buffer),
+      imageData: Buffer.from(input.image.buffer),
       coverImageUrl: null,
     },
     update: {
       userId: BigInt(input.userId),
-      headline: input.headline.slice(0, 500),
+      headline: utf8Text(input.headline, 500),
       imageMime: input.image.mime,
-      imageData: new Uint8Array(input.image.buffer),
+      imageData: Buffer.from(input.image.buffer),
       coverImageUrl: null,
     },
   });
@@ -72,7 +73,7 @@ export async function setPublishDraftHeadline(
   chatId: number,
   headline: string,
 ): Promise<PublishDraftRecord | null> {
-  const trimmed = headline.replace(/\s+/g, " ").trim().slice(0, 500);
+  const trimmed = utf8Text(headline.replace(/\s+/g, " ").trim(), 500);
   if (trimmed.length < 6) return null;
   try {
     const row = await prisma.publishDraft.update({

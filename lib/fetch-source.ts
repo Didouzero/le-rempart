@@ -270,8 +270,20 @@ async function fetchDirect(url: string): Promise<string> {
     throw new Error(`HTTP ${response.status}`);
   }
 
-  const contentType = response.headers.get("content-type") ?? "";
-  const body = await response.text();
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  if (
+    contentType.startsWith("image/") ||
+    contentType.startsWith("audio/") ||
+    contentType.startsWith("video/") ||
+    contentType.includes("pdf") ||
+    contentType.includes("octet-stream")
+  ) {
+    throw new Error(
+      "Ce lien n’est pas une page article (image/PDF). Envoie l’URL de l’article source.",
+    );
+  }
+
+  const body = (await response.text()).replace(/\u0000/g, "");
 
   if (looksBlocked(body)) {
     throw new Error("anti-bot");
@@ -320,7 +332,7 @@ async function fetchViaJina(url: string): Promise<string> {
     throw new Error(`Jina HTTP ${response.status}`);
   }
 
-  const md = await response.text();
+  const md = (await response.text()).replace(/\u0000/g, "");
   const text = jinaMarkdownToText(md);
   if (text.length < 80) {
     throw new Error("Jina : contenu trop court");
@@ -332,9 +344,16 @@ async function fetchViaJina(url: string): Promise<string> {
  * Récupère le texte d'une URL source.
  * Direct navigateur, sinon (ou d'emblée pour certains titres presse) Jina Reader.
  */
-export async function fetchSourceText(url: string): Promise<string> {
-  const finish = (text: string) => scrubBoilerplate(text).slice(0, 12000);
+function finish(text: string): string {
+  return scrubBoilerplate(text.replace(/\u0000/g, "")).slice(0, 12000);
+}
 
+export async function fetchSourceText(url: string): Promise<string> {
+  if (/\.(jpe?g|png|gif|webp|avif|pdf)(\?|#|$)/i.test(url)) {
+    throw new Error(
+      "Ce lien n’est pas une page article (image/PDF). Envoie l’URL de l’article source.",
+    );
+  }
   if (preferJina(url)) {
     try {
       const viaJina = finish(await fetchViaJina(url));

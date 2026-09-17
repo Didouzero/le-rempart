@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
 import { writeArticleSimple } from "@/lib/write-simple";
-import { createHash } from "crypto";
+import { utf8Text, utf8TextOrNull, isPostgresUtf8Error } from "@/lib/utf8";
 
 async function makeUniqueSlug(title: string) {
   const base = slugify(title);
@@ -231,24 +231,36 @@ export async function publishArticleFromCreative(input: {
 
   const authorName = await allocateNextAuthorName();
 
-  const article = await prisma.article.create({
-    data: {
-      title: generated.title,
-      excerpt: generated.excerpt,
-      content: generated.content,
-      sourceText: scrapedText?.slice(0, 12000) || caption,
-      sourceUrl: sourceUrl || null,
-      researchDossier: undefined,
-      slug,
-      category,
-      authorName,
-      status: "published",
-      publishedAt: new Date(),
-      coverImageUrl,
-      coverImageMime: storeBlob ? creativeMime : null,
-      coverImageData: storeBlob ? new Uint8Array(input.image!.buffer) : null,
-    },
-  });
+  const payload = {
+    title: utf8Text(generated.title, 500),
+    excerpt: utf8Text(generated.excerpt, 1500),
+    content: utf8Text(generated.content, 80_000),
+    sourceText: utf8Text(scrapedText?.slice(0, 12000) || caption, 12000),
+    sourceUrl: utf8TextOrNull(sourceUrl, 2000),
+    slug,
+    category,
+    authorName,
+    status: "published" as const,
+    publishedAt: new Date(),
+    coverImageUrl: utf8TextOrNull(coverImageUrl, 2000),
+    coverImageMime: storeBlob ? creativeMime : null,
+    coverImageData: storeBlob ? Buffer.from(input.image!.buffer) : null,
+  };
+
+  let article;
+  try {
+    article = await prisma.article.create({ data: payload });
+  } catch (err) {
+    if (!isPostgresUtf8Error(err)) throw err;
+    console.error("article.create UTF8 — retry without creative blob", err);
+    article = await prisma.article.create({
+      data: {
+        ...payload,
+        coverImageMime: null,
+        coverImageData: null,
+      },
+    });
+  }
 
   return {
     id: article.id,

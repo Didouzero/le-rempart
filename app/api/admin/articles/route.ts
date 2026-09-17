@@ -5,6 +5,7 @@ import { allocateNextAuthorName } from "@/lib/authors";
 import { classifyArticleCategory } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { utf8Text } from "@/lib/utf8";
 
 const articleSchema = z.object({
   title: z.string().min(1),
@@ -56,10 +57,12 @@ export async function POST(request: Request) {
 
     const article = await prisma.article.create({
       data: {
-        title: data.title.trim(),
-        excerpt: data.excerpt.trim(),
-        content: data.content.trim(),
-        sourceText: data.sourceText?.trim() || null,
+        title: utf8Text(data.title.trim(), 500),
+        excerpt: utf8Text(data.excerpt.trim(), 1500),
+        content: utf8Text(data.content.trim(), 80_000),
+        sourceText: data.sourceText?.trim()
+          ? utf8Text(data.sourceText.trim(), 12000)
+          : null,
         sourceUrl: data.sourceUrl?.trim() || null,
         category,
         slug,

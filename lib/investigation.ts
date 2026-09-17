@@ -18,6 +18,7 @@ import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
 import { prisma } from "@/lib/prisma";
 import { absoluteUrl } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
+import { utf8Text, utf8TextOrNull } from "@/lib/utf8";
 import { withTimeout } from "@/lib/with-timeout";
 
 export const INVESTIGATION_COMMENT_PREFIX =
@@ -261,9 +262,9 @@ export async function persistRewrittenInvestigation(input: {
   await prisma.specialDossier.update({
     where: { id: existing.id },
     data: {
-      title: input.title,
-      excerpt: input.excerpt.slice(0, 1500),
-      content: datedContent,
+      title: utf8Text(input.title, 500),
+      excerpt: utf8Text(input.excerpt, 1500),
+      content: utf8Text(datedContent, 200_000),
       publishedAt: existing.publishedAt ?? new Date(),
     },
   });
@@ -307,10 +308,10 @@ export async function persistNewInvestigationDossier(input: {
   const created = await prisma.specialDossier.create({
     data: {
       slug,
-      title: input.title,
-      excerpt: input.excerpt.slice(0, 1500),
-      content: datedContent,
-      coverImageUrl: cover,
+      title: utf8Text(input.title, 500),
+      excerpt: utf8Text(input.excerpt, 1500),
+      content: utf8Text(datedContent, 200_000),
+      coverImageUrl: utf8TextOrNull(cover, 2000),
       membersOnly: true,
       publishedAt: new Date(),
     },

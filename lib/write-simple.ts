@@ -2,7 +2,7 @@ import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { searchWebForSubject } from "@/lib/research/web-search";
 import { scrubBoilerplate } from "@/lib/fetch-source";
 import { italicizeCitations } from "@/lib/italicize-citations";
-import { moonshotChat } from "@/lib/moonshot";
+import { utf8Text } from "@/lib/utf8";
 
 export type SimpleArticle = {
   title: string;
@@ -319,9 +319,9 @@ export async function writeArticleSimple(input: {
       });
       const parsed = parseJsonArticle(raw);
       return {
-        title: pickReformulatedTitle(input.creativeTitle, parsed.title),
-        excerpt: humanize(parsed.excerpt),
-        content: italicizeCitations(humanize(parsed.content)),
+        title: utf8Text(pickReformulatedTitle(input.creativeTitle, parsed.title), 500),
+        excerpt: utf8Text(humanize(parsed.excerpt), 1500),
+        content: utf8Text(italicizeCitations(humanize(parsed.content)), 80_000),
       };
     } catch (err) {
       lastErr = err;
