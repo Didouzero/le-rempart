@@ -162,7 +162,7 @@ async function putTiktokVideo(uploadUrl: string, video: Buffer): Promise<void> {
       "Content-Length": String(size),
       "Content-Range": `bytes 0-${size - 1}/${size}`,
     },
-    body: video,
+    body: new Uint8Array(video),
     signal: AbortSignal.timeout(120_000),
   });
   if (!res.ok) {
