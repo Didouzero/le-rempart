@@ -67,7 +67,7 @@ function parseJsonScript(raw: string): TiktokScript {
         person: person || undefined,
       } satisfies TiktokScene;
     })
-    .filter((s): s is TiktokScene => Boolean(s))
+    .filter((s): s is TiktokScene => s !== null)
     .slice(0, 12);
   if (scenes.length < 6) {
     throw new Error("Script TikTok : pas assez de scènes visuelles");
