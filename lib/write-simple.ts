@@ -2,6 +2,7 @@ import { getKimiTextModel } from "@/lib/kimi-legacy";
 import { searchWebForSubject } from "@/lib/research/web-search";
 import { scrubBoilerplate } from "@/lib/fetch-source";
 import { italicizeCitations } from "@/lib/italicize-citations";
+import { moonshotChat } from "@/lib/moonshot";
 import { utf8Text } from "@/lib/utf8";
 
 export type SimpleArticle = {

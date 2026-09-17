@@ -8,6 +8,7 @@ import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
 import { writeArticleSimple } from "@/lib/write-simple";
 import { utf8Text, utf8TextOrNull, isPostgresUtf8Error } from "@/lib/utf8";
+import { createHash } from "crypto";
 
 async function makeUniqueSlug(title: string) {
   const base = slugify(title);
