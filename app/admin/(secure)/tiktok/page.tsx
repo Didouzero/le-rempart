@@ -5,7 +5,7 @@ import {
   maskedTiktokClientKey,
   tiktokPostMode,
 } from "@/lib/tiktok/publish";
-import { tiktokRedirectUri } from "@/lib/tiktok/oauth";
+import { tiktokRedirectUri, tiktokOauthScopes } from "@/lib/tiktok/oauth";
 
 function oauthErrorLabel(code: string): string {
   const map: Record<string, string> = {
@@ -85,16 +85,21 @@ export default async function AdminTiktokPage({
           <code className="break-all">{tiktokRedirectUri()}</code>
         </p>
         <p>
+          Scopes envoyés à TikTok : <code>{tiktokOauthScopes()}</code>
+        </p>
+        <p>
           Pour <code>PULL_FROM_URL</code>, vérifie le préfixe{" "}
           <code>https://www.le-rempart.org/</code> (ou ton domaine) dans l’app
           TikTok.
         </p>
         <p className="text-muted">
-          Si TikTok dit « client_key » : Vercel a encore les clés Production.
-          Recopie Client key + Secret <strong>du Sandbox</strong> (onglet
-          Sandbox, icône œil), puis Redeploy. Login Kit + Redirect URI doivent
-          aussi être configurés <strong>dans le Sandbox</strong>, pas seulement
-          en Production.
+          Si TikTok dit encore « client_key » alors que les 6 caractères
+          matchent le Sandbox : dans le Sandbox clique{" "}
+          <strong>Apply changes</strong>, Login Kit doit être en{" "}
+          <strong>Web</strong> (pas seulement iOS), et le Target user doit
+          apparaître dans la liste (parfois jusqu’à 1 h). Les variables Vercel
+          doivent être cochées <strong>Production</strong>, pas seulement
+          Preview.
         </p>
       </div>
 

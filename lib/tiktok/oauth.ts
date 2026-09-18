@@ -18,19 +18,19 @@ export function tiktokRedirectUri(): string {
   );
 }
 
+export function tiktokOauthScopes(): string {
+  return tiktokPostMode() === "direct"
+    ? "user.info.basic,video.upload,video.publish"
+    : "user.info.basic,video.upload";
+}
+
 export function tiktokAuthorizeUrl(state: string): string {
   const clientKey = tiktokClientKey();
   if (!clientKey) throw new Error("TIKTOK_CLIENT_KEY manquant.");
   const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
   url.searchParams.set("client_key", clientKey);
   url.searchParams.set("response_type", "code");
-  // Inbox n’a besoin que de video.upload. Demander video.publish avant
-  // l’audit TikTok fait échouer Login Kit (« we couldn't authenticate you »).
-  const scopes =
-    tiktokPostMode() === "direct"
-      ? "user.info.basic,video.upload,video.publish"
-      : "user.info.basic,video.upload";
-  url.searchParams.set("scope", scopes);
+  url.searchParams.set("scope", tiktokOauthScopes());
   url.searchParams.set("redirect_uri", tiktokRedirectUri());
   url.searchParams.set("state", state);
   return url.toString();

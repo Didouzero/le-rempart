@@ -22,7 +22,10 @@ export type TiktokOAuthTokens = {
 const OAUTH_KEY = "tiktok:oauth";
 
 function envCredential(name: "TIKTOK_CLIENT_KEY" | "TIKTOK_CLIENT_SECRET"): string {
-  return (process.env[name] || "").trim().replace(/^["']|["']$/g, "");
+  return (process.env[name] || "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^["'\s]+|["'\s]+$/g, "")
+    .replace(/\s+/g, "");
 }
 
 export function tiktokClientKey(): string {
