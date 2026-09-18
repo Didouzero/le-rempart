@@ -14,6 +14,7 @@ export const TIKTOK_TTS_MAX_ATTEMPTS = 3;
 /** Extraît d'actu : quelques secondes par plan, jamais un plan stock de 10 s. */
 export const TIKTOK_MAX_EXCERPT_SEC = 5;
 export const TIKTOK_MIN_EXCERPT_SEC = 3.2;
+export const TIKTOK_USER_MEDIA_MAX = 20;
 
 export type TiktokDraftStep = "awaiting_url" | "awaiting_media";
 
@@ -42,6 +43,8 @@ export type TiktokTimelineClip = {
   source: string;
   kind: "video" | "photo";
   duration: number;
+  /** Début de coupe dans le fichier source (vidéos Telegram déjà triées). */
+  trimStart?: number;
 };
 
 export type TiktokJobPhase =

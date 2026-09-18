@@ -215,6 +215,7 @@ export async function buildTimelineClips(input: {
           source: tiktokAssetPublicUrl(hosted.id, input.fileToken),
           kind: hosted.kind === "video" ? "video" : "photo",
           duration: 0,
+          trimStart: hosted.kind === "video" ? 0 : undefined,
         });
       } else if (media.url && !isStockVisualHost(media.url)) {
         pushClip(
@@ -232,35 +233,42 @@ export async function buildTimelineClips(input: {
   }
 
   const needed = Math.max(
-    10,
+    unique.length,
     Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC),
   );
-  const news = await collectNewsVisuals({
-    sourceUrl: input.sourceUrl,
-    title: input.title,
-    scenes: input.scenes,
-    limit: Math.max(needed + 4, 16),
-  });
-  const ingested = await Promise.all(
-    news.slice(0, 18).map((visual) =>
-      ingestRemoteVisual({
-        jobId: input.jobId,
-        url: visual.url,
-        kind: visual.kind,
-        fileToken: input.fileToken,
-      }),
-    ),
-  );
-  for (const clip of ingested) pushClip(clip);
+
+  if (unique.length === 0) {
+    const news = await collectNewsVisuals({
+      sourceUrl: input.sourceUrl,
+      title: input.title,
+      scenes: input.scenes,
+      limit: Math.max(needed + 4, 16),
+    });
+    const ingested = await Promise.all(
+      news.slice(0, 18).map((visual) =>
+        ingestRemoteVisual({
+          jobId: input.jobId,
+          url: visual.url,
+          kind: visual.kind,
+          fileToken: input.fileToken,
+        }),
+      ),
+    );
+    for (const clip of ingested) pushClip(clip);
+  }
 
   if (unique.length === 0) {
     throw new Error(
-      "Aucun visuel d’actu. Envoie des photos ou extraits du sujet (les gens dont on parle) — on n’utilise pas de banque d’images.",
+      "Aucun visuel. Envoie des extraits vidéo (3–8 s) et des photos dans l’ordre du montage, puis /tiktok_go.",
     );
   }
 
+  const slots =
+    unique.length >= Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC)
+      ? unique.length
+      : Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC);
   const clips: TiktokTimelineClip[] = [];
-  while (clips.length < needed) {
+  while (clips.length < slots) {
     clips.push(unique[clips.length % unique.length]!);
   }
 

@@ -37,6 +37,10 @@ function clipElements(
       height: "100%",
       fit: "cover",
     };
+    if (clip.kind === "video") {
+      el.trim_start = clip.trimStart ?? 0;
+      el.loop = true;
+    }
     if (clip.kind === "photo") {
       el.animations = [
         {

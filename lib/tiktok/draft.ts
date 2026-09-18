@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { tiktokModels, type TiktokDraftRow } from "@/lib/tiktok/db";
 import {
   TIKTOK_DRAFT_TTL_MS,
+  TIKTOK_USER_MEDIA_MAX,
   type TiktokDraftStep,
   type TiktokExtraMedia,
 } from "@/lib/tiktok/types";
@@ -113,7 +114,21 @@ export async function addTiktokDraftMedia(
 ): Promise<TiktokDraftRecord | null> {
   const draft = await getActiveTiktokDraft(chatId);
   if (!draft) return null;
-  const extraMedia = [...draft.extraMedia, media].slice(0, 12);
+  const extraMedia = [...draft.extraMedia, media].slice(0, TIKTOK_USER_MEDIA_MAX);
+  const row = await tiktokModels().draft.update({
+    where: { id: draft.id },
+    data: { extraMedia: extraMedia as Prisma.InputJsonValue },
+  });
+  return toRecord(row);
+}
+
+export async function popTiktokDraftMedia(
+  chatId: number,
+): Promise<TiktokDraftRecord | null> {
+  const draft = await getActiveTiktokDraft(chatId);
+  if (!draft) return null;
+  if (draft.extraMedia.length === 0) return draft;
+  const extraMedia = draft.extraMedia.slice(0, -1);
   const row = await tiktokModels().draft.update({
     where: { id: draft.id },
     data: { extraMedia: extraMedia as Prisma.InputJsonValue },

@@ -9,6 +9,7 @@ import {
   addTiktokDraftMedia,
   deleteTiktokDraft,
   getActiveTiktokDraft,
+  popTiktokDraftMedia,
   setTiktokDraftSourceUrl,
   startTiktokDraft,
 } from "@/lib/tiktok/draft";
@@ -25,21 +26,39 @@ import { isCreatomateConfigured } from "@/lib/tiktok/render";
 import { isElevenLabsConfigured } from "@/lib/tiktok/voice";
 import { isTiktokAppConfigured, loadTiktokTokens } from "@/lib/tiktok/publish";
 import type { TiktokExtraMedia } from "@/lib/tiktok/types";
+import { TIKTOK_USER_MEDIA_MAX } from "@/lib/tiktok/types";
 
 export const TIKTOK_COMMANDS = new Set([
   "/tiktok",
   "/tt",
   "/tiktok_go",
   "/tiktok_ok",
+  "/tiktok_undo",
   "/tiktok_cancel",
   "/tiktok_annuler",
 ]);
 
+function mediaKindLabel(kind: TiktokExtraMedia["kind"]): string {
+  if (kind === "video") return "vidéo";
+  if (kind === "photo") return "photo";
+  return "lien";
+}
+
+function mediaRoll(items: TiktokExtraMedia[]): string {
+  if (items.length === 0) return "Aucun plan pour l’instant.";
+  return items
+    .map((item, i) => `${i + 1}. ${mediaKindLabel(item.kind)}`)
+    .join("\n");
+}
+
 function mediaHint(): string {
   return [
-    "Envoie maintenant des photos ou extraits vidéo du sujet (les gens, les lieux, les documents).",
-    "Sinon /tiktok_go : je prends des visuels d’actu (article, Wikipedia, Google) — jamais Pexels/Pixabay.",
-    "/tiktok_cancel pour abandonner.",
+    "À toi de trier le montage. Envoie les plans **dans l’ordre**, un par un (ou un album) :",
+    "• extraits vidéo déjà coupés 3–8 s (Hollande qui parle, hémicycle, JT…)",
+    "• photos intercalées",
+    "Sur iPhone : Photos → modifier → coupe l’extrait → partager ici. Mieux : envoyer en fichier (moins compressé).",
+    "12 à 16 plans pour ~1 min 10. /tiktok_undo retire le dernier. Puis /tiktok_go.",
+    "Sans fichier, /tiktok_go prend des photos d’actu tout seul.",
   ].join("\n");
 }
 
@@ -79,6 +98,25 @@ export async function handleTiktokCommand(input: {
     return true;
   }
 
+  if (cmd === "/tiktok_undo") {
+    const draft = await getActiveTiktokDraft(chatId);
+    if (!draft) {
+      await telegramSendMessage(chatId, "Aucun montage en cours. /tiktok d’abord.");
+      return true;
+    }
+    if (draft.extraMedia.length === 0) {
+      await telegramSendMessage(chatId, "Rien à retirer. Envoie un extrait ou une photo.");
+      return true;
+    }
+    const updated = await popTiktokDraftMedia(chatId);
+    const items = updated?.extraMedia || [];
+    await telegramSendMessage(
+      chatId,
+      [`Dernier plan retiré (${items.length} restant${items.length > 1 ? "s" : ""}).`, mediaRoll(items)].join("\n"),
+    );
+    return true;
+  }
+
   if (cmd === "/tiktok_ok") {
     const preview = await getLatestPreviewJob(chatId);
     if (!preview) {
@@ -111,7 +149,10 @@ export async function handleTiktokCommand(input: {
     }
     await telegramSendMessage(
       chatId,
-      `Montage Droitocratie en cours…\n${draft.sourceUrl}`,
+      [
+        `Montage Droitocratie — ${draft.extraMedia.length} plan${draft.extraMedia.length > 1 ? "s" : ""} de ta part.`,
+        draft.sourceUrl,
+      ].join("\n"),
     );
     try {
       const job = await createTiktokJob({
@@ -153,7 +194,7 @@ export async function handleTiktokCommand(input: {
       chatId,
       [
         "Droitocratie — envoie le lien de l’article à traiter.",
-        "Ensuite tu pourras coller photos / vidéos / URLs, ou /tiktok_go.",
+        "Ensuite : extraits vidéo 3–8 s + photos, dans l’ordre, puis /tiktok_go.",
       ].join("\n"),
     );
   }
@@ -282,23 +323,38 @@ export async function handleTiktokDraftMessage(input: {
     await telegramSendMessage(
       input.chatId,
       [
-        "Envoie une photo, une vidéo, une URL, ou /tiktok_go pour lancer.",
-        `Médias déjà reçus : ${draft.extraMedia.length}`,
-        "/tiktok_cancel pour abandonner.",
+        "Envoie un extrait vidéo ou une photo (dans l’ordre du montage).",
+        mediaRoll(draft.extraMedia),
+        "/tiktok_undo · /tiktok_go · /tiktok_cancel",
       ].join("\n"),
     );
     return true;
   }
 
-  let count = draft.extraMedia.length;
+  if (draft.extraMedia.length >= TIKTOK_USER_MEDIA_MAX) {
+    await telegramSendMessage(
+      input.chatId,
+      `Maximum ${TIKTOK_USER_MEDIA_MAX} plans. /tiktok_undo ou /tiktok_go.`,
+    );
+    return true;
+  }
+
+  let updated = draft;
   for (const media of extras) {
     if (media.kind === "url" && media.url === draft.sourceUrl) continue;
-    const updated = await addTiktokDraftMedia(input.chatId, media);
-    count = updated?.extraMedia.length ?? count + 1;
+    const next = await addTiktokDraftMedia(input.chatId, media);
+    if (next) updated = next;
   }
+  const n = updated.extraMedia.length;
+  const ideal =
+    n < 12
+      ? `Idéal : 12–16 plans pour 1 min 10. Encore, /tiktok_undo, ou /tiktok_go.`
+      : `Ça suffit pour monter. Encore, /tiktok_undo, ou /tiktok_go.`;
   await telegramSendMessage(
     input.chatId,
-    `Média ajouté (${count}). Encore, ou /tiktok_go.`,
+    [`Plan ${n}/${TIKTOK_USER_MEDIA_MAX} ajouté.`, mediaRoll(updated.extraMedia), ideal].join(
+      "\n",
+    ),
   );
   return true;
 }
