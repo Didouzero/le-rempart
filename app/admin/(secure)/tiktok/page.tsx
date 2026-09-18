@@ -81,6 +81,13 @@ export default async function AdminTiktokPage({
           <code>https://www.le-rempart.org/</code> (ou ton domaine) dans l’app
           TikTok.
         </p>
+        <p className="text-muted">
+          Si TikTok dit « we couldn’t authenticate you » : l’app doit être en{" "}
+          <strong>Sandbox</strong>, le compte Droitocratie ajouté en{" "}
+          <strong>Target users</strong>, et les clés Vercel doivent être celles
+          du Sandbox (pas la prod). Scopes de l’app :{" "}
+          <code>user.info.basic</code> + <code>video.upload</code> seulement.
+        </p>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
