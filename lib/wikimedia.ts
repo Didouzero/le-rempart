@@ -153,11 +153,12 @@ function pickLargestThumb(info: {
   return info.url || info.thumburl || null;
 }
 
-export async function findWikimediaCover(
+export async function findWikimediaCovers(
   query: string,
-): Promise<WebCover | null> {
+  limit = 8,
+): Promise<WebCover[]> {
   const q = query.trim().slice(0, 120);
-  if (!q) return null;
+  if (!q) return [];
 
   const searchUrl = new URL("https://commons.wikimedia.org/w/api.php");
   searchUrl.searchParams.set("action", "query");
@@ -166,7 +167,7 @@ export async function findWikimediaCover(
   searchUrl.searchParams.set("generator", "search");
   searchUrl.searchParams.set("gsrsearch", q);
   searchUrl.searchParams.set("gsrnamespace", "6");
-  searchUrl.searchParams.set("gsrlimit", "8");
+  searchUrl.searchParams.set("gsrlimit", String(Math.min(15, Math.max(limit, 4))));
   searchUrl.searchParams.set("prop", "imageinfo");
   searchUrl.searchParams.set(
     "iiprop",
@@ -182,7 +183,7 @@ export async function findWikimediaCover(
     signal: AbortSignal.timeout(12000),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) return [];
 
   const data = (await res.json()) as {
     query?: {
@@ -203,16 +204,24 @@ export async function findWikimediaCover(
     };
   };
 
-  const pages = Object.values(data.query?.pages || {});
-  for (const page of pages) {
+  const out: WebCover[] = [];
+  for (const page of Object.values(data.query?.pages || {})) {
     const info = page.imageinfo?.[0];
     if (!info?.mime?.startsWith("image/")) continue;
     if (info.mime === "image/svg+xml") continue;
     const url = pickLargestThumb(info);
     if (!url) continue;
-    return { url, source: "wikimedia", title: page.title };
+    out.push({ url, source: "wikimedia", title: page.title });
+    if (out.length >= limit) break;
   }
-  return null;
+  return out;
+}
+
+export async function findWikimediaCover(
+  query: string,
+): Promise<WebCover | null> {
+  const [first] = await findWikimediaCovers(query, 1);
+  return first || null;
 }
 
 /** Commons : uniquement images paysage (visage / photo d'actu). */

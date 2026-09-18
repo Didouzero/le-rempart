@@ -37,8 +37,8 @@ export const TIKTOK_COMMANDS = new Set([
 
 function mediaHint(): string {
   return [
-    "Envoie maintenant des photos, des vidéos, ou des URLs d’illustration (optionnel).",
-    "Sinon /tiktok_go : je pioche le B-roll tout seul (Pexels / Pixabay / Wikimedia).",
+    "Envoie maintenant des photos ou extraits vidéo du sujet (les gens, les lieux, les documents).",
+    "Sinon /tiktok_go : je prends des visuels d’actu (article, Wikipedia, Google) — jamais Pexels/Pixabay.",
     "/tiktok_cancel pour abandonner.",
   ].join("\n");
 }

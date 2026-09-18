@@ -21,13 +21,15 @@ Tu écris un SCRIPT ORAL pour TikTok, pas un article web.
 
 LONGUEUR : vise ${TIKTOK_SCRIPT_TARGET_WORDS} mots (entre ${TIKTOK_SCRIPT_MIN_WORDS} et ${TIKTOK_SCRIPT_MAX_WORDS}). C'est non négociable : la vidéo doit durer entre 1 min 02 et 1 min 20.
 
-SCÈNES : 8 à 12. Chaque scène a une requête visuelle BANQUE LIBRE (Pexels/Pixabay/Wikimedia) en anglais, concrète (lieu, institution, foule, drapeau, assemblée, police, quartier), pas de « illustration » / cartoon. Si une personnalité publique est centrale, remplis "person" (prénom + nom).
+SCÈNES : 10 à 14. Ce sont des extraits d'un JT, pas une banque d'images. Chaque scène = une photo/vidéo d'actu réelle, 3 à 5 secondes.
+- "person" : prénom + nom dès qu'un politique, ministre, juge, préfet, journaliste connu est à l'écran (ex. "François Hollande"). Obligatoire si le beat parle de quelqu'un.
+- "visualQuery" : requête Google Images en FRANÇAIS, nom propre ou lieu réel (Assemblée nationale hémicycle, François Hollande 2024, palais de justice Paris). INTERDIT : anglais stock (politician, businessman, crowd, news studio), "illustration", cartoon, banque libre, Pexels, Pixabay.
 
 CAPTION TikTok : 1 à 3 phrases + hashtags (dont #Droitocratie). Emojis OK ici seulement. Max 400 caractères.
 
 Réponds UNIQUEMENT avec un JSON valide :
-{"title":"...","script":"...","caption":"...","scenes":[{"text":"extrait ou résumé du beat","visualQuery":"english search","kind":"video","person":""}]}
-kind = "video" sauf si une photo (portrait, document) est clairement mieux.`;
+{"title":"...","script":"...","caption":"...","scenes":[{"text":"extrait ou résumé du beat","visualQuery":"François Hollande Assemblée nationale","kind":"photo","person":"François Hollande"}]}
+kind = "photo" pour un portrait ou un document ; "video" seulement si tu as un extrait d'actu réel (jamais du stock).`;
 
 function parseJsonScript(raw: string): TiktokScript {
   const cleaned = raw
@@ -63,10 +65,10 @@ function parseJsonScript(raw: string): TiktokScript {
     scenes.push({
       text: String(rec.text || "").trim(),
       visualQuery,
-      kind: rec.kind === "photo" ? "photo" : "video",
+      kind: rec.kind === "video" ? "video" : "photo",
       person: person || undefined,
     });
-    if (scenes.length >= 12) break;
+    if (scenes.length >= 14) break;
   }
   if (scenes.length < 6) {
     throw new Error("Script TikTok : pas assez de scènes visuelles");

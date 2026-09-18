@@ -11,6 +11,10 @@ export const TIKTOK_SCRIPT_TARGET_WORDS = 180;
 
 export const TIKTOK_TTS_MAX_ATTEMPTS = 3;
 
+/** Extraît d'actu : quelques secondes par plan, jamais un plan stock de 10 s. */
+export const TIKTOK_MAX_EXCERPT_SEC = 5;
+export const TIKTOK_MIN_EXCERPT_SEC = 3.2;
+
 export type TiktokDraftStep = "awaiting_url" | "awaiting_media";
 
 export type TiktokExtraMedia = {

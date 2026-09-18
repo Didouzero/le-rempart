@@ -176,7 +176,7 @@ export async function runTiktokJob(jobId: string): Promise<void> {
     });
     await notify(
       chatId,
-      `Voix OK (${formatDuration(durationMs)}). Choix des plans 9:16…`,
+      `Voix OK (${formatDuration(durationMs)}). Photos d’actu (pas de banque d’images)…`,
     );
 
     const clips = await buildTimelineClips({
@@ -185,6 +185,8 @@ export async function runTiktokJob(jobId: string): Promise<void> {
       extraMedia: parseExtra(job.extraMedia),
       scenes: script.scenes,
       durationSec: durationMs / 1000,
+      sourceUrl: job.sourceUrl,
+      title: script.title,
     });
 
     await setPhase(jobId, "render", { progress: "Montage Creatomate…" });
