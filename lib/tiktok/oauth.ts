@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import {
   TIKTOK_TOKEN_URL,
   saveTiktokTokens,
+  tiktokClientKey,
+  tiktokClientSecret,
   tiktokPostMode,
 } from "@/lib/tiktok/publish";
 
@@ -17,7 +19,7 @@ export function tiktokRedirectUri(): string {
 }
 
 export function tiktokAuthorizeUrl(state: string): string {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
+  const clientKey = tiktokClientKey();
   if (!clientKey) throw new Error("TIKTOK_CLIENT_KEY manquant.");
   const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
   url.searchParams.set("client_key", clientKey);
@@ -62,8 +64,8 @@ export async function consumeTiktokOAuthState(state: string): Promise<boolean> {
 }
 
 export async function exchangeTiktokCode(code: string): Promise<void> {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET?.trim();
+  const clientKey = tiktokClientKey();
+  const clientSecret = tiktokClientSecret();
   if (!clientKey || !clientSecret) {
     throw new Error("App TikTok non configurée.");
   }

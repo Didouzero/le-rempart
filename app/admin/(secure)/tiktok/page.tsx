@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   isTiktokAppConfigured,
   loadTiktokTokens,
+  maskedTiktokClientKey,
   tiktokPostMode,
 } from "@/lib/tiktok/publish";
 import { tiktokRedirectUri } from "@/lib/tiktok/oauth";
@@ -56,6 +57,13 @@ export default async function AdminTiktokPage({
         <p>
           App TikTok :{" "}
           <strong>{configured ? "clés présentes" : "TIKTOK_CLIENT_KEY / SECRET manquants"}</strong>
+          {configured ? (
+            <>
+              {" "}
+              (client_key {maskedTiktokClientKey()} — doit matcher le{" "}
+              <strong>Sandbox</strong>, pas Production)
+            </>
+          ) : null}
         </p>
         <p>
           Compte :{" "}
@@ -82,11 +90,11 @@ export default async function AdminTiktokPage({
           TikTok.
         </p>
         <p className="text-muted">
-          Si TikTok dit « we couldn’t authenticate you » : l’app doit être en{" "}
-          <strong>Sandbox</strong>, le compte Droitocratie ajouté en{" "}
-          <strong>Target users</strong>, et les clés Vercel doivent être celles
-          du Sandbox (pas la prod). Scopes de l’app :{" "}
-          <code>user.info.basic</code> + <code>video.upload</code> seulement.
+          Si TikTok dit « client_key » : Vercel a encore les clés Production.
+          Recopie Client key + Secret <strong>du Sandbox</strong> (onglet
+          Sandbox, icône œil), puis Redeploy. Login Kit + Redirect URI doivent
+          aussi être configurés <strong>dans le Sandbox</strong>, pas seulement
+          en Production.
         </p>
       </div>
 

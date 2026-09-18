@@ -21,11 +21,26 @@ export type TiktokOAuthTokens = {
 
 const OAUTH_KEY = "tiktok:oauth";
 
+function envCredential(name: "TIKTOK_CLIENT_KEY" | "TIKTOK_CLIENT_SECRET"): string {
+  return (process.env[name] || "").trim().replace(/^["']|["']$/g, "");
+}
+
+export function tiktokClientKey(): string {
+  return envCredential("TIKTOK_CLIENT_KEY");
+}
+
+export function tiktokClientSecret(): string {
+  return envCredential("TIKTOK_CLIENT_SECRET");
+}
+
+export function maskedTiktokClientKey(): string {
+  const key = tiktokClientKey();
+  if (key.length < 8) return key ? "trop courte" : "absente";
+  return `${key.slice(0, 6)}…${key.slice(-4)}`;
+}
+
 export function isTiktokAppConfigured(): boolean {
-  return Boolean(
-    process.env.TIKTOK_CLIENT_KEY?.trim() &&
-      process.env.TIKTOK_CLIENT_SECRET?.trim(),
-  );
+  return Boolean(tiktokClientKey() && tiktokClientSecret());
 }
 
 export function tiktokPostMode(): "inbox" | "direct" {
@@ -59,8 +74,8 @@ export async function clearTiktokTokens(): Promise<void> {
 async function refreshAccessToken(
   tokens: TiktokOAuthTokens,
 ): Promise<TiktokOAuthTokens> {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET?.trim();
+  const clientKey = tiktokClientKey();
+  const clientSecret = tiktokClientSecret();
   if (!clientKey || !clientSecret) {
     throw new Error("App TikTok non configurée (TIKTOK_CLIENT_KEY / SECRET).");
   }
