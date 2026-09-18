@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(tiktokAuthorizeUrl(oauthState));
   }
 
-  return NextResponse.json({ ok: false, error: "missing_params" }, { status: 400 });
+  return NextResponse.redirect(adminTiktokUrl("?error=ouvre_le_bouton_connecter"));
 }
 
 export async function POST(request: NextRequest) {

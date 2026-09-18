@@ -6,6 +6,20 @@ import {
 } from "@/lib/tiktok/publish";
 import { tiktokRedirectUri } from "@/lib/tiktok/oauth";
 
+function oauthErrorLabel(code: string): string {
+  const map: Record<string, string> = {
+    ouvre_le_bouton_connecter:
+      "N’ouvre pas l’URL /api/tiktok/oauth dans le navigateur. Reviens ici et clique « Connecter le compte TikTok ».",
+    missing_params:
+      "N’ouvre pas l’URL /api/tiktok/oauth dans le navigateur. Reviens ici et clique « Connecter le compte TikTok ».",
+    config:
+      "Clés TikTok absentes ou incomplètes sur Vercel (TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET). Redeploy après les avoir ajoutées.",
+    state:
+      "La session OAuth a expiré ou le state ne correspond pas. Recolle la Redirect URI exacte dans TikTok, puis reclique Connecter.",
+  };
+  return map[code] || `Erreur OAuth : ${code}`;
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminTiktokPage({
@@ -34,7 +48,7 @@ export default async function AdminTiktokPage({
       ) : null}
       {q.error ? (
         <p className="mt-4 rounded-lg border border-red-700/40 bg-red-50 px-4 py-3 text-sm">
-          Erreur OAuth : {q.error}
+          {oauthErrorLabel(q.error)}
         </p>
       ) : null}
 
@@ -58,7 +72,8 @@ export default async function AdminTiktokPage({
             : " — Direct Post public"}
         </p>
         <p>
-          Redirect URI à coller dans TikTok for Developers :{" "}
+          Redirect URI à coller dans TikTok for Developers (ne pas l’ouvrir
+          soi-même) :{" "}
           <code className="break-all">{tiktokRedirectUri()}</code>
         </p>
         <p>
