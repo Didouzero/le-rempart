@@ -57,7 +57,7 @@ function mediaHint(): string {
     "• extraits déjà coupés 3–8 s, ou une vidéo plus longue (le bot en tire les moments parlants, ex. Hollande à 0:40)",
     "• photos intercalées",
     "Sur iPhone : Photos → partager ici. Coupe toi-même si tu veux un plan précis ; sinon envoie la minute, on découpe.",
-    "12 à 16 plans pour ~1 min 10. /tiktok_undo retire le dernier. Puis /tiktok_go.",
+    "Sur l’image : voix off sur le fond (son coupé). Quand un intervenant parle, la voix off se tait.",
     "Sans fichier, /tiktok_go prend des photos d’actu tout seul.",
   ].join("\n");
 }

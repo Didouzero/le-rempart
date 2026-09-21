@@ -20,6 +20,7 @@ const MAX_EXCERPTS_PER_VIDEO = 5;
 export type SmartExcerpt = {
   start: number;
   duration: number;
+  role: "soundbite" | "broll";
 };
 
 function clamp(n: number, min: number, max: number): number {
@@ -29,7 +30,13 @@ function clamp(n: number, min: number, max: number): number {
 function spacedExcerpts(durationSec: number): SmartExcerpt[] {
   const span = TIKTOK_MAX_EXCERPT_SEC;
   if (durationSec <= SHORT_SEC) {
-    return [{ start: 0, duration: Math.max(TIKTOK_MIN_EXCERPT_SEC, durationSec) }];
+    return [
+      {
+        start: 0,
+        duration: Math.max(TIKTOK_MIN_EXCERPT_SEC, durationSec),
+        role: "broll",
+      },
+    ];
   }
   const usable = Math.max(0, durationSec - span);
   const n = Math.min(
@@ -40,7 +47,7 @@ function spacedExcerpts(durationSec: number): SmartExcerpt[] {
   for (let i = 0; i < n; i++) {
     const start =
       n === 1 ? 0 : Math.round((i * usable) / (n - 1) * 10) / 10;
-    out.push({ start, duration: span });
+    out.push({ start, duration: span, role: "broll" });
   }
   return out;
 }
@@ -61,7 +68,7 @@ function mergeClose(excerpts: SmartExcerpt[], durationSec: number): SmartExcerpt
     );
     const last = out[out.length - 1];
     if (last && Math.abs(start - last.start) < 3.2) continue;
-    out.push({ start, duration });
+    out.push({ start, duration, role: ex.role || "soundbite" });
     if (out.length >= MAX_EXCERPTS_PER_VIDEO) break;
   }
   return out;
@@ -172,9 +179,11 @@ async function kimiPickExcerpts(input: {
     messages: [
       {
         role: "system",
-        content: `Tu découpes un reportage pour un TikTok d'actu français. On veut des EXTRAITS parlants de ${TIKTOK_MIN_EXCERPT_SEC} à ${TIKTOK_MAX_EXCERPT_SEC} secondes, pas l'intro générique.
-Réponds UNIQUEMENT JSON : {"clips":[{"start":40.2,"duration":4.8,"why":"Hollande parle"}]}
-start = secondes depuis le début. 3 à ${MAX_EXCERPTS_PER_VIDEO} clips, non chevauchants, dans l'ordre chronologique. Priorité : personnalités citées qui PARLENT, phrases concrètes. Interdit : silence, générique, publicité.`,
+        content: `Tu découpes un reportage pour un TikTok d'actu français. Extraíts de ${TIKTOK_MIN_EXCERPT_SEC} à ${TIKTOK_MAX_EXCERPT_SEC} s.
+Réponds UNIQUEMENT JSON : {"clips":[{"start":40.2,"duration":4.8,"role":"soundbite","why":"Hollande parle"}]}
+start en secondes. 2 à ${MAX_EXCERPTS_PER_VIDEO} clips, non chevauchants, ordre chrono.
+role=soundbite si quelqu'un d'identifiable PARLE (on gardera le son, voix off coupée). role=broll pour du fond visuel (voix off par-dessus, son coupé).
+Priorité soundbite : personnalités citées. Pas de générique / pub / silence en soundbite.`,
       },
       {
         role: "user",
@@ -195,7 +204,7 @@ start = secondes depuis le début. 3 à ${MAX_EXCERPTS_PER_VIDEO} clips, non che
   const end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) return [];
   const obj = JSON.parse(raw.slice(start, end + 1)) as {
-    clips?: Array<{ start?: unknown; duration?: unknown }>;
+    clips?: Array<{ start?: unknown; duration?: unknown; role?: unknown }>;
   };
   const clips: SmartExcerpt[] = [];
   for (const c of obj.clips || []) {
@@ -204,6 +213,7 @@ start = secondes depuis le début. 3 à ${MAX_EXCERPTS_PER_VIDEO} clips, non che
     clips.push({
       start: s,
       duration: Number(c.duration) || TIKTOK_MAX_EXCERPT_SEC,
+      role: c.role === "broll" ? "broll" : "soundbite",
     });
   }
   return clips;
@@ -222,7 +232,13 @@ export async function pickSmartExcerpts(input: {
 }): Promise<SmartExcerpt[]> {
   const known = input.durationSec && input.durationSec > 0 ? input.durationSec : 0;
   if (known && known <= SHORT_SEC) {
-    return [{ start: 0, duration: Math.max(known, TIKTOK_MIN_EXCERPT_SEC) }];
+    return [
+      {
+        start: 0,
+        duration: Math.max(known, TIKTOK_MIN_EXCERPT_SEC),
+        role: "soundbite",
+      },
+    ];
   }
 
   try {
@@ -247,5 +263,5 @@ export async function pickSmartExcerpts(input: {
   }
 
   if (known > SHORT_SEC) return spacedExcerpts(known);
-  return [{ start: 0, duration: TIKTOK_MAX_EXCERPT_SEC }];
+  return [{ start: 0, duration: TIKTOK_MAX_EXCERPT_SEC, role: "soundbite" }];
 }

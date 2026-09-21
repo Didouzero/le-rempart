@@ -3,11 +3,16 @@ import { telegramDownloadFile } from "@/lib/telegram";
 import { absoluteUrl } from "@/lib/seo";
 import type {
   TiktokExtraMedia,
+  TiktokMontagePlan,
   TiktokScene,
   TiktokTimelineClip,
+  TiktokVoiceSegment,
 } from "@/lib/tiktok/types";
 import {
+  TIKTOK_MAX_DURATION_MS,
   TIKTOK_MAX_EXCERPT_SEC,
+  TIKTOK_MAX_SOUNDBITE_TOTAL_SEC,
+  TIKTOK_MAX_SOUNDBITES,
   TIKTOK_MIN_EXCERPT_SEC,
 } from "@/lib/tiktok/types";
 import {
@@ -162,29 +167,141 @@ export async function saveVoiceAsset(input: {
   return { id: row.id, kind: row.kind, mime: row.mime };
 }
 
-function assignExcerptDurations(
-  clips: TiktokTimelineClip[],
-  durationSec: number,
+function fillBroll(
+  pool: TiktokTimelineClip[],
+  start: number,
+  duration: number,
 ): TiktokTimelineClip[] {
-  const n = clips.length;
-  if (n === 0) return clips;
-  const base = durationSec / n;
-  const each = Math.min(
-    TIKTOK_MAX_EXCERPT_SEC,
-    Math.max(TIKTOK_MIN_EXCERPT_SEC, Math.round(base * 100) / 100),
-  );
-  let used = 0;
-  return clips.map((c, i) => {
-    const duration =
-      i === n - 1
-        ? Math.round((durationSec - used) * 100) / 100
-        : each;
-    used += duration;
-    return { ...c, duration };
-  });
+  if (duration <= 0.08 || pool.length === 0) return [];
+  const end = start + duration;
+  const out: TiktokTimelineClip[] = [];
+  let t = start;
+  let i = 0;
+  while (t < end - 0.05) {
+    const left = end - t;
+    const src = pool[i % pool.length]!;
+    const piece =
+      left < TIKTOK_MIN_EXCERPT_SEC + 0.4
+        ? left
+        : Math.min(TIKTOK_MAX_EXCERPT_SEC, left);
+    out.push({
+      ...src,
+      time: Number(t.toFixed(2)),
+      duration: Number(piece.toFixed(2)),
+      role: "broll",
+    });
+    t += piece;
+    i += 1;
+  }
+  return out;
 }
 
-export async function buildTimelineClips(input: {
+function pickSoundbites(clips: TiktokTimelineClip[]): TiktokTimelineClip[] {
+  const bites = clips.filter(
+    (c) => c.role === "soundbite" && c.kind === "video",
+  );
+  const chosen: TiktokTimelineClip[] = [];
+  let total = 0;
+  for (const bite of bites) {
+    const dur = clampBiteDuration(bite.duration);
+    if (chosen.length >= TIKTOK_MAX_SOUNDBITES) break;
+    if (total + dur > TIKTOK_MAX_SOUNDBITE_TOTAL_SEC) break;
+    chosen.push({ ...bite, duration: dur, role: "soundbite" });
+    total += dur;
+  }
+  return chosen;
+}
+
+function clampBiteDuration(duration: number): number {
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return TIKTOK_MAX_EXCERPT_SEC;
+  }
+  return Math.min(
+    TIKTOK_MAX_EXCERPT_SEC,
+    Math.max(TIKTOK_MIN_EXCERPT_SEC, duration),
+  );
+}
+
+function assembleMontage(
+  voiceSec: number,
+  clips: TiktokTimelineClip[],
+): TiktokMontagePlan {
+  const maxTotal = TIKTOK_MAX_DURATION_MS / 1000;
+  let bites = pickSoundbites(clips);
+  while (
+    bites.length &&
+    voiceSec + bites.reduce((s, b) => s + b.duration, 0) > maxTotal + 0.05
+  ) {
+    bites = bites.slice(0, -1);
+  }
+
+  const brollPool = clips.filter((c) => c.role !== "soundbite");
+  const pool = brollPool.length ? brollPool : clips;
+
+  const fractions =
+    bites.length <= 1
+      ? [0.38]
+      : bites.length === 2
+        ? [0.28, 0.62]
+        : [0.22, 0.48, 0.72];
+  const insertAt = bites.map((_, i) =>
+    Number((voiceSec * (fractions[i] || 0.5)).toFixed(2)),
+  );
+
+  type Event =
+    | { type: "vo"; duration: number }
+    | { type: "bite"; clip: TiktokTimelineClip };
+  const events: Event[] = [];
+  let voPos = 0;
+  bites.forEach((bite, i) => {
+    const at = Math.min(insertAt[i] ?? voPos, voiceSec);
+    if (at > voPos + 0.4) {
+      events.push({ type: "vo", duration: Number((at - voPos).toFixed(2)) });
+      voPos = at;
+    }
+    events.push({ type: "bite", clip: bite });
+  });
+  if (voiceSec - voPos > 0.4) {
+    events.push({
+      type: "vo",
+      duration: Number((voiceSec - voPos).toFixed(2)),
+    });
+  }
+
+  const visuals: TiktokTimelineClip[] = [];
+  const voiceSegments: TiktokVoiceSegment[] = [];
+  let t = 0;
+  let voTrim = 0;
+  for (const ev of events) {
+    if (ev.type === "vo") {
+      voiceSegments.push({
+        time: Number(t.toFixed(2)),
+        duration: ev.duration,
+        trimStart: Number(voTrim.toFixed(2)),
+      });
+      visuals.push(...fillBroll(pool, t, ev.duration));
+      voTrim += ev.duration;
+      t += ev.duration;
+    } else {
+      visuals.push({
+        ...ev.clip,
+        time: Number(t.toFixed(2)),
+        duration: ev.clip.duration,
+        role: "soundbite",
+      });
+      t += ev.clip.duration;
+    }
+  }
+
+  return {
+    durationSec: Number(t.toFixed(2)),
+    clips: visuals,
+    voiceSegments,
+    soundbiteCount: bites.length,
+  };
+}
+
+export async function buildMontagePlan(input: {
   jobId: string;
   fileToken: string;
   extraMedia: TiktokExtraMedia[];
@@ -192,13 +309,13 @@ export async function buildTimelineClips(input: {
   durationSec: number;
   sourceUrl: string;
   title: string;
-}): Promise<TiktokTimelineClip[]> {
+}): Promise<TiktokMontagePlan> {
   const unique: TiktokTimelineClip[] = [];
   const seen = new Set<string>();
 
   const pushClip = (clip: TiktokTimelineClip | null) => {
     if (!clip?.source) return;
-    const key = `${clip.source.split("?")[0]}#${clip.trimStart ?? 0}`;
+    const key = `${clip.source.split("?")[0]}#${clip.trimStart ?? 0}#${clip.role || "broll"}`;
     if (seen.has(key)) return;
     seen.add(key);
     unique.push(clip);
@@ -225,8 +342,9 @@ export async function buildTimelineClips(input: {
             pushClip({
               source,
               kind: "video",
-              duration: 0,
+              duration: ex.duration,
               trimStart: ex.start,
+              role: ex.role,
             });
           }
         } else {
@@ -234,29 +352,25 @@ export async function buildTimelineClips(input: {
             source,
             kind: "photo",
             duration: 0,
+            role: "broll",
           });
         }
       } else if (media.url && !isStockVisualHost(media.url)) {
-        pushClip(
-          await ingestRemoteVisual({
-            jobId: input.jobId,
-            url: media.url,
-            kind: media.kind === "video" ? "video" : "photo",
-            fileToken: input.fileToken,
-          }),
-        );
+        const remote = await ingestRemoteVisual({
+          jobId: input.jobId,
+          url: media.url,
+          kind: media.kind === "video" ? "video" : "photo",
+          fileToken: input.fileToken,
+        });
+        if (remote) pushClip({ ...remote, role: "broll" });
       }
     } catch (err) {
       console.error("tiktok user media skipped", err);
     }
   }
 
-  const needed = Math.max(
-    unique.length,
-    Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC),
-  );
-
   if (unique.length === 0) {
+    const needed = Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC);
     const news = await collectNewsVisuals({
       sourceUrl: input.sourceUrl,
       title: input.title,
@@ -273,23 +387,17 @@ export async function buildTimelineClips(input: {
         }),
       ),
     );
-    for (const clip of ingested) pushClip(clip);
+    for (const clip of ingested) {
+      if (clip) pushClip({ ...clip, role: "broll" });
+    }
   }
 
   if (unique.length === 0) {
     throw new Error(
-      "Aucun visuel. Envoie des extraits vidéo (3–8 s) et des photos dans l’ordre du montage, puis /tiktok_go.",
+      "Aucun visuel. Envoie des extraits vidéo et des photos, puis /tiktok_go.",
     );
   }
 
-  const slots =
-    unique.length >= Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC)
-      ? unique.length
-      : Math.ceil(input.durationSec / TIKTOK_MAX_EXCERPT_SEC);
-  const clips: TiktokTimelineClip[] = [];
-  while (clips.length < slots) {
-    clips.push(unique[clips.length % unique.length]!);
-  }
-
-  return assignExcerptDurations(clips, input.durationSec);
+  return assembleMontage(input.durationSec, unique);
 }
+

@@ -17,7 +17,7 @@ import {
 import { writeDroitocratieScript } from "@/lib/tiktok/script";
 import { synthesizeJournalistVoice } from "@/lib/tiktok/voice";
 import {
-  buildTimelineClips,
+  buildMontagePlan,
   saveVoiceAsset,
   tiktokAssetPublicUrl,
 } from "@/lib/tiktok/media";
@@ -181,7 +181,7 @@ export async function runTiktokJob(jobId: string): Promise<void> {
         : `Voix OK (${formatDuration(durationMs)}). Pas de fichier de ta part — visuels d’actu…`,
     );
 
-    const clips = await buildTimelineClips({
+    const plan = await buildMontagePlan({
       jobId,
       fileToken: job.fileToken,
       extraMedia: parseExtra(job.extraMedia),
@@ -192,19 +192,23 @@ export async function runTiktokJob(jobId: string): Promise<void> {
     });
 
     await setPhase(jobId, "render", { progress: "Montage Creatomate…" });
-    await notify(chatId, "Montage 9:16 en cours (ça peut prendre 2 à 5 min)…");
+    await notify(
+      chatId,
+      plan.soundbiteCount
+        ? `Montage 9:16 : voix coupée sur ${plan.soundbiteCount} extrait${plan.soundbiteCount > 1 ? "s" : ""} parlant${plan.soundbiteCount > 1 ? "s" : ""} (2 à 5 min)…`
+        : "Montage 9:16 en cours (ça peut prendre 2 à 5 min)…",
+    );
 
     const render = await startCreatomateRender({
       jobId,
-      durationSec: durationMs / 1000,
       voiceUrl: tiktokAssetPublicUrl(voiceAsset.id, job.fileToken),
-      clips,
+      plan,
     });
 
     await setPhase(jobId, "render", {
       creatomateId: render.id,
       progress: "Rendu cloud…",
-      durationMs,
+      durationMs: Math.round(plan.durationSec * 1000),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "échec montage";

@@ -3,7 +3,7 @@ import {
   findNewsMusicUrl,
   tiktokWordmarkUrl,
 } from "@/lib/tiktok/media";
-import type { TiktokTimelineClip } from "@/lib/tiktok/types";
+import type { TiktokMontagePlan, TiktokTimelineClip } from "@/lib/tiktok/types";
 
 export function isCreatomateConfigured(): boolean {
   return Boolean(process.env.CREATOMATE_API_KEY?.trim());
@@ -18,62 +18,61 @@ function webhookUrl(): string {
   return secret ? `${base}?secret=${encodeURIComponent(secret)}` : base;
 }
 
-function clipElements(
-  clips: TiktokTimelineClip[],
-): Array<Record<string, unknown>> {
-  let t = 0;
-  const out: Array<Record<string, unknown>> = [];
-  for (const clip of clips) {
-    const duration = Math.max(3, clip.duration);
-    const el: Record<string, unknown> = {
-      type: clip.kind === "video" ? "video" : "image",
-      source: clip.source,
-      track: 1,
-      time: Number(t.toFixed(2)),
-      duration,
-      x: "50%",
-      y: "50%",
-      width: "100%",
-      height: "100%",
-      fit: "cover",
-    };
-    if (clip.kind === "video") {
-      el.trim_start = clip.trimStart ?? 0;
-      el.loop = true;
+function visualElement(clip: TiktokTimelineClip): Record<string, unknown> {
+  const duration = Math.max(0.4, clip.duration);
+  const time = clip.time ?? 0;
+  const sync = clip.role === "soundbite";
+  const el: Record<string, unknown> = {
+    type: clip.kind === "video" ? "video" : "image",
+    source: clip.source,
+    track: 1,
+    time: Number(time.toFixed(2)),
+    duration,
+    x: "50%",
+    y: "50%",
+    width: "100%",
+    height: "100%",
+    fit: "cover",
+  };
+  if (clip.kind === "video") {
+    el.trim_start = clip.trimStart ?? 0;
+    el.volume = sync ? "100%" : "0%";
+    el.loop = !sync;
+    if (sync) {
+      el.audio_fade_in = 0.12;
+      el.audio_fade_out = 0.15;
     }
-    if (clip.kind === "photo") {
-      el.animations = [
-        {
-          type: "scale",
-          easing: "linear",
-          start_scale: "100%",
-          end_scale: "112%",
-          fade: false,
-        },
-      ];
-    } else {
-      el.animations = [{ type: "fade", duration: 0.35, transition: true }];
-    }
-    out.push(el);
-    t += duration;
   }
-  return out;
+  if (clip.kind === "photo") {
+    el.animations = [
+      {
+        type: "scale",
+        easing: "linear",
+        start_scale: "100%",
+        end_scale: "112%",
+        fade: false,
+      },
+    ];
+  } else {
+    el.animations = [{ type: "fade", duration: 0.28, transition: true }];
+  }
+  return el;
 }
 
 export async function startCreatomateRender(input: {
   jobId: string;
-  durationSec: number;
   voiceUrl: string;
-  clips: TiktokTimelineClip[];
+  plan: TiktokMontagePlan;
 }): Promise<{ id: string }> {
   const apiKey = process.env.CREATOMATE_API_KEY?.trim();
   if (!apiKey) throw new Error("CREATOMATE_API_KEY n’est pas configurée.");
 
-  const duration = Math.round(input.durationSec * 100) / 100;
+  const duration = Math.round(input.plan.durationSec * 100) / 100;
   const musicUrl = await findNewsMusicUrl().catch(() => null);
+  const voSegs = input.plan.voiceSegments;
 
   const elements: Array<Record<string, unknown>> = [
-    ...clipElements(input.clips),
+    ...input.plan.clips.map(visualElement),
     {
       type: "shape",
       track: 2,
@@ -117,22 +116,28 @@ export async function startCreatomateRender(input: {
       fill_color: "#d4af37",
       letter_spacing: "8%",
     },
-    {
-      id: "voiceover",
+  ];
+
+  voSegs.forEach((seg, i) => {
+    const id = `voiceover-${i}`;
+    elements.push({
+      id,
       type: "audio",
       source: input.voiceUrl,
       track: 4,
-      time: 0,
-      duration,
-    },
-    {
+      time: seg.time,
+      duration: seg.duration,
+      trim_start: seg.trimStart,
+      volume: "100%",
+    });
+    elements.push({
       type: "text",
-      transcript_source: "voiceover",
+      transcript_source: id,
       transcript_maximum_length: 4,
       transcript_color: "#d4af37",
       track: 5,
-      time: 0,
-      duration,
+      time: seg.time,
+      duration: seg.duration,
       y: "74%",
       width: "88%",
       height: "18%",
@@ -144,19 +149,21 @@ export async function startCreatomateRender(input: {
       stroke_width: "1.6 vmin",
       line_height: "110%",
       text_align: "center",
-    },
-  ];
+    });
+  });
 
   if (musicUrl) {
-    elements.push({
-      type: "audio",
-      source: musicUrl,
-      track: 6,
-      time: 0,
-      duration,
-      volume: "10%",
-      audio_fade_out: 1.2,
-    });
+    for (const seg of voSegs) {
+      elements.push({
+        type: "audio",
+        source: musicUrl,
+        track: 6,
+        time: seg.time,
+        duration: seg.duration,
+        volume: "8%",
+        audio_fade_out: 0.4,
+      });
+    }
   }
 
   const res = await fetch("https://api.creatomate.com/v1/renders", {

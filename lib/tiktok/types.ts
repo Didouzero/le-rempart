@@ -15,6 +15,8 @@ export const TIKTOK_TTS_MAX_ATTEMPTS = 3;
 export const TIKTOK_MAX_EXCERPT_SEC = 5;
 export const TIKTOK_MIN_EXCERPT_SEC = 3.2;
 export const TIKTOK_USER_MEDIA_MAX = 20;
+export const TIKTOK_MAX_SOUNDBITES = 3;
+export const TIKTOK_MAX_SOUNDBITE_TOTAL_SEC = 16;
 
 export type TiktokDraftStep = "awaiting_url" | "awaiting_media";
 
@@ -41,12 +43,28 @@ export type TiktokScript = {
   scenes: TiktokScene[];
 };
 
+export type TiktokClipRole = "broll" | "soundbite";
+
 export type TiktokTimelineClip = {
   source: string;
   kind: "video" | "photo";
   duration: number;
-  /** Début de coupe dans le fichier source (vidéos Telegram déjà triées). */
   trimStart?: number;
+  time?: number;
+  role?: TiktokClipRole;
+};
+
+export type TiktokVoiceSegment = {
+  time: number;
+  duration: number;
+  trimStart: number;
+};
+
+export type TiktokMontagePlan = {
+  durationSec: number;
+  clips: TiktokTimelineClip[];
+  voiceSegments: TiktokVoiceSegment[];
+  soundbiteCount: number;
 };
 
 export type TiktokJobPhase =

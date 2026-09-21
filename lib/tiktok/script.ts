@@ -18,6 +18,7 @@ Tu écris un SCRIPT ORAL pour TikTok, pas un article web.
 - Pas d'emojis dans la voix off. Pas de hashtags dans le script. Pas de tiret long.
 - Pas de « il convient de noter », « dans un contexte où », « en conclusion ».
 - Accroche en 1 phrase (ce qui se passe). Puis déroulé. Puis lecture. Clos court signé Droitocratie (sans dire « abonne-toi »).
+- MIXAGE : la voix off passe SUR des images (fond). Quand un intervenant parle à l'image (Hollande, ministre…), la voix off se TAIT. Donc : ne récite pas les longues citations, amorce (« Hollande assume : ») puis le plateau fera entendre l'extrait.
 
 LONGUEUR : vise ${TIKTOK_SCRIPT_TARGET_WORDS} mots (entre ${TIKTOK_SCRIPT_MIN_WORDS} et ${TIKTOK_SCRIPT_MAX_WORDS}). C'est non négociable : la vidéo doit durer entre 1 min 02 et 1 min 20.
 
