@@ -52,6 +52,7 @@ export type TiktokTimelineClip = {
   trimStart?: number;
   time?: number;
   role?: TiktokClipRole;
+  label?: string;
 };
 
 export type TiktokVoiceSegment = {

@@ -53,12 +53,9 @@ function mediaRoll(items: TiktokExtraMedia[]): string {
 
 function mediaHint(): string {
   return [
-    "À toi de trier le montage. Envoie les plans **dans l’ordre**, un par un (ou un album) :",
-    "• extraits déjà coupés 3–8 s, ou une vidéo plus longue (le bot en tire les moments parlants, ex. Hollande à 0:40)",
-    "• photos intercalées",
-    "Sur iPhone : Photos → partager ici. Coupe toi-même si tu veux un plan précis ; sinon envoie la minute, on découpe.",
-    "Sur l’image : voix off sur le fond (son coupé). Quand un intervenant parle, la voix off se tait.",
-    "Sans fichier, /tiktok_go prend des photos d’actu tout seul.",
+    "Envoie tes MP4 et tes photos **en vrac** (album OK). Pas besoin de les trier.",
+    "Je découpe les extraits parlants, je mets la voix off sur le fond, je range le montage.",
+    "Puis /tiktok_go. Sans fichier : photos d’actu toutes seules.",
   ].join("\n");
 }
 
@@ -194,7 +191,7 @@ export async function handleTiktokCommand(input: {
       chatId,
       [
         "Droitocratie — envoie le lien de l’article à traiter.",
-        "Ensuite : extraits vidéo 3–8 s + photos, dans l’ordre, puis /tiktok_go.",
+        "Ensuite envoie tes vidéos/photos (en vrac) ou /tiktok_go tout de suite.",
       ].join("\n"),
     );
   }
@@ -325,7 +322,7 @@ export async function handleTiktokDraftMessage(input: {
     await telegramSendMessage(
       input.chatId,
       [
-        "Envoie un extrait vidéo ou une photo (dans l’ordre du montage).",
+        "Envoie des MP4 ou des photos, dans n’importe quel ordre.",
         mediaRoll(draft.extraMedia),
         "/tiktok_undo · /tiktok_go · /tiktok_cancel",
       ].join("\n"),
@@ -349,9 +346,9 @@ export async function handleTiktokDraftMessage(input: {
   }
   const n = updated.extraMedia.length;
   const ideal =
-    n < 12
-      ? `Idéal : 12–16 plans pour 1 min 10. Encore, /tiktok_undo, ou /tiktok_go.`
-      : `Ça suffit pour monter. Encore, /tiktok_undo, ou /tiktok_go.`;
+    n < 3
+      ? "Encore des fichiers si tu en as, sinon /tiktok_go je monte avec ça."
+      : "Reçu. /tiktok_go quand tu as fini (pas besoin de trier).";
   await telegramSendMessage(
     input.chatId,
     [`Plan ${n}/${TIKTOK_USER_MEDIA_MAX} ajouté.`, mediaRoll(updated.extraMedia), ideal].join(

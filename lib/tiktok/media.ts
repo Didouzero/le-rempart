@@ -196,20 +196,57 @@ function fillBroll(
   return out;
 }
 
-function pickSoundbites(clips: TiktokTimelineClip[]): TiktokTimelineClip[] {
-  const bites = clips.filter(
-    (c) => c.role === "soundbite" && c.kind === "video",
+function fold(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function pickSoundbites(
+  clips: TiktokTimelineClip[],
+  title: string,
+  scenes: TiktokScene[],
+): TiktokTimelineClip[] {
+  const hay = fold(
+    `${title} ${scenes.map((s) => `${s.person || ""} ${s.text}`).join(" ")}`,
   );
+  const bites = clips
+    .filter((c) => c.role === "soundbite" && c.kind === "video")
+    .map((c) => {
+      const dur = clampBiteDuration(c.duration);
+      const label = fold(c.label || "");
+      const personHit = hay
+        .split(/\s+/)
+        .filter((w) => w.length >= 5)
+        .some((w) => label.includes(w));
+      const durationScore = 5 - Math.abs(dur - 4.5);
+      const score = (personHit ? 8 : 0) + durationScore;
+      return { clip: { ...c, duration: dur, role: "soundbite" as const }, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
   const chosen: TiktokTimelineClip[] = [];
   let total = 0;
-  for (const bite of bites) {
-    const dur = clampBiteDuration(bite.duration);
+  for (const { clip } of bites) {
     if (chosen.length >= TIKTOK_MAX_SOUNDBITES) break;
-    if (total + dur > TIKTOK_MAX_SOUNDBITE_TOTAL_SEC) break;
-    chosen.push({ ...bite, duration: dur, role: "soundbite" });
-    total += dur;
+    if (total + clip.duration > TIKTOK_MAX_SOUNDBITE_TOTAL_SEC) break;
+    chosen.push(clip);
+    total += clip.duration;
   }
   return chosen;
+}
+
+function orderBroll(clips: TiktokTimelineClip[]): TiktokTimelineClip[] {
+  const photos = clips.filter((c) => c.kind === "photo");
+  const videos = clips.filter((c) => c.kind === "video");
+  const out: TiktokTimelineClip[] = [];
+  const n = Math.max(photos.length, videos.length);
+  for (let i = 0; i < n; i++) {
+    if (photos[i]) out.push(photos[i]!);
+    if (videos[i]) out.push(videos[i]!);
+  }
+  return out.length ? out : clips;
 }
 
 function clampBiteDuration(duration: number): number {
@@ -225,9 +262,11 @@ function clampBiteDuration(duration: number): number {
 function assembleMontage(
   voiceSec: number,
   clips: TiktokTimelineClip[],
+  title: string,
+  scenes: TiktokScene[],
 ): TiktokMontagePlan {
   const maxTotal = TIKTOK_MAX_DURATION_MS / 1000;
-  let bites = pickSoundbites(clips);
+  let bites = pickSoundbites(clips, title, scenes);
   while (
     bites.length &&
     voiceSec + bites.reduce((s, b) => s + b.duration, 0) > maxTotal + 0.05
@@ -236,7 +275,7 @@ function assembleMontage(
   }
 
   const brollPool = clips.filter((c) => c.role !== "soundbite");
-  const pool = brollPool.length ? brollPool : clips;
+  const pool = orderBroll(brollPool.length ? brollPool : clips);
 
   const fractions =
     bites.length <= 1
@@ -345,6 +384,7 @@ export async function buildMontagePlan(input: {
               duration: ex.duration,
               trimStart: ex.start,
               role: ex.role,
+              label: ex.why,
             });
           }
         } else {
@@ -398,6 +438,6 @@ export async function buildMontagePlan(input: {
     );
   }
 
-  return assembleMontage(input.durationSec, unique);
+  return assembleMontage(input.durationSec, unique, input.title, input.scenes);
 }
 

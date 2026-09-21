@@ -21,6 +21,7 @@ export type SmartExcerpt = {
   start: number;
   duration: number;
   role: "soundbite" | "broll";
+  why?: string;
 };
 
 function clamp(n: number, min: number, max: number): number {
@@ -68,7 +69,7 @@ function mergeClose(excerpts: SmartExcerpt[], durationSec: number): SmartExcerpt
     );
     const last = out[out.length - 1];
     if (last && Math.abs(start - last.start) < 3.2) continue;
-    out.push({ start, duration, role: ex.role || "soundbite" });
+    out.push({ start, duration, role: ex.role || "soundbite", why: ex.why });
     if (out.length >= MAX_EXCERPTS_PER_VIDEO) break;
   }
   return out;
@@ -204,7 +205,12 @@ Priorité soundbite : personnalités citées. Pas de générique / pub / silence
   const end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) return [];
   const obj = JSON.parse(raw.slice(start, end + 1)) as {
-    clips?: Array<{ start?: unknown; duration?: unknown; role?: unknown }>;
+    clips?: Array<{
+      start?: unknown;
+      duration?: unknown;
+      role?: unknown;
+      why?: unknown;
+    }>;
   };
   const clips: SmartExcerpt[] = [];
   for (const c of obj.clips || []) {
@@ -214,6 +220,7 @@ Priorité soundbite : personnalités citées. Pas de générique / pub / silence
       start: s,
       duration: Number(c.duration) || TIKTOK_MAX_EXCERPT_SEC,
       role: c.role === "broll" ? "broll" : "soundbite",
+      why: typeof c.why === "string" ? c.why : undefined,
     });
   }
   return clips;
