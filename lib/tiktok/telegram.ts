@@ -54,9 +54,9 @@ function mediaRoll(items: TiktokExtraMedia[]): string {
 function mediaHint(): string {
   return [
     "À toi de trier le montage. Envoie les plans **dans l’ordre**, un par un (ou un album) :",
-    "• extraits vidéo déjà coupés 3–8 s (Hollande qui parle, hémicycle, JT…)",
+    "• extraits déjà coupés 3–8 s, ou une vidéo plus longue (le bot en tire les moments parlants, ex. Hollande à 0:40)",
     "• photos intercalées",
-    "Sur iPhone : Photos → modifier → coupe l’extrait → partager ici. Mieux : envoyer en fichier (moins compressé).",
+    "Sur iPhone : Photos → partager ici. Coupe toi-même si tu veux un plan précis ; sinon envoie la minute, on découpe.",
     "12 à 16 plans pour ~1 min 10. /tiktok_undo retire le dernier. Puis /tiktok_go.",
     "Sans fichier, /tiktok_go prend des photos d’actu tout seul.",
   ].join("\n");
@@ -272,7 +272,8 @@ function extraFromTelegramMessage(
     if (fileId) out.push({ kind: "photo", fileId });
   }
   const doc = message.document;
-  if (doc?.file_id) {
+  const hasNativeVideo = Boolean(message.video?.file_id);
+  if (doc?.file_id && !hasNativeVideo) {
     const mime = (doc.mime_type || "").toLowerCase();
     const name = (doc.file_name || "").toLowerCase();
     if (mime.startsWith("image/") || /\.(jpe?g|png|webp)$/.test(name)) {
@@ -286,6 +287,7 @@ function extraFromTelegramMessage(
       kind: "video",
       fileId: message.video.file_id,
       mime: message.video.mime_type,
+      durationSec: message.video.duration,
     });
   }
   for (const url of extractAllHttpUrls(text)) {

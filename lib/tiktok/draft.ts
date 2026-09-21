@@ -30,6 +30,10 @@ function parseMedia(raw: unknown): TiktokExtraMedia[] {
       url: typeof rec.url === "string" ? rec.url : undefined,
       fileId: typeof rec.fileId === "string" ? rec.fileId : undefined,
       mime: typeof rec.mime === "string" ? rec.mime : undefined,
+      durationSec:
+        typeof rec.durationSec === "number" && rec.durationSec > 0
+          ? rec.durationSec
+          : undefined,
     });
   }
   return out;

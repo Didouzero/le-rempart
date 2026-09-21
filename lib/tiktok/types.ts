@@ -23,6 +23,8 @@ export type TiktokExtraMedia = {
   url?: string;
   fileId?: string;
   mime?: string;
+  /** Durée Telegram (secondes) — sert au découpage intelligent. */
+  durationSec?: number;
 };
 
 export type TiktokScene = {

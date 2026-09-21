@@ -5,7 +5,6 @@ import { fetchSourceText } from "@/lib/fetch-source";
 import { tiktokModels } from "@/lib/tiktok/db";
 import { telegramSendMessage } from "@/lib/telegram";
 import {
-  TIKTOK_MAX_EXCERPT_SEC,
   TIKTOK_TTS_MAX_ATTEMPTS,
   canPostToTikTok,
   formatDuration,
@@ -178,7 +177,7 @@ export async function runTiktokJob(jobId: string): Promise<void> {
     await notify(
       chatId,
       parseExtra(job.extraMedia).length
-        ? `Voix OK (${formatDuration(durationMs)}). Montage avec tes ${parseExtra(job.extraMedia).length} plans (extraits ~${Math.round(TIKTOK_MAX_EXCERPT_SEC)} s)…`
+        ? `Voix OK (${formatDuration(durationMs)}). Découpe des extraits parlants sur tes vidéos…`
         : `Voix OK (${formatDuration(durationMs)}). Pas de fichier de ta part — visuels d’actu…`,
     );
 

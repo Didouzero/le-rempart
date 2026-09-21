@@ -14,6 +14,7 @@ import {
   collectNewsVisuals,
   isStockVisualHost,
 } from "@/lib/tiktok/news-visuals";
+import { pickSmartExcerpts } from "@/lib/tiktok/smart-clips";
 
 const USER_MEDIA_MAX_BYTES = 14 * 1024 * 1024;
 const NEWS_INGEST_MAX_BYTES = 8 * 1024 * 1024;
@@ -79,7 +80,7 @@ async function hostTelegramFile(input: {
   jobId: string;
   fileId: string;
   kind: "photo" | "video";
-}): Promise<HostedAsset> {
+}): Promise<HostedAsset & { buffer: Buffer }> {
   const { buffer, mime } = await telegramDownloadFile(input.fileId);
   if (buffer.length > USER_MEDIA_MAX_BYTES) {
     throw new Error(
@@ -94,7 +95,7 @@ async function hostTelegramFile(input: {
       data: new Uint8Array(buffer),
     },
   });
-  return { id: row.id, kind: row.kind, mime: row.mime };
+  return { id: row.id, kind: row.kind, mime: row.mime, buffer };
 }
 
 async function ingestRemoteVisual(input: {
@@ -197,7 +198,7 @@ export async function buildTimelineClips(input: {
 
   const pushClip = (clip: TiktokTimelineClip | null) => {
     if (!clip?.source) return;
-    const key = clip.source.split("?")[0]!.toLowerCase();
+    const key = `${clip.source.split("?")[0]}#${clip.trimStart ?? 0}`;
     if (seen.has(key)) return;
     seen.add(key);
     unique.push(clip);
@@ -211,12 +212,30 @@ export async function buildTimelineClips(input: {
           fileId: media.fileId,
           kind: media.kind === "video" ? "video" : "photo",
         });
-        pushClip({
-          source: tiktokAssetPublicUrl(hosted.id, input.fileToken),
-          kind: hosted.kind === "video" ? "video" : "photo",
-          duration: 0,
-          trimStart: hosted.kind === "video" ? 0 : undefined,
-        });
+        const source = tiktokAssetPublicUrl(hosted.id, input.fileToken);
+        if (hosted.kind === "video") {
+          const excerpts = await pickSmartExcerpts({
+            buffer: hosted.buffer,
+            mime: hosted.mime,
+            durationSec: media.durationSec,
+            title: input.title,
+            scenes: input.scenes,
+          });
+          for (const ex of excerpts) {
+            pushClip({
+              source,
+              kind: "video",
+              duration: 0,
+              trimStart: ex.start,
+            });
+          }
+        } else {
+          pushClip({
+            source,
+            kind: "photo",
+            duration: 0,
+          });
+        }
       } else if (media.url && !isStockVisualHost(media.url)) {
         pushClip(
           await ingestRemoteVisual({
