@@ -36,6 +36,9 @@ model Article {
   coverImageUrl  String?
   coverImageMime String?
   coverImageData Bytes?
+  /// Illustration site (fichier Telegram), distincte de la créative Facebook.
+  illustrationMime String?
+  illustrationData Bytes?
   category       ArticleCategory @default(insolite)
   status         ArticleStatus   @default(draft)
   createdAt      DateTime        @default(now())
@@ -86,7 +89,7 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 }
 
-/// Brouillon Telegram : créative → URL illustration → lien source.
+/// Brouillon Telegram : créative → illustration (URL ou fichier) → lien source.
 model PublishDraft {
   id            String   @id @default(cuid())
   chatId        BigInt   @unique
@@ -95,7 +98,9 @@ model PublishDraft {
   imageMime     String
   imageData     Bytes
   /// URL illustration site (demandée après la créative).
-  coverImageUrl String?
+  coverImageUrl  String?
+  coverImageMime String?
+  coverImageData Bytes?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

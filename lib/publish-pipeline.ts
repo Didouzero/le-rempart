@@ -174,6 +174,8 @@ export async function publishCreativePipeline(input: {
   headline?: string;
   /** URL illustration site (fournie après la créative). */
   coverImageUrl?: string;
+  /** Fichier illustration Telegram (alternative à l’URL). */
+  coverImage?: { buffer: Buffer; mime: string };
   requireSource?: boolean;
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
@@ -191,13 +193,18 @@ export async function publishCreativePipeline(input: {
     sourceTitle: input.sourceTitle,
     headline: input.headline,
     coverImageUrl: input.coverImageUrl,
+    coverImage: input.coverImage,
     image: input.image,
     requireSource,
     notify,
   });
 
   const coverLine = article.coverImageUrl
-    ? "Illustration site : photo web trouvée."
+    ? input.coverImage
+      ? "Illustration site : fichier enregistré."
+      : input.coverImageUrl?.trim()
+        ? "Illustration site : URL enregistrée."
+        : "Illustration site : photo web trouvée."
     : "Illustration site : aucune photo web trouvée.";
 
   await notify(

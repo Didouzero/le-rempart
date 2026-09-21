@@ -2,8 +2,10 @@ import { allocateNextAuthorName } from "@/lib/authors";
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { classifyArticleCategory } from "@/lib/categories";
 import { fetchSourceText } from "@/lib/fetch-source";
+import { prepareSiteIllustration } from "@/lib/illustration";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { prisma } from "@/lib/prisma";
+import { absoluteUrl } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { withTimeout } from "@/lib/with-timeout";
 import { writeArticleSimple } from "@/lib/write-simple";
@@ -72,6 +74,8 @@ export async function publishArticleFromCreative(input: {
   headline?: string;
   /** URL illustration fournie par l'utilisateur (prioritaire). */
   coverImageUrl?: string;
+  /** Fichier illustration Telegram (alternative à l’URL). */
+  coverImage?: { buffer: Buffer; mime: string };
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
   requireSource?: boolean;
@@ -194,25 +198,33 @@ export async function publishArticleFromCreative(input: {
     await prisma.appSetting.delete({ where: { key: lockKey } }).catch(() => {});
   }
 
+  const preparedCover = input.coverImage?.buffer.length
+    ? await prepareSiteIllustration(input.coverImage)
+    : null;
+  const hasCoverFile = Boolean(preparedCover);
   await notify(
-    input.coverImageUrl?.trim()
-      ? "Illustration : URL fournie."
-      : "Recherche d'illustration site…",
+    hasCoverFile
+      ? "Illustration : fichier reçu."
+      : input.coverImageUrl?.trim()
+        ? "Illustration : URL fournie."
+        : "Recherche d'illustration site…",
   );
   const providedCover = input.coverImageUrl?.trim() || "";
   const coverImageUrl = providedCover
     ? providedCover
-    : await withTimeout(
-        resolveRelevantCoverUrl({
-          title: generated.title,
-          excerpt: generated.excerpt,
-        }),
-        28_000,
-        "Timeout illustration",
-      ).catch((err) => {
-        console.error(err);
-        return null;
-      });
+    : hasCoverFile
+      ? null
+      : await withTimeout(
+          resolveRelevantCoverUrl({
+            title: generated.title,
+            excerpt: generated.excerpt,
+          }),
+          28_000,
+          "Timeout illustration",
+        ).catch((err) => {
+          console.error(err);
+          return null;
+        });
 
   const slug = await makeUniqueSlug(generated.title);
   const creativeMime = input.image
@@ -246,6 +258,10 @@ export async function publishArticleFromCreative(input: {
     coverImageUrl: utf8TextOrNull(coverImageUrl, 2000),
     coverImageMime: storeBlob ? creativeMime : null,
     coverImageData: storeBlob ? Buffer.from(input.image!.buffer) : null,
+    illustrationMime: preparedCover ? preparedCover.mime : null,
+    illustrationData: preparedCover
+      ? Buffer.from(preparedCover.buffer)
+      : null,
   };
 
   let article;
@@ -260,6 +276,14 @@ export async function publishArticleFromCreative(input: {
         coverImageMime: null,
         coverImageData: null,
       },
+    });
+  }
+
+  if (hasCoverFile) {
+    const hosted = absoluteUrl(`/api/media/${article.id}/illustration`);
+    article = await prisma.article.update({
+      where: { id: article.id },
+      data: { coverImageUrl: hosted },
     });
   }
 

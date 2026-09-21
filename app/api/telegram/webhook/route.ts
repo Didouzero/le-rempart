@@ -4,8 +4,10 @@ import { isFacebookConfigured } from "@/lib/facebook";
 import { prisma } from "@/lib/prisma";
 import {
   deletePublishDraft,
+  draftHasCover,
   extractHttpUrl,
   getActivePublishDraft,
+  setPublishDraftCoverFile,
   setPublishDraftCoverUrl,
   setPublishDraftHeadline,
   upsertPublishDraft,
@@ -43,13 +45,20 @@ function normalizeCommand(text: string): string {
     .replace(/@\w+$/i, "");
 }
 
+function illustrationPromptLines(): string[] {
+  return [
+    "Envoie l’illustration de l’article : un fichier JPG/PNG, ou une URL http/https.",
+    "Idéal : 1600×900 (16:9), sujet au centre.",
+  ];
+}
+
 function commandsHelpText(): string {
   return [
     "📘 COMMANDES LE REMPART",
     "",
     "── Manuel (toujours dispo) ──",
     "1) Envoie une créative PNG/JPG",
-    "2) Envoie l’URL de l’image d’illustration (site) — 1600×900, 16:9",
+    "2) Envoie l’illustration du site : fichier JPG/PNG ou URL — 1600×900, 16:9",
     "3) Envoie le lien de l’article source",
     "→ article site + Facebook",
     "/cancel — annuler la créative en attente",
@@ -169,7 +178,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "",
           "Flux manuel :",
           "1) Envoie ta créative Canva (PNG/JPG)",
-          "2) Envoie l’URL de l’image pour l’article",
+          "2) Envoie l’illustration de l’article (fichier JPG/PNG ou URL)",
           "3) Envoie le lien de l’article source",
           "4) Je publie l’article site + Facebook",
           "",
@@ -681,8 +690,38 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       if (handledTt) return;
     }
 
-    // ── Étape 1 : créative → demande URL illustration ──
+    // ── Étape 1 : créative. 2e image = illustration site (si titre déjà là). ──
     if (fileId) {
+      const pendingCover = await getActivePublishDraft(chatId);
+      if (
+        pendingCover &&
+        pendingCover.headline.trim() &&
+        !draftHasCover(pendingCover)
+      ) {
+        try {
+          const cover = await telegramDownloadFile(fileId);
+          const saved = await setPublishDraftCoverFile(chatId, cover);
+          if (!saved) throw new Error("Illustration non enregistrée");
+          await telegramSendMessage(
+            chatId,
+            [
+              "Illustration enregistrée (fichier).",
+              "",
+              "Envoie maintenant le lien de l’article source (URL http/https).",
+              "Je m’en sers pour rédiger l’article + le flash Facebook.",
+              "",
+              "/cancel pour annuler.",
+            ].join("\n"),
+          );
+        } catch (err) {
+          await telegramSendMessage(
+            chatId,
+            `Illustration : ${err instanceof Error ? err.message : "fichier illisible"}. Envoie un JPG/PNG, ou une URL.`,
+          );
+        }
+        return;
+      }
+
       await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
       const image = await telegramDownloadFile(fileId);
 
@@ -720,9 +759,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(
         chatId,
         [
-          "Envoie maintenant l’URL de l’image à mettre dans l’article (http/https).",
-          "Idéal : 1600×900 (16:9), sujet au centre.",
-          "Exemple : lien direct vers un .jpg / .png (Wikimedia, agence, etc.).",
+          ...illustrationPromptLines(),
           "",
           "Ensuite je te demanderai le lien de l’article source.",
           "/cancel pour annuler.",
@@ -751,8 +788,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           [
             `Titre enregistré : ${saved.headline}`,
             "",
-            "Envoie maintenant l’URL de l’image à mettre dans l’article (http/https).",
-            "Idéal : 1600×900 (16:9), sujet au centre.",
+            ...illustrationPromptLines(),
             "",
             "/cancel pour annuler.",
           ].join("\n"),
@@ -766,7 +802,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (draft && url && !draft.coverImageUrl) {
+    if (draft && url && !draftHasCover(draft)) {
       await setPublishDraftCoverUrl(chatId, url);
       await telegramSendMessage(
         chatId,
@@ -782,7 +818,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (draft && url && draft.coverImageUrl) {
+    if (draft && url && draftHasCover(draft)) {
       await telegramSendMessage(
         chatId,
         `Lien source reçu. Publication en cours…\n${url}`,
@@ -793,7 +829,14 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           caption: draft.headline,
           headline: draft.headline,
           sourceUrl: url,
-          coverImageUrl: draft.coverImageUrl,
+          coverImageUrl: draft.coverImageUrl || undefined,
+          coverImage:
+            draft.coverImageData && draft.coverImageData.length > 0
+              ? {
+                  buffer: draft.coverImageData,
+                  mime: draft.coverImageMime || "image/jpeg",
+                }
+              : undefined,
           image: { buffer: draft.imageData, mime: draft.imageMime },
           requireSource: true,
           notify: telegramNotifier(chatId),
@@ -810,9 +853,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(
         chatId,
         [
-          draft.coverImageUrl
+          draftHasCover(draft)
             ? "J’attends encore le lien de la source (URL complète http/https)."
-            : "J’attends encore l’URL de l’image d’illustration (http/https).",
+            : "J’attends encore l’illustration : un JPG/PNG, ou une URL http/https.",
           draft.headline.trim()
             ? `Titre en attente : ${draft.headline.slice(0, 120)}`
             : "Il me manque encore le titre (un message texte).",
@@ -825,7 +868,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     await telegramSendMessage(
       chatId,
-      "Envoie d’abord une créative (PNG/JPG), puis l’URL image, puis le lien source.",
+      "Envoie d’abord une créative (PNG/JPG), puis l’illustration (fichier ou URL), puis le lien source.",
     );
   } catch (err) {
     console.error("telegram process error", err);
