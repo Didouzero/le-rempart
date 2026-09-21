@@ -6,6 +6,8 @@ import {
   tiktokPostMode,
 } from "@/lib/tiktok/publish";
 import { tiktokRedirectUri, tiktokOauthScopes } from "@/lib/tiktok/oauth";
+import { isCreatomateConfigured } from "@/lib/tiktok/render";
+import { isElevenLabsConfigured } from "@/lib/tiktok/voice";
 
 function oauthErrorLabel(code: string): string {
   const map: Record<string, string> = {
@@ -32,6 +34,8 @@ export default async function AdminTiktokPage({
   const configured = isTiktokAppConfigured();
   const tokens = await loadTiktokTokens();
   const mode = tiktokPostMode();
+  const eleven = isElevenLabsConfigured();
+  const creatomate = isCreatomateConfigured();
 
   return (
     <div>
@@ -71,6 +75,16 @@ export default async function AdminTiktokPage({
             {tokens
               ? `relié (open_id ${tokens.openId.slice(0, 8)}…)`
               : "non relié"}
+          </strong>
+        </p>
+        <p>
+          ElevenLabs (voix) :{" "}
+          <strong>{eleven ? "clé présente" : "ELEVENLABS_API_KEY manquante"}</strong>
+        </p>
+        <p>
+          Creatomate (montage) :{" "}
+          <strong>
+            {creatomate ? "clé présente" : "CREATOMATE_API_KEY manquante"}
           </strong>
         </p>
         <p>
