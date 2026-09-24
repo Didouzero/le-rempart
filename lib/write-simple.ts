@@ -4,6 +4,10 @@ import { scrubBoilerplate } from "@/lib/fetch-source";
 import { italicizeCitations } from "@/lib/italicize-citations";
 import { moonshotChat } from "@/lib/moonshot";
 import { utf8Text } from "@/lib/utf8";
+import {
+  assertNoUnsourcedHeadlinePenalties,
+  stripUnsourcedPenaltiesFromTitle,
+} from "@/lib/source-first";
 
 export type SimpleArticle = {
   title: string;
@@ -94,15 +98,24 @@ function significantTitleTokens(text: string): string[] {
 
 /**
  * Accepte une reformulation Kimi si elle reste ancrée sur la créative ;
- * sinon repli = titre créative normalisé.
+ * sinon repli = titre créative, sans peines absentes de la source.
  */
 export function pickReformulatedTitle(
   creativeTitle: string,
   proposed: string | undefined | null,
+  matter = "",
 ): string {
-  const fallback = titleFromCreative(creativeTitle);
-  const candidate = titleFromCreative(String(proposed || ""));
-  if (candidate.length < 18 || candidate === "Actualité") return fallback;
+  const fallback = stripUnsourcedPenaltiesFromTitle(
+    titleFromCreative(creativeTitle),
+    matter,
+  );
+  let candidate = titleFromCreative(String(proposed || ""));
+  if (candidate.length >= 18 && candidate !== "Actualité") {
+    candidate = stripUnsourcedPenaltiesFromTitle(candidate, matter);
+  }
+  if (candidate.length < 18 || candidate === "Actualité") {
+    return fallback || "Actualité";
+  }
 
   const foldFallback = foldTitle(fallback);
   const foldCandidate = foldTitle(candidate);
@@ -323,11 +336,26 @@ export async function writeArticleSimple(input: {
         ],
       });
       const parsed = parseJsonArticle(raw);
-      return {
-        title: utf8Text(pickReformulatedTitle(input.creativeTitle, parsed.title), 500),
+      const assembled = {
+        title: utf8Text(
+          pickReformulatedTitle(
+            input.creativeTitle,
+            parsed.title,
+            `${sourceSlice}\n${webBrief}`,
+          ),
+          500,
+        ),
         excerpt: utf8Text(humanize(parsed.excerpt), 1500),
         content: utf8Text(italicizeCitations(humanize(parsed.content)), 80_000),
       };
+      const matter = `${sourceSlice}\n${webBrief}`;
+      assertNoUnsourcedHeadlinePenalties({
+        headline: input.creativeTitle,
+        matter,
+        output: `${assembled.title}\n${assembled.excerpt}\n${assembled.content}`,
+        label: "Article",
+      });
+      return assembled;
     } catch (err) {
       lastErr = err;
       console.error("writeArticleSimple attempt failed", attempt.model, err);

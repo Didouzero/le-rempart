@@ -218,7 +218,13 @@ function significantTokens(text: string): string[] {
 }
 
 function articleMatchesHeadline(headline: string, content: string): boolean {
-  const tokens = significantTokens(headline);
+  const tokens = significantTokens(headline).filter(
+    (t) =>
+      !/^\d+$/.test(t) &&
+      !/^(ans|mois|prison|ferme|sursis|cinq|six|sept|huit|neuf|dix|onze|douze|quinze|vingt|trente)$/.test(
+        t,
+      ),
+  );
   if (tokens.length === 0) return true;
   const body = content
     .toLowerCase()

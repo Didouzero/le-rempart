@@ -227,10 +227,10 @@ export async function publishCreativePipeline(input: {
     return { article, facebook };
   }
 
-  const flashCorpus = [article.sourceText, article.content, article.excerpt]
-    .filter(Boolean)
-    .join("\n\n")
-    .slice(0, 8000);
+  const flashCorpus = [article.sourceText, article.content]
+      .filter(Boolean)
+      .join("\n\n")
+      .slice(0, 8000);
 
   const fb = await publishFacebookForArticle({
     articleId: article.id,

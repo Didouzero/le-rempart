@@ -117,7 +117,6 @@ export async function republishArticleToFacebook(input: {
     const flashCorpus = [
       article.sourceText,
       article.content,
-      article.excerpt,
     ]
       .filter(Boolean)
       .join("\n\n")

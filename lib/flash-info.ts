@@ -1,5 +1,6 @@
 import { moonshotChat, isKimiContentFilter } from "@/lib/moonshot";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
+import { assertNoUnsourcedHeadlinePenalties } from "@/lib/source-first";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const MIN_CHARS = 80;
@@ -171,10 +172,9 @@ export async function buildFlashInfoText(input: {
     throw new Error("MOONSHOT_API_KEY manquante — flash Facebook impossible");
   }
 
+  const scraped = scrubBoilerplate((input.sourceText || "").slice(0, 4000));
   const corpus = scrubBoilerplate(
-    [(input.sourceText || "").slice(0, 4000), input.excerpt]
-      .filter(Boolean)
-      .join("\n\n"),
+    [scraped, input.excerpt].filter(Boolean).join("\n\n"),
   ).slice(0, 4500);
   const outlet = outletFromUrl(input.sourceUrl);
   const userContent = [
@@ -220,6 +220,12 @@ export async function buildFlashInfoText(input: {
       body = ensureParagraphs(trimToCompleteSentences(body, 180));
       body = ensureParagraphs(scrubFlashOutput(body));
       body = body.replace(/\n*\(?\s*Source\s*:[^)\n]+\)?\s*$/i, "").trim();
+      assertNoUnsourcedHeadlinePenalties({
+        headline: input.title,
+        matter: scraped || corpus,
+        output: body,
+        label: "Flash Facebook",
+      });
       if (wordCount(body) < MIN_WORDS) {
         throw new Error("flash trop court après coupe");
       }
@@ -230,6 +236,7 @@ export async function buildFlashInfoText(input: {
       const reason = err instanceof Error ? err.message : String(err);
       console.error("flash kimi retry", attempt, reason);
       if (isKimiContentFilter(err) && attempt >= 2) throw err;
+      if (attempt >= 5) throw err instanceof Error ? err : new Error(reason);
       await input.onRetry?.(attempt + 1, reason);
       await sleep(Math.min(4_000, 1000 * attempt));
     }
