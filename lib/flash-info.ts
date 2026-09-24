@@ -17,6 +17,7 @@ function outletFromUrl(url?: string): string | null {
       "valeursactuelles.com": "Valeurs Actuelles",
       "bfmtv.com": "BFMTV",
       "francetvinfo.fr": "franceinfo",
+      "france3-regions.franceinfo.fr": "France 3",
       "liberation.fr": "Libération",
       "mediacites.fr": "Mediacités",
       "ladepeche.fr": "La Dépêche",
@@ -129,7 +130,9 @@ PRIORITÉ : faits exacts ET lecture politique tissés ensemble, dans chaque para
 - Chaque paragraphe mêle information concrète (qui, quoi, quand, où, citation courte, réactions NOMÉES) et une lecture de droite courte, lisse, réfléchie, percutante.
 - INTERDIT de relayer platement puis de coller un dernier paragraphe « réac » / invective.
 - INTERDIT le plaisir de taper sur la gauche ou le gouvernement sans argument. INTERDIT « on croit rêver », « les Français apprécieront », « scandale », gueulante.
-- INTERDIT d'inventer des noms, réactions ou citations absents de la matière.
+- INTERDIT d'inventer des noms, réactions, citations, peines ou chiffres absents de la matière.
+- Le « Titre » n'est PAS une source : c'est l'accroche. Les faits (peine, durée, « selon tel média ») viennent UNIQUEMENT de la matière. Si le titre dit « 5 ans de prison » et la matière « cinq ans dont quatre avec sursis et un an sous bracelet », tu écris la matière.
+- N'attribue JAMAIS un fait à un média s'il n'est pas dans la matière issue de cet article.
 
 LIGNE ÉDITORIALE :
 - Public patriote, souverainiste. Tu écris POUR eux, sans les prendre pour des crétins.
@@ -148,6 +151,7 @@ RÈGLES FORME :
 - Termine par une phrase COMPLÈTE. Pas de … ni guillemet ouvert.
 - SANS préfixe ‼️🇫🇷 FLASH INFO (ajouté après). Pas d'emojis, hashtags, URL, markdown.
 - N'invente rien. N'écris jamais « non sourcé ».
+- N'ajoute PAS de ligne « (Source : …) » : ça attribue à un média des faits qu'il n'a pas forcément écrits.
 - INTERDIT : cookies, inventaire, hypothèses (« imaginez si c'était LFI… ») en paragraphe entier.
 
 Réponds UNIQUEMENT avec les 3–4 paragraphes du flash.`;
@@ -168,22 +172,23 @@ export async function buildFlashInfoText(input: {
   }
 
   const corpus = scrubBoilerplate(
-    [input.excerpt, (input.sourceText || "").slice(0, 2200)]
+    [(input.sourceText || "").slice(0, 4000), input.excerpt]
       .filter(Boolean)
       .join("\n\n"),
-  ).slice(0, 2500);
+  ).slice(0, 4500);
   const outlet = outletFromUrl(input.sourceUrl);
   const userContent = [
-    `Titre : ${input.title}`,
-    outlet ? `Source presse : ${outlet}` : null,
+    `Accroche (PAS une source de faits) : ${input.title}`,
+    outlet ? `Média de l'URL fournie (ne lui attribue que ce qui est dans la matière) : ${outlet}` : null,
     "",
-    "Matière (EXTRAIS les faits : noms, citations, réactions — n'invente rien) :",
+    "Matière (EXTRAIS les faits : noms, peines exactes, citations, réactions — n'invente rien, n'amplifie pas Canva) :",
     corpus,
     "",
     "Écris le flash : 3 paragraphes, ligne vide entre eux.",
     "Chaque paragraphe = faits exacts + une lecture politique courte, lisse, argumentée.",
     "Pas de dernier paragraphe invective / réac isolé.",
     "Ligne droite dure : jamais un patriote / le RN « en tort ».",
+    "Pas de ligne Source / (Source : …).",
   ]
     .filter(Boolean)
     .join("\n");
@@ -214,12 +219,9 @@ export async function buildFlashInfoText(input: {
 
       body = ensureParagraphs(trimToCompleteSentences(body, 180));
       body = ensureParagraphs(scrubFlashOutput(body));
+      body = body.replace(/\n*\(?\s*Source\s*:[^)\n]+\)?\s*$/i, "").trim();
       if (wordCount(body) < MIN_WORDS) {
         throw new Error("flash trop court après coupe");
-      }
-
-      if (outlet && !/\(Source\s*:/i.test(body)) {
-        body = `${body}\n\n(Source : ${outlet})`;
       }
 
       console.log("flash word count ~", wordCount(body), "attempt", attempt);

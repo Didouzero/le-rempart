@@ -30,7 +30,9 @@ export const ARTICLE_LENGTH = {
  */
 export const WRITING_HARD_RULES = [
   "Travailler exclusivement à partir du ResearchDossier fourni.",
-  "Ne jamais inventer dates, chiffres, citations, institutions ou motivations.",
+  "Ne jamais inventer dates, chiffres, citations, institutions, peines ou motivations.",
+  "Un titre / une accroche Canva n'est pas une source : en cas d'écart avec le texte source, le texte source gagne.",
+  "Ne jamais attribuer à un média un fait qu'il n'a pas écrit.",
   "Ne jamais inventer un média, un titre d'article ou une URL : seules les sources listées dans le dossier peuvent être citées.",
   "Ne jamais inventer un nom de personne ni une étiquette politique absente du dossier.",
   "Nommer systématiquement ce que le dossier nomme : personnes (nom + fonction), organisations, lieux, montants exacts, dates.",

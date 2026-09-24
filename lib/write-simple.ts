@@ -182,9 +182,9 @@ function humanize(text: string): string {
 const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite). Tu rédiges un VRAI article d'actualité : faits exacts ET lecture politique tissée tout du long. Ni tribune sarcastique, ni simple relais de l'article source.
 
 Tu reçois :
-1) Le TITRE CRÉATIVE (faits établis — à prendre comme VRAIS)
-2) Le texte scrapé de l'article SOURCE (matière factuelle principale)
-3) Des résultats web complémentaires (contexte, antécédents, réactions, chiffres, angles possibles)
+1) Le TITRE CRÉATIVE : accroche Canva, UNIQUEMENT pour caler le sujet / le titre site. CE N'EST PAS une source de faits. Un chiffre, une peine, un « selon tel média » dans ce titre est INTERDIT dans l'article s'il n'apparaît pas tel quel dans le TEXTE SOURCE ou dans un extrait web.
+2) Le TEXTE SOURCE (article dont l'URL a été fournie) : socle factuel. Tu n'attribues à ce média QUE ce qu'il a réellement écrit.
+3) Des extraits web : faits complémentaires UNIQUEMENT s'ils sont écrits dans l'extrait. Sinon tu omets.
 
 OBJECTIF DOUBLE, MÉLANGÉ :
 A) Rapporter fidèlement les FAITS (qui / quoi / où / quand / combien / cadre).
@@ -193,8 +193,9 @@ B) Porter un COMMENTAIRE DE DROITE à l'intérieur de l'article, pas seulement �
    INTERDIT : invective bête, réac gratuit, plaisir de taper sur la gauche / le gouvernement sans argument, « on croit rêver », « les Français apprécieront ».
 
 TITRE SITE (champ "title") :
-- Même faits / même sujet que la créative, reformulé (pas recopié mot pour mot).
-- Noms, lieux, chiffres conservés. Pas d'emoji / hashtag / MAJUSCULES partout.
+- Même sujet que la créative, reformulé.
+- Les faits du titre (peine, chiffres, attribution) doivent coller au TEXTE SOURCE / extraits web, pas à l'exagération Canva.
+- Noms, lieux conservés. Pas d'emoji / hashtag / MAJUSCULES partout.
 
 STRUCTURE DU CORPS (content) — OBLIGATOIRE :
 1) Accroche factuelle (qui / quoi / où / quand), éventuellement suivie d'une phrase de lecture.
@@ -214,8 +215,10 @@ RÈGLES DURES :
 - Si la matière est riche → article dense (vise 600–1100 mots). Si pauvre → plus court, mais SANS blabla pour combler.
 - INTERDIT le sarcasme, l'ironie lourde, les tics Rempart creux :
   « on croit rêver », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on notera la sévérité… », « scandale absolu », refrain « pendant que… », gueulante anti-gouvernement sans élément nouveau.
-- Ne pas inventer noms, chiffres, citations, sondages absents des matières. Tu peux ENCHAÎNER des raisonnements politiques prudents à partir de faits établis (« cela peut se lire comme… », « difficile d'y voir autre chose qu'… »).
-- Le titre créative fixe les faits centraux : ne les relativise pas (« non sourcé », « non confirmé »…).
+- Ne pas inventer noms, chiffres, citations, sondages, peines, « selon tel média » absents des matières. Tu peux ENCHAÎNER des raisonnements politiques prudents à partir de faits établis (« cela peut se lire comme… », « difficile d'y voir autre chose qu'… »).
+- HIÉRARCHIE DES FAITS : 1) TEXTE SOURCE 2) extraits web 3) jamais le titre créative. Si Canva dit « 5 ans de prison » et la source « cinq ans dont quatre avec sursis et un an sous bracelet », tu écris la version source. Si la source n'a pas encore le verdict, tu n'inventes pas le verdict d'après Canva.
+- N'attribue JAMAIS à un média (France 3, AFP, etc.) un fait qu'il n'a pas écrit.
+- INTERDIT de relativiser par du flou (« non sourcé », « non confirmé ») : soit le fait est dans la matière et tu l'écris précisément, soit tu l'omets.
 - Ton : presse claire, droite dans les questions posées — habile, pas méchant bête.
 - content en Markdown : 2 à 4 ## utiles. Peu de **gras**.
 - Pas de tiret long (—), pas d'emojis, pas de hashtags, pas de style ChatGPT.
@@ -243,7 +246,7 @@ export async function writeArticleSimple(input: {
       searchWebForSubject({
         subject: input.creativeTitle,
         extraQueries: [
-          `${input.creativeTitle} sondage popularité`,
+          `${input.creativeTitle} verdict peine condamnation sursis`,
           `${input.creativeTitle} réactions opposition contexte`,
         ],
         fast: true,
@@ -268,21 +271,22 @@ export async function writeArticleSimple(input: {
   await progress("Rédaction (faits + angle argumenté)…");
   const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 9000);
   const userContent = [
-    `TITRE CRÉATIVE (faits établis — reformule pour le titre site, ne recopie pas) :`,
+    `TITRE CRÉATIVE (sujet / accroche site SEULEMENT — pas une source de faits) :`,
     input.creativeTitle,
     "",
     `URL source : ${input.sourceUrl}`,
     "",
-    "TEXTE SOURCE (socle factuel : dates, noms, chiffres, citations, déroulé) :",
+    "TEXTE SOURCE (seule base pour ce que tu attribues à ce média : dates, noms, chiffres, peines, citations) :",
     sourceSlice,
     "",
-    "RÉSULTATS WEB (NE PAS seulement reformuler la source) :",
+    "RÉSULTATS WEB (faits seulement s'ils sont DANS l'extrait ; sinon omets) :",
     "Sers-t'en pour : contexte, antécédents, réactions nommées, chiffres annexes,",
     "éléments qui nourrissent une ANALYSE (popularité, contradictions, coût politique…).",
     webBrief || "(aucun)",
     "",
-    "Consigne : 1) rapporter les faits ; 2) ajouter un angle éditorial ARGUMENTÉ (pas sarcastique) ;",
-    "3) citations en italique *« … »* ; 4) interdiction de paraphraser bêtement la seule source.",
+    "Consigne : 1) faits = source + extraits web, jamais Canva ; 2) angle éditorial ARGUMENTÉ (pas sarcastique) ;",
+    "3) citations en italique *« … »* ; 4) interdiction de paraphraser bêtement la seule source ;",
+    "5) si Canva et la source divergent sur un chiffre / une peine : la source gagne.",
     "Rédige title + excerpt + content maintenant.",
   ].join("\n");
 

@@ -50,7 +50,7 @@ Forme (écrire comme un humain de presse, PAS comme une IA) :
 - INTERDIT le style ChatGPT : pas de "Il convient de noter", "Dans un contexte où", "Il est important de souligner", "En conclusion", "Cela dit", listes de trois adjectifs en série, formules toutes faites, symétrie parfaite des paragraphes.
 - Pas d'emojis. N'inclus JAMAIS de consignes internes / brief Telegram / créative Canva.
 - L'article DOIT porter UNIQUEMENT sur le titre fourni.
-- Tu peux recevoir un "Briefing presse récente" (souvent des titres d'articles). Mine-le : les titres contiennent déjà des faits (durée, acte, lieu). Ancre le contexte national sur CES faits. INTERDIT d'inventer une autre crise non mentionnée dans le titre ni dans le briefing.
+- Tu peux recevoir un "Briefing presse récente" (titres + extraits). Les extraits priment. Un titre n'est pas une preuve : n'écris un chiffre / une peine que s'il est dans un extrait ou dans les notes. INTERDIT d'inventer une autre crise non mentionnée.
 - Réponds UNIQUEMENT avec un JSON valide :
 {"title":"...","excerpt":"...","content":"..."}
 - excerpt = 1 ou 2 phrases d'accroche FACTUELLES (qui / quoi / où / quand si connu). Pas de sarcasme anti-médias, pas de "pendant que…", pas de couplet éditorial. L'angle critique va dans le corps, pas dans le chapô.`;
@@ -377,7 +377,7 @@ export async function generateArticleLegacy(input: {
 PRIORITÉ : rapporter les précisions factuelles du briefing/notes (dates, durées, décisions, cadre juridique, citations, chiffres), PUIS l'angle critique Rempart.
 OBLIGATOIRE : au moins 4 ancrages concrets, 2 ou 3 sous-titres ##, dont une section factuelle.
 INTERDIT : gueulante sans faits, paragraphes en double, filler creux, faits inventés.
-Ancre-toi sur le briefing presse s'il est fourni : mine aussi les titres (ils contiennent souvent la durée, l'acte, l'institution).`,
+Ancre-toi sur les notes et extraits : chiffres et peines seulement s'ils y figurent, pas d'après le seul titre Canva.`,
   ]
     .filter(Boolean)
     .join("\n\n");
