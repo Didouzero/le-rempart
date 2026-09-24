@@ -36,6 +36,14 @@ export function isKimiContentFilter(err: unknown): boolean {
   return HIGH_RISK_RE.test(msg) || /Kimi a bloqué ce sujet/i.test(msg);
 }
 
+export function isKimiQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /insufficient balance|exceeded_current_quota|quota/i.test(msg);
+}
+
+export const KIMI_QUOTA_USER_MESSAGE =
+  "Kimi n’a plus de crédits. Recharge sur https://platform.kimi.ai/console/pay puis réessaie (ou tape le titre à la main).";
+
 function frameMessages(messages: MoonshotMessage[]): MoonshotMessage[] {
   let framed = false;
   return messages.map((m) => {

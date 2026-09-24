@@ -1,6 +1,10 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { isFacebookConfigured } from "@/lib/facebook";
+import {
+  isKimiQuotaError,
+  KIMI_QUOTA_USER_MESSAGE,
+} from "@/lib/moonshot";
 import { prisma } from "@/lib/prisma";
 import {
   deletePublishDraft,
@@ -545,7 +549,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               headline = "Enquête Le Rempart";
               await telegramSendMessage(
                 chatId,
-                "Titre illisible sur la créative — on continue. Envoie le prompt.",
+                isKimiQuotaError(err)
+                  ? KIMI_QUOTA_USER_MESSAGE
+                  : "Titre illisible sur la créative — on continue. Envoie le prompt.",
               );
             }
           }
@@ -733,6 +739,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         } catch (err) {
           console.error("flash headline", err);
           headline = "";
+          if (isKimiQuotaError(err)) {
+            await telegramSendMessage(chatId, KIMI_QUOTA_USER_MESSAGE);
+          }
         }
       }
 
@@ -882,7 +891,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           ? "Kimi a bloqué ce sujet (filtre de contenu). Réessaie avec une autre source, ou reformule le titre."
           : /22021|invalid byte sequence|UTF8/i.test(raw)
             ? "La source n’est pas une page article (souvent un lien image). Envoie l’URL de l’article, pas le .jpg."
-            : raw;
+            : isKimiQuotaError(raw)
+              ? KIMI_QUOTA_USER_MESSAGE
+              : raw;
       await telegramSendMessage(chatId, `Erreur : ${friendly}`);
     } catch {
       // ignore
