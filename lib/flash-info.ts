@@ -28,6 +28,7 @@ function outletFromUrl(url?: string): string | null {
       "jdd.fr": "JDD",
       "lci.fr": "LCI",
       "rtl.fr": "RTL",
+      "jeanmarcmorandini.com": "Jean-Marc Morandini",
     };
     if (map[host]) return map[host];
     const base = host.split(".")[0] || host;
@@ -125,35 +126,108 @@ function trimToCompleteSentences(text: string, maxWords: number): string {
   return cut;
 }
 
+/** Retire URLs et domaines nus (ex. jeanmarcmorandini.com) du corps du flash. */
+function stripUrlsAndBareHosts(text: string): string {
+  return text
+    .replace(/https?:\/\/[^\s<>"')\]]+/gi, "")
+    .replace(
+      /\b(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z]{2,}){1,3}\b/gi,
+      (host) => {
+        // Garde les acronymes / mots courants, pas les domaines
+        if (!/\.[a-z]{2,}$/i.test(host)) return host;
+        if (/^(fr|com|org|net|info|eu)$/i.test(host)) return host;
+        return "";
+      },
+    )
+    .replace(/\(\s*Source\s*:[^)]*\)/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\(\s*\)/g, "")
+    .trim();
+}
+
+/**
+ * Rejette le schéma toxique : §1 faits seuls, §2–3 pur commentaire.
+ * Chaque paragraphe doit porter au moins une ancre factuelle.
+ */
+function assertFlashNotSegregated(body: string): void {
+  const paras = body
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => !/^\(?\s*Source\s*:/i.test(p));
+
+  if (paras.length < 3) {
+    throw new Error("flash : moins de 3 paragraphes");
+  }
+
+  const facty =
+    /\d|janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre|selon|a déclaré|a annoncé|a condamné|tribunal|cour|procureur|ministre|député|maire|police|gendarme|«|"/i;
+
+  const opinionHeavy =
+    /\b(c'est|voilà|encore une fois|deux poids|symbole|révèle|montre que|difficile de|on voit|on croit|scandale|hypocrisie|à chacun|les français)\b/i;
+
+  let pureOpinionTail = 0;
+  for (let i = 0; i < paras.length; i++) {
+    const p = paras[i]!;
+    const hasFact = facty.test(p);
+    const opinion = opinionHeavy.test(p);
+    if (!hasFact && opinion) {
+      if (i === 0) {
+        throw new Error("flash : 1er paragraphe sans fait (interdit)");
+      }
+      pureOpinionTail += 1;
+    }
+  }
+
+  if (pureOpinionTail >= 2) {
+    throw new Error(
+      "flash : paragraphes 2–3 en pur commentaire (faits et angle doivent s'entremêler)",
+    );
+  }
+
+  // §1 factuel OK mais §2 et §3 sans ancre factuelle = le schéma hais
+  const later = paras.slice(1);
+  const laterWithoutFact = later.filter((p) => !facty.test(p)).length;
+  if (laterWithoutFact >= 2) {
+    throw new Error(
+      "flash : suite sans faits (interdit : §1 faits / §2–3 édito)",
+    );
+  }
+}
+
 const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart — média de droite, argumenté.
 
-PRIORITÉ : faits exacts ET lecture politique tissés ensemble, dans chaque paragraphe.
-- Chaque paragraphe mêle information concrète (qui, quoi, quand, où, citation courte, réactions NOMÉES) et une lecture de droite courte, lisse, réfléchie, percutante.
-- INTERDIT de relayer platement puis de coller un dernier paragraphe « réac » / invective.
-- INTERDIT le plaisir de taper sur la gauche ou le gouvernement sans argument. INTERDIT « on croit rêver », « les Français apprécieront », « scandale », gueulante.
-- INTERDIT d'inventer des noms, réactions, citations, peines ou chiffres absents de la matière.
-- Le « Titre » n'est PAS une source : c'est l'accroche. Les faits (peine, durée, « selon tel média ») viennent UNIQUEMENT de la matière. Si le titre dit « 5 ans de prison » et la matière « cinq ans dont quatre avec sursis et un an sous bracelet », tu écris la matière.
-- N'attribue JAMAIS un fait à un média s'il n'est pas dans la matière issue de cet article.
+RÈGLE D'OR — ENTREMÊLER, NE JAMAIS SÉPARER :
+- CHAQUE paragraphe = faits concrets (qui / quoi / où / quand / citation / réaction NOMÉÉE) + UNE courte lecture de droite tissée DANS le même paragraphe.
+- INTERDIT le schéma « §1 = faits seuls, §2 et §3 = critique / édito ». Si tu fais ça, le flash est refusé.
+- INTERDIT un dernier paragraphe qui n'est que du commentaire sans fait nouveau.
+- INTERDIT de relayer platement puis de coller un slam réac à la fin.
+
+FAITS :
+- INTERDIT d'inventer noms, réactions, citations, peines, chiffres absents de la matière.
+- Le « Titre » / accroche n'est PAS une source : peines et chiffres viennent UNIQUEMENT de la matière.
+- N'attribue un fait à un média que s'il est dans la matière de cet article.
 
 LIGNE ÉDITORIALE :
 - Public patriote, souverainiste. Tu écris POUR eux, sans les prendre pour des crétins.
-- Le commentaire vise les faits : deux poids deux mesures, coups de com', coût pour le contribuable, incohérences — avec un raisonnement, pas une insulte.
+- Lecture : deux poids deux mesures, coups de com', coût pour le contribuable, incohérences — argumentée, pas une insulte.
 - JAMAIS ridiculiser une position patriotique / RN / droite dure comme si elle était en tort.
+- INTERDIT « on croit rêver », « les Français apprécieront », « scandale », gueulante gratuite.
 
-STRUCTURE (3 paragraphes, ligne vide entre eux) :
-1) Faits d'accroche + déjà une phrase de lecture.
+STRUCTURE (3 paragraphes, ligne vide entre eux) — CHAQUE § = fait(s) + lecture :
+1) Accroche factuelle + déjà une phrase de lecture.
 2) Suite factuelle (réactions nommées si dans la matière) + lecture.
 3) Fait ou conséquence + lecture — PAS un slam isolé.
 
-RÈGLES FORME :
+FORME :
 - 110 à 160 mots. Vise ~130–140.
 - EXACTEMENT 3 paragraphes (4 max si beaucoup de faits), séparés par UNE LIGNE VIDE (\\n\\n).
 - Une ou deux citations courtes max, toujours fermées (« … »).
 - Termine par une phrase COMPLÈTE. Pas de … ni guillemet ouvert.
-- SANS préfixe ‼️🇫🇷 FLASH INFO (ajouté après). Pas d'emojis, hashtags, URL, markdown.
+- SANS préfixe ‼️🇫🇷 FLASH INFO (ajouté après).
+- INTERDIT : emojis, hashtags, markdown, URL, nom de domaine (ex. site.com), lien, « Source : » dans le corps (la source est ajoutée après, hors de ton texte).
 - N'invente rien. N'écris jamais « non sourcé ».
-- N'ajoute PAS de ligne « (Source : …) » : ça attribue à un média des faits qu'il n'a pas forcément écrits.
-- INTERDIT : cookies, inventaire, hypothèses (« imaginez si c'était LFI… ») en paragraphe entier.
 
 Réponds UNIQUEMENT avec les 3–4 paragraphes du flash.`;
 
@@ -179,16 +253,17 @@ export async function buildFlashInfoText(input: {
   const outlet = outletFromUrl(input.sourceUrl);
   const userContent = [
     `Accroche (PAS une source de faits) : ${input.title}`,
-    outlet ? `Média de l'URL fournie (ne lui attribue que ce qui est dans la matière) : ${outlet}` : null,
+    outlet
+      ? `Média de l'URL fournie (faits uniquement s'ils sont dans la matière) : ${outlet}`
+      : null,
     "",
-    "Matière (EXTRAIS les faits : noms, peines exactes, citations, réactions — n'invente rien, n'amplifie pas Canva) :",
+    "Matière (EXTRAIS les faits : noms, peines exactes, citations, réactions — n'invente rien) :",
     corpus,
     "",
     "Écris le flash : 3 paragraphes, ligne vide entre eux.",
-    "Chaque paragraphe = faits exacts + une lecture politique courte, lisse, argumentée.",
-    "Pas de dernier paragraphe invective / réac isolé.",
+    "OBLIGATOIRE : dans CHAQUE paragraphe, faits + courte lecture de droite — jamais §1 faits puis §2–3 édito.",
+    "Pas d'URL, pas de nom de domaine, pas de « Source : » dans ton texte.",
     "Ligne droite dure : jamais un patriote / le RN « en tort ».",
-    "Pas de ligne Source / (Source : …).",
   ]
     .filter(Boolean)
     .join("\n");
@@ -210,6 +285,7 @@ export async function buildFlashInfoText(input: {
       });
 
       let body = scrubFlashOutput(ensureParagraphs(stripFlashPrefix(text || "")));
+      body = ensureParagraphs(stripUrlsAndBareHosts(body));
       const words = wordCount(body);
       if (body.length < MIN_CHARS || words < MIN_WORDS) {
         throw new Error(
@@ -218,8 +294,8 @@ export async function buildFlashInfoText(input: {
       }
 
       body = ensureParagraphs(trimToCompleteSentences(body, 180));
-      body = ensureParagraphs(scrubFlashOutput(body));
-      body = body.replace(/\n*\(?\s*Source\s*:[^)\n]+\)?\s*$/i, "").trim();
+      body = ensureParagraphs(scrubFlashOutput(stripUrlsAndBareHosts(body)));
+      assertFlashNotSegregated(body);
       assertNoUnsourcedHeadlinePenalties({
         headline: input.title,
         matter: scraped || corpus,
@@ -228,6 +304,10 @@ export async function buildFlashInfoText(input: {
       });
       if (wordCount(body) < MIN_WORDS) {
         throw new Error("flash trop court après coupe");
+      }
+
+      if (outlet && !/\(Source\s*:/i.test(body)) {
+        body = `${body}\n\n(Source : ${outlet})`;
       }
 
       console.log("flash word count ~", wordCount(body), "attempt", attempt);
