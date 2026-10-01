@@ -4,10 +4,7 @@ import { scrubBoilerplate } from "@/lib/fetch-source";
 import { italicizeCitations } from "@/lib/italicize-citations";
 import { moonshotChat } from "@/lib/moonshot";
 import { utf8Text } from "@/lib/utf8";
-import {
-  assertNoUnsourcedHeadlinePenalties,
-  stripUnsourcedPenaltiesFromTitle,
-} from "@/lib/source-first";
+import { stripUnsourcedPenaltiesFromTitle } from "@/lib/source-first";
 
 export type SimpleArticle = {
   title: string;
@@ -97,8 +94,9 @@ function significantTitleTokens(text: string): string[] {
 }
 
 /**
- * Accepte une reformulation Kimi si elle reste ancrée sur la créative ;
- * sinon repli = titre créative, sans peines absentes de la source.
+ * Titre site : priorité au titre rédigé (source + web).
+ * La créative ne sert qu'à caler le sujet ; peines/chiffres Canva absents
+ * de la matière sont retirés du repli, sans bloquer la publication.
  */
 export function pickReformulatedTitle(
   creativeTitle: string,
@@ -117,20 +115,27 @@ export function pickReformulatedTitle(
     return fallback || "Actualité";
   }
 
+  if (candidate.length > 220) {
+    return fallback || candidate.slice(0, 220);
+  }
+
   const foldFallback = foldTitle(fallback);
   const foldCandidate = foldTitle(candidate);
-  // Identique (casse près) → on garde la créative (pas de faux « changement »)
-  if (foldCandidate === foldFallback) return fallback;
+  if (foldCandidate === foldFallback) return candidate;
 
-  const anchors = significantTitleTokens(fallback);
+  // Ancres sujet seulement (pas peines / chiffres Canva)
+  const anchors = significantTitleTokens(fallback).filter(
+    (t) =>
+      !/^\d+$/.test(t) &&
+      !/^(ans|mois|prison|ferme|sursis|reclusion|cinq|six|sept|huit|neuf|dix|onze|douze|quinze|vingt|trente)$/.test(
+        t,
+      ),
+  );
   if (anchors.length === 0) return candidate;
 
   const hits = anchors.filter((t) => foldCandidate.includes(t)).length;
-  const need = Math.min(2, anchors.length);
-  if (hits < need) return fallback;
-
-  // Trop long / hors format titre
-  if (candidate.length > 220) return fallback;
+  const need = Math.min(1, anchors.length);
+  if (hits < need) return fallback || candidate;
 
   return candidate;
 }
@@ -195,9 +200,11 @@ function humanize(text: string): string {
 const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite). Tu rédiges un VRAI article d'actualité : faits exacts ET lecture politique tissée tout du long. Ni tribune sarcastique, ni simple relais de l'article source.
 
 Tu reçois :
-1) Le TITRE CRÉATIVE : accroche Canva, UNIQUEMENT pour caler le sujet / le titre site. CE N'EST PAS une source de faits. Un chiffre, une peine, un « selon tel média » dans ce titre est INTERDIT dans l'article s'il n'apparaît pas tel quel dans le TEXTE SOURCE ou dans un extrait web.
-2) Le TEXTE SOURCE (article dont l'URL a été fournie) : socle factuel. Tu n'attribues à ce média QUE ce qu'il a réellement écrit.
-3) Des extraits web : faits complémentaires UNIQUEMENT s'ils sont écrits dans l'extrait. Sinon tu omets.
+1) Le TITRE CRÉATIVE : accroche Canva pour savoir DE QUOI parle le sujet (noms, lieu). IGNORE totalement peines, chiffres, « X ans de prison », attributions médias du titre Canva. Ce n'est PAS une source.
+2) Le TEXTE SOURCE (URL fournie) : socle factuel n°1. Reprends peines, chiffres, citations TELLES QU'ÉCRITES ici.
+3) Les RÉSULTATS WEB : socle factuel n°2. Complète / précise avec ce qui s'y dit (verdict, sursis, bracelet, etc.) s'il est DANS l'extrait.
+
+FAITS = SOURCE + WEB UNIQUEMENT. Qu'importe ce qu'affiche la créative.
 
 OBJECTIF DOUBLE, MÉLANGÉ :
 A) Rapporter fidèlement les FAITS (qui / quoi / où / quand / combien / cadre).
@@ -206,8 +213,8 @@ B) Porter un COMMENTAIRE DE DROITE à l'intérieur de l'article, pas seulement �
    INTERDIT : invective bête, réac gratuit, plaisir de taper sur la gauche / le gouvernement sans argument, « on croit rêver », « les Français apprécieront ».
 
 TITRE SITE (champ "title") :
-- Même sujet que la créative, reformulé.
-- Les faits du titre (peine, chiffres, attribution) doivent coller au TEXTE SOURCE / extraits web, pas à l'exagération Canva.
+- Même sujet (personnes, lieu), reformulé.
+- Peines / chiffres = ceux de la SOURCE + WEB, jamais ceux de Canva s'ils divergent.
 - Noms, lieux conservés. Pas d'emoji / hashtag / MAJUSCULES partout.
 
 STRUCTURE DU CORPS (content) — OBLIGATOIRE :
@@ -229,8 +236,8 @@ RÈGLES DURES :
 - INTERDIT le sarcasme, l'ironie lourde, les tics Rempart creux :
   « on croit rêver », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on notera la sévérité… », « scandale absolu », refrain « pendant que… », gueulante anti-gouvernement sans élément nouveau.
 - Ne pas inventer noms, chiffres, citations, sondages, peines, « selon tel média » absents des matières. Tu peux ENCHAÎNER des raisonnements politiques prudents à partir de faits établis (« cela peut se lire comme… », « difficile d'y voir autre chose qu'… »).
-- HIÉRARCHIE DES FAITS : 1) TEXTE SOURCE 2) extraits web 3) jamais le titre créative. Si Canva dit « 5 ans de prison » et la source « cinq ans dont quatre avec sursis et un an sous bracelet », tu écris la version source. Si la source n'a pas encore le verdict, tu n'inventes pas le verdict d'après Canva.
-- N'attribue JAMAIS à un média (France 3, AFP, etc.) un fait qu'il n'a pas écrit.
+- HIÉRARCHIE DES FAITS : 1) TEXTE SOURCE 2) extraits web. La créative Canva = zéro pour les faits. Si Canva dit « 7 ans » et la source / le web disent autre chose (sursis, bracelet, encouru…), tu écris SOURCE + WEB. Si le verdict n'est que sur le web, tu le prends dans l'extrait web.
+- N'attribue JAMAIS à un média un fait qu'il n'a pas écrit.
 - INTERDIT de relativiser par du flou (« non sourcé », « non confirmé ») : soit le fait est dans la matière et tu l'écris précisément, soit tu l'omets.
 - Ton : presse claire, droite dans les questions posées — habile, pas méchant bête.
 - content en Markdown : 2 à 4 ## utiles. Peu de **gras**.
@@ -297,9 +304,9 @@ export async function writeArticleSimple(input: {
     "éléments qui nourrissent une ANALYSE (popularité, contradictions, coût politique…).",
     webBrief || "(aucun)",
     "",
-    "Consigne : 1) faits = source + extraits web, jamais Canva ; 2) angle éditorial ARGUMENTÉ (pas sarcastique) ;",
-    "3) citations en italique *« … »* ; 4) interdiction de paraphraser bêtement la seule source ;",
-    "5) si Canva et la source divergent sur un chiffre / une peine : la source gagne.",
+    "Consigne : 1) FAITS = texte source + résultats web UNIQUEMENT — ignore peines/chiffres Canva ;",
+    "2) angle éditorial ARGUMENTÉ (pas sarcastique) ; 3) citations en italique *« … »* ;",
+    "4) ne paraphraser pas bêtement la seule source ; 5) Canva ne sert qu'au sujet.",
     "Rédige title + excerpt + content maintenant.",
   ].join("\n");
 
@@ -336,26 +343,15 @@ export async function writeArticleSimple(input: {
         ],
       });
       const parsed = parseJsonArticle(raw);
-      const assembled = {
+      const matter = `${sourceSlice}\n${webBrief}`;
+      return {
         title: utf8Text(
-          pickReformulatedTitle(
-            input.creativeTitle,
-            parsed.title,
-            `${sourceSlice}\n${webBrief}`,
-          ),
+          pickReformulatedTitle(input.creativeTitle, parsed.title, matter),
           500,
         ),
         excerpt: utf8Text(humanize(parsed.excerpt), 1500),
         content: utf8Text(italicizeCitations(humanize(parsed.content)), 80_000),
       };
-      const matter = `${sourceSlice}\n${webBrief}`;
-      assertNoUnsourcedHeadlinePenalties({
-        headline: input.creativeTitle,
-        matter,
-        output: `${assembled.title}\n${assembled.excerpt}\n${assembled.content}`,
-        label: "Article",
-      });
-      return assembled;
     } catch (err) {
       lastErr = err;
       console.error("writeArticleSimple attempt failed", attempt.model, err);

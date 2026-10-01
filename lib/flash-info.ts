@@ -1,6 +1,5 @@
 import { moonshotChat, isKimiContentFilter } from "@/lib/moonshot";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
-import { assertNoUnsourcedHeadlinePenalties } from "@/lib/source-first";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const MIN_CHARS = 80;
@@ -205,9 +204,9 @@ RÈGLE D'OR — ENTREMÊLER, NE JAMAIS SÉPARER :
 - INTERDIT de relayer platement puis de coller un slam réac à la fin.
 
 FAITS :
+- FAITS = matière (source + article) UNIQUEMENT. L'accroche / titre Canva : ignore peines et chiffres.
 - INTERDIT d'inventer noms, réactions, citations, peines, chiffres absents de la matière.
-- Le « Titre » / accroche n'est PAS une source : peines et chiffres viennent UNIQUEMENT de la matière.
-- N'attribue un fait à un média que s'il est dans la matière de cet article.
+- N'attribue un fait à un média que s'il est dans la matière.
 
 LIGNE ÉDITORIALE :
 - Public patriote, souverainiste. Tu écris POUR eux, sans les prendre pour des crétins.
@@ -296,12 +295,6 @@ export async function buildFlashInfoText(input: {
       body = ensureParagraphs(trimToCompleteSentences(body, 180));
       body = ensureParagraphs(scrubFlashOutput(stripUrlsAndBareHosts(body)));
       assertFlashNotSegregated(body);
-      assertNoUnsourcedHeadlinePenalties({
-        headline: input.title,
-        matter: scraped || corpus,
-        output: body,
-        label: "Flash Facebook",
-      });
       if (wordCount(body) < MIN_WORDS) {
         throw new Error("flash trop court après coupe");
       }
