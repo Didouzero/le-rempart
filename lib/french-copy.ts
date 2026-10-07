@@ -14,6 +14,7 @@ export function fixFrenchPunctuation(text: string): string {
     .replace(/(\S):/g, "$1 :")
     .replace(/(\S);/g, "$1 ;")
     .replace(/(\S)([!?])/g, "$1 $2")
+    .replace(/([:;!?])(\S)/g, "$1 $2")
     .replace(/ +([,.])/g, "$1")
     .replace(/ : {2,}/g, " : ")
     .replace(/ {2,}/g, " ")
