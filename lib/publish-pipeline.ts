@@ -227,7 +227,8 @@ export async function publishCreativePipeline(input: {
     return { article, facebook };
   }
 
-  const flashCorpus = [article.sourceText, article.content]
+  // Excerpt + article d'abord : sourceText scrapé est souvent un mur cookies.
+  const flashCorpus = [article.excerpt, article.content, article.sourceText]
       .filter(Boolean)
       .join("\n\n")
       .slice(0, 8000);

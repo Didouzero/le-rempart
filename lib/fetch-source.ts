@@ -26,6 +26,8 @@ const PREFER_JINA_HOSTS = [
   "lepoint.fr",
   "nouvelobs.com",
   "bfmtv.com",
+  "lamontagne.fr",
+  "centrefrance.com",
 ];
 
 function hostOf(url: string): string {
@@ -104,6 +106,11 @@ export function scrubBoilerplate(text: string): string {
     /continuer sans accepter[^\n]{0,120}/gi,
     /accéder au contenu gratuit[^\n]{0,200}/gi,
     /this site uses cookies[^\n]{0,200}/gi,
+    /en poursuivant votre navigation[^\n]{0,300}/gi,
+    /en cliquant sur [«"]?accepter[»"]?[^\n]{0,300}/gi,
+    /politique de confidentialit[ée][^\n]{0,200}/gi,
+    /parametrer\s*(mes\s*)?cookies[^\n]{0,120}/gi,
+    /je refuse[^\n]{0,80}/gi,
   ];
   for (const re of blockPatterns) {
     t = t.replace(re, "\n");
