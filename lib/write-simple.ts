@@ -3,6 +3,7 @@ import { searchWebForSubject } from "@/lib/research/web-search";
 import { scrubBoilerplate } from "@/lib/fetch-source";
 import { italicizeCitations } from "@/lib/italicize-citations";
 import { moonshotChat } from "@/lib/moonshot";
+import { polishFrenchCopy } from "@/lib/french-copy";
 import { utf8Text } from "@/lib/utf8";
 import { stripUnsourcedPenaltiesFromTitle } from "@/lib/source-first";
 
@@ -173,28 +174,20 @@ function parseJsonArticle(raw: string): {
 }
 
 function humanize(text: string): string {
-  return text
-    .replace(/\u2014/g, ",")
-    .replace(/\u2013/g, ",")
-    .replace(
-      /\b(Il convient de noter que|Il est important de (noter|souligner) que|Dans un contexte où|En conclusion,?|Cela étant dit,?|On notera (que|également)?|Il faut (bien )?le reconnaître,?|Force est de constater que)\s*/gi,
-      "",
-    )
-    .replace(
-      /\s*Les Français apprécieront[^.!?]*[.!?]?\s*/gi,
-      " ",
-    )
-    .replace(
-      /\s*(À chacun d'en tirer|Chacun en tirera)[^.!?]*[.!?]?\s*/gi,
-      " ",
-    )
-    .replace(
-      /\s*on croit rêver[^.!?]*[.!?]?\s*/gi,
-      " ",
-    )
-    .replace(/ {2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return polishFrenchCopy(
+    text
+      .replace(/\u2014/g, ",")
+      .replace(/\u2013/g, ",")
+      .replace(
+        /\s*Les Français apprécieront[^.!?]*[.!?]?\s*/gi,
+        " ",
+      )
+      .replace(
+        /\s*(À chacun d'en tirer|Chacun en tirera)[^.!?]*[.!?]?\s*/gi,
+        " ",
+      )
+      .replace(/\s*on croit rêver[^.!?]*[.!?]?\s*/gi, " "),
+  );
 }
 
 const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite). Tu rédiges un VRAI article d'actualité : faits exacts ET lecture politique tissée tout du long. Ni tribune sarcastique, ni simple relais de l'article source.
@@ -233,8 +226,10 @@ RÈGLES DURES :
 - INTERDIT de se contenter de paraphraser l'article source d'un bout à l'autre.
 - EXTRAIS tout ce qui est utile dans la source ET dans le web.
 - Si la matière est riche → article dense (vise 600–1100 mots). Si pauvre → plus court, mais SANS blabla pour combler.
-- INTERDIT le sarcasme, l'ironie lourde, les tics Rempart creux :
-  « on croit rêver », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on notera la sévérité… », « scandale absolu », refrain « pendant que… », gueulante anti-gouvernement sans élément nouveau.
+- INTERDIT le sarcasme, l'ironie lourde, les tics Rempart / IA creux :
+  « on croit rêver », « les Français apprécieront », « à chacun d'en tirer les conclusions », « on notera », « on notera que », « on observe ici », « la méthode est classique », « scandale absolu », refrain « pendant que… », gueulante anti-gouvernement sans élément nouveau.
+- Typo française : espace avant les deux-points (« exemple : », jamais « exemple: »).
+- Si la source mélange plusieurs sujets, priorise celui de la créative / du titre.
 - Ne pas inventer noms, chiffres, citations, sondages, peines, « selon tel média » absents des matières. Tu peux ENCHAÎNER des raisonnements politiques prudents à partir de faits établis (« cela peut se lire comme… », « difficile d'y voir autre chose qu'… »).
 - HIÉRARCHIE DES FAITS : 1) TEXTE SOURCE 2) extraits web. La créative Canva = zéro pour les faits. Si Canva dit « 7 ans » et la source / le web disent autre chose (sursis, bracelet, encouru…), tu écris SOURCE + WEB. Si le verdict n'est que sur le web, tu le prends dans l'extrait web.
 - N'attribue JAMAIS à un média un fait qu'il n'a pas écrit.

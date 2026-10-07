@@ -1,5 +1,9 @@
 import { moonshotChat, isKimiContentFilter } from "@/lib/moonshot";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
+import {
+  assertFlashOnSubject,
+  polishFrenchCopy,
+} from "@/lib/french-copy";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const MIN_CHARS = 80;
@@ -140,7 +144,7 @@ function stripUrlsAndBareHosts(text: string): string {
     )
     .replace(/\(\s*Source\s*:[^)]*\)/gi, "")
     .replace(/\s{2,}/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\s+([,.])/g, "$1")
     .replace(/\(\s*\)/g, "")
     .trim();
 }
@@ -197,6 +201,11 @@ function assertFlashNotSegregated(body: string): void {
 
 const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart — média de droite, argumenté.
 
+SUJET — PRIORITÉ ABSOLUE :
+- L'ACCROCHE définit le sujet unique du flash (ex. Bardella / Mediapart / amis de collège).
+- La matière source peut parler d'AUTRES choses : IGNORE tout hors-sujet. N'écris QUE l'angle de l'accroche.
+- Si la source mélange plusieurs infos, extrais UNIQUEMENT les passages qui collent à l'accroche.
+
 RÈGLE D'OR — ENTREMÊLER, NE JAMAIS SÉPARER :
 - CHAQUE paragraphe = faits concrets (qui / quoi / où / quand / citation / réaction NOMÉÉE) + UNE courte lecture de droite tissée DANS le même paragraphe.
 - INTERDIT le schéma « §1 = faits seuls, §2 et §3 = critique / édito ». Si tu fais ça, le flash est refusé.
@@ -204,9 +213,16 @@ RÈGLE D'OR — ENTREMÊLER, NE JAMAIS SÉPARER :
 - INTERDIT de relayer platement puis de coller un slam réac à la fin.
 
 FAITS :
-- FAITS = matière (source + article) UNIQUEMENT. L'accroche / titre Canva : ignore peines et chiffres.
+- FAITS = passages de la matière qui concernent l'accroche. Ignore peines/chiffres Canva s'ils divergent.
 - INTERDIT d'inventer noms, réactions, citations, peines, chiffres absents de la matière.
 - N'attribue un fait à un média que s'il est dans la matière.
+
+LANGAGE — VARIÉ, PAS DE TICS :
+- INTERDIT absolu : « on notera », « on notera que », « on notera ici », « on observe », « on observe ici », « on remarque », « la méthode est classique », « force est de constater », « il convient de noter ».
+- Varie les formulations. Écris comme un journaliste humain, pas un template.
+
+TYPO FRANÇAISE :
+- Espace avant les deux-points : « exemple : » (JAMAIS « exemple: »). Idem ; ! ?
 
 LIGNE ÉDITORIALE :
 - Public patriote, souverainiste. Tu écris POUR eux, sans les prendre pour des crétins.
@@ -251,16 +267,17 @@ export async function buildFlashInfoText(input: {
   ).slice(0, 4500);
   const outlet = outletFromUrl(input.sourceUrl);
   const userContent = [
-    `Accroche (PAS une source de faits) : ${input.title}`,
+    `ACCROCHE = SUJET UNIQUE DU FLASH (ignore le reste de la source) : ${input.title}`,
     outlet
       ? `Média de l'URL fournie (faits uniquement s'ils sont dans la matière) : ${outlet}`
       : null,
     "",
-    "Matière (EXTRAIS les faits : noms, peines exactes, citations, réactions — n'invente rien) :",
+    "Matière (ne prends QUE ce qui concerne l'accroche ; ignore les autres sujets du même article) :",
     corpus,
     "",
-    "Écris le flash : 3 paragraphes, ligne vide entre eux.",
+    "Écris le flash : 3 paragraphes, ligne vide entre eux — UNIQUEMENT sur le sujet de l'accroche.",
     "OBLIGATOIRE : dans CHAQUE paragraphe, faits + courte lecture de droite — jamais §1 faits puis §2–3 édito.",
+    "INTERDIT : on notera / on observe / la méthode est classique. Typo : espace avant « : ».",
     "Pas d'URL, pas de nom de domaine, pas de « Source : » dans ton texte.",
     "Ligne droite dure : jamais un patriote / le RN « en tort ».",
   ]
@@ -285,6 +302,7 @@ export async function buildFlashInfoText(input: {
 
       let body = scrubFlashOutput(ensureParagraphs(stripFlashPrefix(text || "")));
       body = ensureParagraphs(stripUrlsAndBareHosts(body));
+      body = ensureParagraphs(polishFrenchCopy(body));
       const words = wordCount(body);
       if (body.length < MIN_CHARS || words < MIN_WORDS) {
         throw new Error(
@@ -293,8 +311,11 @@ export async function buildFlashInfoText(input: {
       }
 
       body = ensureParagraphs(trimToCompleteSentences(body, 180));
-      body = ensureParagraphs(scrubFlashOutput(stripUrlsAndBareHosts(body)));
+      body = ensureParagraphs(
+        polishFrenchCopy(scrubFlashOutput(stripUrlsAndBareHosts(body))),
+      );
       assertFlashNotSegregated(body);
+      assertFlashOnSubject(input.title, body);
       if (wordCount(body) < MIN_WORDS) {
         throw new Error("flash trop court après coupe");
       }
