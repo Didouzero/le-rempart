@@ -15,12 +15,28 @@ function formatDate(value: Date | null): string {
 }
 
 export default async function AdminDossiersPage() {
-  let dossiers: Awaited<ReturnType<typeof prisma.specialDossier.findMany>> = [];
+  let dossiers: {
+    id: string;
+    slug: string;
+    title: string;
+    membersOnly: boolean;
+    publishedAt: Date | null;
+    updatedAt: Date;
+  }[] = [];
 
   try {
     dossiers = await withDbTimeout(
       prisma.specialDossier.findMany({
         orderBy: { updatedAt: "desc" },
+        take: 200,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          membersOnly: true,
+          publishedAt: true,
+          updatedAt: true,
+        },
       }),
     );
   } catch {

@@ -10,7 +10,22 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminEditArticlePage({ params }: Props) {
   const { id } = await params;
-  const article = await prisma.article.findUnique({ where: { id } });
+  // Pas de Bytes (cover/illustration) ni researchDossier : OOM Edge/serverless.
+  const article = await prisma.article.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      publicId: true,
+      title: true,
+      excerpt: true,
+      content: true,
+      sourceText: true,
+      sourceUrl: true,
+      coverImageUrl: true,
+      category: true,
+      status: true,
+    },
+  });
   if (!article) notFound();
 
   return (

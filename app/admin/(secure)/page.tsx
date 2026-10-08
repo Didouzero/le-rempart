@@ -15,12 +15,27 @@ function formatDate(value: Date | null): string {
 }
 
 export default async function AdminDashboardPage() {
-  let articles: Awaited<ReturnType<typeof prisma.article.findMany>> = [];
+  let articles: {
+    id: string;
+    publicId: number;
+    title: string;
+    status: "draft" | "published";
+    updatedAt: Date;
+  }[] = [];
 
   try {
+    // Ne JAMAIS charger content / sourceText / Bytes images : OOM serverless.
     articles = await withDbTimeout(
       prisma.article.findMany({
         orderBy: { updatedAt: "desc" },
+        take: 300,
+        select: {
+          id: true,
+          publicId: true,
+          title: true,
+          status: true,
+          updatedAt: true,
+        },
       }),
     );
   } catch {
