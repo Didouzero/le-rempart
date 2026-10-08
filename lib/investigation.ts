@@ -22,7 +22,7 @@ import { utf8Text, utf8TextOrNull } from "@/lib/utf8";
 import { withTimeout } from "@/lib/with-timeout";
 
 export const INVESTIGATION_COMMENT_PREFIX =
-  "notre enquête complète est disponible pour nos abonnés payants juste ici : 👉";
+  "notre enquête complète est disponible pour nos abonnés Rempart+ juste ici : 👉";
 
 async function uniqueDossierSlug(title: string): Promise<string> {
   const base = slugify(title);
