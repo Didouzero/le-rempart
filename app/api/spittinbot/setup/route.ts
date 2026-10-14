@@ -12,7 +12,12 @@ export async function GET(req: NextRequest) {
   const token = process.env.SPITTIN_BOT_TOKEN;
   const params = req.nextUrl.searchParams;
   if (!secret || !token || params.get("secret") !== secret) {
-    return NextResponse.json({ ok: false }, { status: 401 });
+    // n'expose que la présence des variables, jamais leur valeur
+    const present = Object.fromEntries(
+      ["SPITTIN_WEBHOOK_SECRET", "SPITTIN_BOT_TOKEN", "SPITTIN_TG_API_ID", "SPITTIN_TG_API_HASH",
+        "SPITTIN_ALLOWED_USER_IDS", "UPLOAD_POST_API_KEY"].map((k) => [k, Boolean(process.env[k])]),
+    );
+    return NextResponse.json({ ok: false, present, env: process.env.VERCEL_ENV }, { status: 401 });
   }
   const host = req.headers.get("x-forwarded-host") || req.nextUrl.host;
   const hook = new URL(`https://${host}/api/spittinbot/webhook`);
