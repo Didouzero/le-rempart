@@ -36,17 +36,22 @@ function apiKey(): string {
 
 export type PlatformResult = { ok: boolean | null; text: string };
 
+export const DEFAULT_HASHTAGS = "#clash #débat #politique #actu";
+
+function hashtags(): string {
+  return (process.env.SPITTIN_HASHTAGS || DEFAULT_HASHTAGS).trim();
+}
+
 export async function uploadPostPublish(opts: {
   video: Buffer;
   filename: string;
   title: string;
-  description: string;
   platforms: PlatformKey[];
   requestId: string;
 }): Promise<{ httpStatus: number; body: Record<string, unknown> }> {
-  const hashtags = (process.env.SPITTIN_HASHTAGS || "").trim();
-  const caption = hashtags ? `${opts.title}\n\n${hashtags}` : opts.title;
-  const fullDesc = [opts.description, hashtags].filter(Boolean).join("\n\n") || opts.title;
+  const tags = hashtags();
+  // légende / description partout : "titre + #"
+  const caption = tags ? `${opts.title}\n\n${tags}` : opts.title;
 
   const form = new FormData();
   form.append("user", process.env.UPLOAD_POST_USER || "spittinfakt");
@@ -57,9 +62,12 @@ export async function uploadPostPublish(opts: {
 
   if (opts.platforms.includes("youtube")) {
     form.append("youtube_title", opts.title.slice(0, 100));
-    form.append("youtube_description", fullDesc);
+    form.append("youtube_description", caption);
+    for (const t of tags.split(/\s+/).filter(Boolean)) form.append("tags[]", t.replace(/^#/, ""));
     form.append("privacyStatus", "public");
     form.append("selfDeclaredMadeForKids", "false");
+    form.append("containsSyntheticMedia", "false"); // « fait avec l'IA » : non
+    form.append("hasPaidProductPlacement", "false"); // « promotion rémunérée » : non
     form.append("defaultLanguage", "fr");
     form.append("defaultAudioLanguage", "fr");
   }
@@ -77,7 +85,7 @@ export async function uploadPostPublish(opts: {
     if (pageId) form.append("facebook_page_id", pageId);
     form.append("facebook_media_type", "REELS");
     form.append("facebook_title", caption);
-    form.append("description", fullDesc);
+    form.append("description", caption);
   }
   form.append(
     "video",

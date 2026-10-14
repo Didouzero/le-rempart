@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     // n'expose que la présence des variables, jamais leur valeur
     const present = Object.fromEntries(
       ["SPITTIN_WEBHOOK_SECRET", "SPITTIN_BOT_TOKEN", "SPITTIN_TG_API_ID", "SPITTIN_TG_API_HASH",
-        "SPITTIN_ALLOWED_USER_IDS", "UPLOAD_POST_API_KEY"].map((k) => [k, Boolean(process.env[k])]),
+        "SPITTIN_ALLOWED_USER_IDS", "UPLOAD_POST_API_KEY", "DATABASE_URL"].map((k) => [k, Boolean(process.env[k])]),
     );
     return NextResponse.json({ ok: false, present, env: process.env.VERCEL_ENV }, { status: 401 });
   }

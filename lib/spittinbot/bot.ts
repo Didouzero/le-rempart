@@ -1,15 +1,15 @@
 /**
- * @spittinbot : on envoie une vidéo au bot, elle part sur YouTube Shorts,
- * TikTok, Instagram et Facebook via Upload-Post.
+ * @spittinbot : on envoie une vidéo au bot, il demande le titre, puis la
+ * publie sur YouTube Shorts, TikTok, Instagram et Facebook via Upload-Post.
  *
- * Sans état en base : le récap (message du bot, en réponse à la vidéo) porte
- * le titre, la description et les plateformes cochées. Les boutons relisent
- * ce message, et la vidéo est retrouvée via reply_to_message.
+ * La vidéo en attente de titre est gardée dans AppSetting
+ * (clé spittinbot:pending:<chatId>). Le message de suivi est envoyé en réponse
+ * à la vidéo : le bouton « Réessayer » la retrouve via reply_to_message.
  */
+import { prisma } from "@/lib/prisma";
 import { downloadBotMessageMedia } from "@/lib/spittinbot/mtproto";
 import {
   ALL_MASK,
-  PLATFORMS,
   type PlatformKey,
   type PlatformResult,
   describeResults,
@@ -22,10 +22,9 @@ import {
 
 const TG = "https://api.telegram.org";
 const BOT_API_FILE_LIMIT = 20 * 1024 * 1024;
-const NO_TITLE = "(sans titre)";
 const TITLE_PREFIX = "🎬 ";
-const DESC_PREFIX = "📝 ";
 const PLATFORMS_PREFIX = "Plateformes : ";
+const ASK_TITLE = "✍️ Et maintenant, donne-moi un titre :";
 
 type TgUser = { id: number; is_bot?: boolean };
 type TgFile = { file_id: string; file_size?: number; mime_type?: string; file_name?: string };
@@ -94,57 +93,44 @@ async function downloadVideo(video: TgMessage): Promise<Buffer> {
   return downloadBotMessageMedia(video.message_id);
 }
 
-// ------------------------------------------------------------------ récap
-type Recap = { title: string; description: string; mask: number };
+// ------------------------------------------------------------------ vidéo en attente
+const pendingKey = (chatId: number) => `spittinbot:pending:${chatId}`;
 
-function recapText(r: Recap, footer?: string): string {
-  const lines = [TITLE_PREFIX + (r.title || NO_TITLE)];
-  if (r.description) lines.push(DESC_PREFIX + r.description);
-  lines.push("", PLATFORMS_PREFIX + (maskToPlatforms(r.mask).map(platformLabel).join(" · ") || "aucune"));
-  if (!r.title) lines.push("", "↩️ Réponds à ce message avec le titre (1re ligne) et, si tu veux, la description dessous.");
+async function setPending(video: TgMessage) {
+  const key = pendingKey(video.chat.id);
+  const value = JSON.stringify(video);
+  await prisma.appSetting.upsert({ where: { key }, create: { key, value }, update: { value } });
+}
+
+async function takePending(chatId: number): Promise<TgMessage | null> {
+  const row = await prisma.appSetting.findUnique({ where: { key: pendingKey(chatId) } });
+  if (!row) return null;
+  await prisma.appSetting.delete({ where: { key: row.key } }).catch(() => {});
+  try {
+    return JSON.parse(row.value) as TgMessage;
+  } catch {
+    return null;
+  }
+}
+
+// ------------------------------------------------------------------ messages
+function statusText(title: string, mask: number, footer?: string): string {
+  const lines = [
+    TITLE_PREFIX + title,
+    "",
+    PLATFORMS_PREFIX + maskToPlatforms(mask).map(platformLabel).join(" · "),
+  ];
   if (footer) lines.push("", footer);
   return lines.join("\n");
 }
 
-function parseRecap(text: string): Recap {
-  const lines = text.split("\n");
-  const title = (lines[0] ?? "").startsWith(TITLE_PREFIX) ? lines[0].slice(TITLE_PREFIX.length).trim() : "";
-  const descLines: string[] = [];
-  let mask = ALL_MASK;
-  let inDesc = false;
-  for (const l of lines.slice(1)) {
-    if (l.startsWith(DESC_PREFIX)) {
-      inDesc = true;
-      descLines.push(l.slice(DESC_PREFIX.length));
-    } else if (l.startsWith(PLATFORMS_PREFIX)) {
-      inDesc = false;
-      const labels = l.slice(PLATFORMS_PREFIX.length).split(" · ");
-      mask = platformsToMask(PLATFORMS.filter((p) => labels.includes(p.label)).map((p) => p.key));
-    } else if (inDesc && l !== "") descLines.push(l);
-    else inDesc = false;
-  }
-  return { title: title === NO_TITLE ? "" : title, description: descLines.join("\n").trim(), mask };
+function titleFromStatus(text: string): string {
+  const first = text.split("\n")[0] ?? "";
+  return first.startsWith(TITLE_PREFIX) ? first.slice(TITLE_PREFIX.length).trim() : "";
 }
 
-function keyboard(mask: number): unknown[][] {
-  const toggles = PLATFORMS.map((p) => ({
-    text: (mask & p.bit ? "✅ " : "⬜️ ") + p.label,
-    callback_data: `t:${p.bit}`,
-  }));
-  return [
-    toggles.slice(0, 2),
-    toggles.slice(2),
-    [
-      { text: "🚀 Publier", callback_data: "go" },
-      { text: "✏️ Titre", callback_data: "ti" },
-      { text: "❌ Annuler", callback_data: "x" },
-    ],
-  ];
-}
-
-function splitTitle(raw: string): { title: string; description: string } {
-  const [first, ...rest] = raw.trim().split("\n");
-  return { title: (first ?? "").trim(), description: rest.join("\n").trim() };
+function cleanTitle(raw: string): string {
+  return raw.trim().replace(/\s*\n+\s*/g, " ");
 }
 
 function isVideo(m: TgMessage): boolean {
@@ -161,75 +147,72 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
   if (update.callback_query) return handleCallback(update.callback_query);
   const m = update.message;
   if (!m || !isAllowed(m.from?.id)) return;
+  const chatId = m.chat.id;
 
   if (m.text?.startsWith("/start") || m.text?.startsWith("/aide")) {
     await send(
-      m.chat.id,
+      chatId,
       [
         "👋 Bot spittinfakt prêt.",
         "",
-        "Envoie-moi une vidéo avec le titre en légende (1re ligne = titre, le reste = description facultative).",
-        "Je te montre un récap, tu valides, et elle part sur YouTube, TikTok, Instagram et Facebook.",
+        "1) Envoie-moi la vidéo (en fichier 📎 → Fichier, pour garder la qualité)",
+        "2) Je te demande le titre, tu l'envoies",
+        "3) Elle part sur YouTube, TikTok, Instagram et Facebook",
         "",
-        "Astuce : envoie-la en fichier (📎 → Fichier) pour garder la qualité d'origine.",
+        "/annuler — oublier la vidéo en attente de titre",
       ].join("\n"),
     );
     return;
   }
 
+  if (m.text?.startsWith("/annuler")) {
+    const had = await takePending(chatId);
+    await send(chatId, had ? "❌ Vidéo en attente annulée." : "Aucune vidéo en attente.");
+    return;
+  }
+
   if (isVideo(m)) {
-    const { title, description } = splitTitle(m.caption ?? "");
-    const r: Recap = { title, description, mask: ALL_MASK };
-    await send(m.chat.id, recapText(r), {
+    const caption = cleanTitle(m.caption ?? "");
+    if (caption) return startPublish(m, caption);
+    await setPending(m);
+    await send(chatId, ASK_TITLE, {
       reply_to_message_id: m.message_id,
-      reply_markup: { inline_keyboard: keyboard(r.mask) },
+      reply_markup: { force_reply: true, input_field_placeholder: "Titre de la vidéo" },
     });
     return;
   }
 
-  // réponse texte au récap = nouveau titre / description
-  const target = m.reply_to_message;
-  if (m.text && target?.from?.is_bot && target.text?.startsWith(TITLE_PREFIX)) {
-    const cur = parseRecap(target.text);
-    const { title, description } = splitTitle(m.text);
-    const r: Recap = { title, description: description || cur.description, mask: cur.mask };
-    await edit(m.chat.id, target.message_id, recapText(r), keyboard(r.mask));
-    await tg("deleteMessage", { chat_id: m.chat.id, message_id: m.message_id });
+  if (m.text && !m.text.startsWith("/")) {
+    const video = await takePending(chatId);
+    if (!video) {
+      await send(chatId, "🎬 Envoie-moi d'abord une vidéo, je te demanderai le titre ensuite.");
+      return;
+    }
+    await startPublish(video, cleanTitle(m.text));
   }
+}
+
+async function startPublish(video: TgMessage, title: string) {
+  const status = await send(video.chat.id, statusText(title, ALL_MASK, "⏳ C'est parti…"), {
+    reply_to_message_id: video.message_id,
+  });
+  const statusId = Number(status?.message_id);
+  if (!statusId) return;
+  await publish(video.chat.id, statusId, video, title, maskToPlatforms(ALL_MASK));
 }
 
 async function handleCallback(cq: NonNullable<TgUpdate["callback_query"]>): Promise<void> {
   if (!isAllowed(cq.from.id)) return void (await answer(cq.id, "Non autorisé"));
   const msg = cq.message;
   const data = cq.data ?? "";
-  if (!msg?.text) return void (await answer(cq.id));
-  const chatId = msg.chat.id;
-  const r = parseRecap(msg.text);
-
-  if (data.startsWith("t:")) {
-    r.mask ^= Number(data.slice(2));
-    await edit(chatId, msg.message_id, recapText(r), keyboard(r.mask));
-    return void (await answer(cq.id));
+  if (!msg?.text || !data.startsWith("rt:")) return void (await answer(cq.id));
+  const title = titleFromStatus(msg.text);
+  const video = msg.reply_to_message;
+  if (!title || !video || !isVideo(video)) {
+    return void (await answer(cq.id, "Vidéo d'origine introuvable, renvoie-la.", true));
   }
-  if (data === "ti") {
-    await answer(cq.id, "↩️ Réponds au récap avec le nouveau titre", true);
-    return;
-  }
-  if (data === "x") {
-    await edit(chatId, msg.message_id, recapText(r, "❌ Annulé."));
-    return void (await answer(cq.id));
-  }
-  if (data === "go" || data.startsWith("rt:")) {
-    const mask = data === "go" ? r.mask : Number(data.slice(3));
-    if (!r.title) return void (await answer(cq.id, "Ajoute d'abord un titre (réponds au récap).", true));
-    if (!mask) return void (await answer(cq.id, "Coche au moins une plateforme.", true));
-    const video = msg.reply_to_message;
-    if (!video || !isVideo(video)) {
-      return void (await answer(cq.id, "Vidéo d'origine introuvable, renvoie-la.", true));
-    }
-    await answer(cq.id, "C'est parti 🚀");
-    await publish(chatId, msg.message_id, video, r, maskToPlatforms(mask));
-  }
+  await answer(cq.id, "On réessaie 🔁");
+  await publish(msg.chat.id, msg.message_id, video, title, maskToPlatforms(Number(data.slice(3))));
 }
 
 // ------------------------------------------------------------------ publication
@@ -244,28 +227,21 @@ function resultsText(res: Partial<Record<PlatformKey, PlatformResult>>, platform
     .join("\n");
 }
 
-async function publish(chatId: number, recapId: number, video: TgMessage, r: Recap, platforms: PlatformKey[]) {
-  const status = (footer: string, kb?: unknown[][]) => edit(chatId, recapId, recapText(r, footer), kb);
+async function publish(chatId: number, statusId: number, video: TgMessage, title: string, platforms: PlatformKey[]) {
+  const mask = platformsToMask(platforms);
+  const status = (footer: string, kb?: unknown[][]) => edit(chatId, statusId, statusText(title, mask, footer), kb);
+  const retry = (failed: PlatformKey[]) => [[{ text: "🔁 Réessayer", callback_data: `rt:${platformsToMask(failed)}` }]];
   const requestId = `tg-${chatId}-${video.message_id}-${Date.now()}`;
   try {
     await status("⬇️ Récupération de la vidéo…");
     const buf = await downloadVideo(video);
     await status(`⬆️ Envoi à Upload-Post (${(buf.length / 1048576).toFixed(1)} Mo)…`);
     const filename = video.document?.file_name || `spittinfakt-${video.message_id}.mp4`;
-    const { httpStatus, body } = await uploadPostPublish({
-      video: buf,
-      filename,
-      title: r.title,
-      description: r.description,
-      platforms,
-      requestId,
-    });
+    const { httpStatus, body } = await uploadPostPublish({ video: buf, filename, title, platforms, requestId });
     console.log("spittinbot upload", httpStatus, JSON.stringify(body).slice(0, 1000));
     if (!body.success) {
       const err = String(body.message || body.error || JSON.stringify(body)).slice(0, 400);
-      await status(`⚠️ Upload-Post a refusé l'envoi (HTTP ${httpStatus}) :\n${err}`, [
-        [{ text: "🔁 Réessayer", callback_data: `rt:${platformsToMask(platforms)}` }],
-      ]);
+      await status(`⚠️ Upload-Post a refusé l'envoi (HTTP ${httpStatus}) :\n${err}`, retry(platforms));
       return;
     }
 
@@ -288,17 +264,14 @@ async function publish(chatId: number, recapId: number, video: TgMessage, r: Rec
     const failed = platforms.filter((p) => !res[p]?.ok);
     if (failed.length === 0) {
       await status(resultsText(res, platforms) + "\n\n✅ Publié partout !");
-    } else if (failed.every((p) => res[p]?.ok === null || !res[p])) {
+    } else if (failed.every((p) => !res[p] || res[p]!.ok === null)) {
       await status(resultsText(res, platforms) + "\n\n⏳ Toujours en cours côté Upload-Post — vérifie ton tableau de bord.");
     } else {
-      await status(resultsText(res, platforms) + "\n\n⚠️ Certaines plateformes ont échoué.", [
-        [{ text: "🔁 Réessayer les échecs", callback_data: `rt:${platformsToMask(failed)}` }],
-      ]);
+      await status(resultsText(res, platforms) + "\n\n⚠️ Certaines plateformes ont échoué.", retry(failed));
     }
   } catch (e) {
     console.error("spittinbot publish error", e);
-    await status(`⚠️ Erreur : ${String((e as Error).message || e).slice(0, 300)}`, [
-      [{ text: "🔁 Réessayer", callback_data: `rt:${platformsToMask(platforms)}` }],
-    ]);
+    await status(`⚠️ Erreur : ${String((e as Error).message || e).slice(0, 300)}`, retry(platforms));
   }
 }
+
