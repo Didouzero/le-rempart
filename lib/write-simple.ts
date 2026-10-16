@@ -193,11 +193,12 @@ function humanize(text: string): string {
 const SYSTEM = `Tu es journaliste de presse écrite pour Le Rempart (droite). Tu rédiges un VRAI article d'actualité : faits exacts ET lecture politique tissée tout du long. Ni tribune sarcastique, ni simple relais de l'article source.
 
 Tu reçois :
-1) Le TITRE CRÉATIVE : accroche Canva pour savoir DE QUOI parle le sujet (noms, lieu). IGNORE totalement peines, chiffres, « X ans de prison », attributions médias du titre Canva. Ce n'est PAS une source.
-2) Le TEXTE SOURCE (URL fournie) : socle factuel n°1. Reprends peines, chiffres, citations TELLES QU'ÉCRITES ici.
-3) Les RÉSULTATS WEB : socle factuel n°2. Complète / précise avec ce qui s'y dit (verdict, sursis, bracelet, etc.) s'il est DANS l'extrait.
+1) Le TITRE CRÉATIVE = THÈSE ÉDITORIALE. Tu écris DANS LE SENS de cette accroche. INTERDIT de la contredire ou de « corriger » avec un article qui dit l'inverse (ex. accroche « endommagée au transport » → INTERDIT d'écrire « ce n'était pas un accident »).
+2) NOTES DE RECHERCHE (si fournies) : directives (« trouve des sources qui disent que… ») — suis-les.
+3) Les RÉSULTATS WEB : privilégie ce qui CORROBORE l'accroche / les notes.
+4) Le TEXTE SOURCE (URL) : secondaire. Utile pour dates/noms/chiffres neutres. Si cet article NIE la thèse de l'accroche, IGNORE ces passages — ne les relaie pas.
 
-FAITS = SOURCE + WEB UNIQUEMENT. Qu'importe ce qu'affiche la créative.
+FAITS = WEB (sens accroche) + SOURCE (neutre) + NOTES. L'accroche fixe l'ANGLE ; tu n'inventes pas de citations.
 
 OBJECTIF DOUBLE, MÉLANGÉ :
 A) Rapporter fidèlement les FAITS (qui / quoi / où / quand / combien / cadre).
@@ -231,7 +232,7 @@ RÈGLES DURES :
 - Typo française : espace avant les deux-points (« exemple : », jamais « exemple: »).
 - Si la source mélange plusieurs sujets, priorise celui de la créative / du titre.
 - Ne pas inventer noms, chiffres, citations, sondages, peines, « selon tel média » absents des matières. Tu peux ENCHAÎNER des raisonnements politiques prudents à partir de faits établis (« cela peut se lire comme… », « difficile d'y voir autre chose qu'… »).
-- HIÉRARCHIE DES FAITS : 1) TEXTE SOURCE 2) extraits web. La créative Canva = zéro pour les faits. Si Canva dit « 7 ans » et la source / le web disent autre chose (sursis, bracelet, encouru…), tu écris SOURCE + WEB. Si le verdict n'est que sur le web, tu le prends dans l'extrait web.
+- HIÉRARCHIE : 1) THÈSE = accroche Canva (angle) 2) NOTES 3) WEB qui corrobore 4) SOURCE pour détails neutres. Exception peines/chiffres justice : si Canva dit « 7 ans » et le web/source disent sursis/bracelet, prends web/source pour LE CHIFFRE — mais ne retourne jamais l'angle politique de l'accroche.
 - N'attribue JAMAIS à un média un fait qu'il n'a pas écrit.
 - INTERDIT de relativiser par du flou (« non sourcé », « non confirmé ») : soit le fait est dans la matière et tu l'écris précisément, soit tu l'omets.
 - Ton : presse claire, droite dans les questions posées — habile, pas méchant bête.
@@ -250,20 +251,25 @@ export async function writeArticleSimple(input: {
   creativeTitle: string;
   sourceUrl: string;
   sourceText: string;
+  researchNotes?: string;
   onProgress?: (msg: string) => void | Promise<void>;
 }): Promise<SimpleArticle> {
   const progress = input.onProgress || (async () => {});
+  const notes = (input.researchNotes || "").trim();
 
-  await progress("Recherche web (contexte et angles)…");
+  await progress("Recherche web (corroborer l’accroche)…");
   let webBrief = "";
   try {
     const hits = await Promise.race([
       searchWebForSubject({
-        subject: input.creativeTitle,
+        subject: notes
+          ? `${input.creativeTitle} — ${notes.slice(0, 180)}`
+          : input.creativeTitle,
         extraQueries: [
-          `${input.creativeTitle} verdict peine condamnation sursis`,
+          notes || `${input.creativeTitle} verdict peine condamnation sursis`,
           `${input.creativeTitle} réactions opposition contexte`,
-        ],
+          input.creativeTitle,
+        ].filter(Boolean),
         fast: true,
       }),
       new Promise<never>((_, reject) =>
@@ -280,28 +286,29 @@ export async function writeArticleSimple(input: {
   } catch (err) {
     console.error("writeArticleSimple search skipped", err);
     webBrief =
-      "(recherche web indisponible — exploite la source à fond, sans inventer)";
+      "(recherche web indisponible — reste dans le sens de l'accroche, sans inventer)";
   }
 
-  await progress("Rédaction (faits + angle argumenté)…");
-  const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 9000);
+  await progress("Rédaction (thèse accroche + faits)…");
+  const sourceSlice = scrubBoilerplate(input.sourceText).slice(0, 7000);
   const userContent = [
-    `TITRE CRÉATIVE (sujet / accroche site SEULEMENT — pas une source de faits) :`,
+    `TITRE CRÉATIVE = THÈSE (écris DANS CE SENS, ne la contredis JAMAIS) :`,
     input.creativeTitle,
     "",
-    `URL source : ${input.sourceUrl}`,
+    notes
+      ? `NOTES DE RECHERCHE / ANGLE (directives éditoriales) :\n${notes}\n`
+      : "",
+    `URL source (secondaire) : ${input.sourceUrl}`,
     "",
-    "TEXTE SOURCE (seule base pour ce que tu attribues à ce média : dates, noms, chiffres, peines, citations) :",
-    sourceSlice,
-    "",
-    "RÉSULTATS WEB (faits seulement s'ils sont DANS l'extrait ; sinon omets) :",
-    "Sers-t'en pour : contexte, antécédents, réactions nommées, chiffres annexes,",
-    "éléments qui nourrissent une ANALYSE (popularité, contradictions, coût politique…).",
+    "RÉSULTATS WEB (privilégie ce qui CORROBORE l'accroche / les notes) :",
     webBrief || "(aucun)",
     "",
-    "Consigne : 1) FAITS = texte source + résultats web UNIQUEMENT — ignore peines/chiffres Canva ;",
-    "2) angle éditorial ARGUMENTÉ (pas sarcastique) ; 3) citations en italique *« … »* ;",
-    "4) ne paraphraser pas bêtement la seule source ; 5) Canva ne sert qu'au sujet.",
+    "TEXTE SOURCE (secondaire — dates/noms/chiffres neutres ; IGNORE s'il nie l'accroche) :",
+    sourceSlice,
+    "",
+    "Consigne : 1) THÈSE = accroche ; 2) FAITS = web corroborant + source neutre ;",
+    "3) INTERDIT de relayer un article qui dit l'inverse de l'accroche ;",
+    "4) angle éditorial ARGUMENTÉ ; 5) citations en italique *« … »*.",
     "Rédige title + excerpt + content maintenant.",
   ].join("\n");
 

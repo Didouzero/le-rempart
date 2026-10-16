@@ -26,12 +26,15 @@ export type CreativePipelineResult = {
 export async function publishFacebookForArticle(input: {
   articleId: string;
   title: string;
+  /** Accroche Canva = thèse du flash (prioritaire sur le titre site). */
+  accroche?: string;
   excerpt: string;
   articleUrl: string;
   creative: { buffer: Buffer; mime: string };
   /** Matière pour le flash Rempart (scrape / contenu article). */
   sourceText?: string | null;
   sourceUrl?: string | null;
+  researchNotes?: string | null;
   notify: PipelineNotify;
 }): Promise<CreativePipelineResult["facebook"]> {
   const facebook: CreativePipelineResult["facebook"] = {};
@@ -46,13 +49,14 @@ export async function publishFacebookForArticle(input: {
     "://www.le-rempart.org",
   );
 
-  await input.notify("Facebook : rédaction du flash…");
+  await input.notify("Facebook : recherche web + flash…");
   const flash = await buildFlashInfoText({
-    title: input.title,
+    title: (input.accroche || input.title).trim(),
     excerpt: input.excerpt,
     sourceText: input.sourceText || undefined,
     sourceUrl: input.sourceUrl || undefined,
     articleUrl: articleWww,
+    researchNotes: input.researchNotes || undefined,
     onRetry: (n, reason) =>
       input.notify(`Facebook : Kimi n’a pas fini (${reason}) — essai ${n}…`),
   });
@@ -172,6 +176,8 @@ export async function publishCreativePipeline(input: {
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
+  /** Directives « trouve des sources qui disent que… » (Telegram). */
+  researchNotes?: string;
   /** URL illustration site (fournie après la créative). */
   coverImageUrl?: string;
   /** Fichier illustration Telegram (alternative à l’URL). */
@@ -181,10 +187,13 @@ export async function publishCreativePipeline(input: {
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
   const requireSource = input.requireSource ?? Boolean(input.sourceUrl);
+  const accroche = (input.headline || input.caption || "").trim();
 
   await notify(
     input.sourceUrl
-      ? "Lecture source + petite recherche + rédaction…\n(environ 30–60 s)"
+      ? input.researchNotes?.trim()
+        ? "Notes reçues + source + recherche web + rédaction…\n(environ 40–70 s)"
+        : "Lecture source + recherche web (sens de l’accroche) + rédaction…\n(environ 30–60 s)"
       : "Rédaction…",
   );
   const article = await publishArticleFromCreative({
@@ -192,6 +201,7 @@ export async function publishCreativePipeline(input: {
     sourceUrl: input.sourceUrl,
     sourceTitle: input.sourceTitle,
     headline: input.headline,
+    researchNotes: input.researchNotes,
     coverImageUrl: input.coverImageUrl,
     coverImage: input.coverImage,
     image: input.image,
@@ -236,11 +246,13 @@ export async function publishCreativePipeline(input: {
   const fb = await publishFacebookForArticle({
     articleId: article.id,
     title: article.title,
+    accroche: accroche || article.title,
     excerpt: article.excerpt,
     articleUrl: article.url,
     creative: article.creative,
     sourceText: flashCorpus,
     sourceUrl: article.sourceUrl,
+    researchNotes: input.researchNotes,
     notify,
   });
 

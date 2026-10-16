@@ -130,3 +130,50 @@ export function assertFlashOnSubject(title: string, body: string): void {
     );
   }
 }
+
+/**
+ * Rejette un flash qui NIE explicitement la thèse de l'accroche Canva
+ * (ex. titre « endommagée durant le transport » → flash « ce n'est pas un accident »).
+ */
+export function assertFlashDoesNotNegateThesis(
+  title: string,
+  body: string,
+): void {
+  const t = fold(title);
+  const b = fold(body);
+
+  if (
+    /endommage|abime|casse|detruit|abimee|fissur/.test(t) &&
+    /transport|camion|demenagement|transfert|deplace/.test(t)
+  ) {
+    if (
+      /pas (le fruit d |d )?un accident|n est pas .*accident|aucun accident|pas endommage|sans endommage|pas (a |à )?cause du transport|decision n est pas|n etait pas .*transport|pas un probleme de transport/.test(
+        b,
+      )
+    ) {
+      throw new Error(
+        "flash : contredit l'accroche (nie le dommage / l'accident de transport)",
+      );
+    }
+  }
+
+  if (/\bmacron\b/.test(t) && /decid|decision|ordonne|impose|lui.meme/.test(t)) {
+    if (
+      /macron n a pas (decid|ordonne|impose)|pas une decision (de |d )?macron|macron n est pour rien/.test(
+        b,
+      )
+    ) {
+      throw new Error(
+        "flash : contredit l'accroche (nie la décision / le rôle de Macron)",
+      );
+    }
+  }
+
+  // Négation frontale du claim principal (« contrairement à… n'est pas… »)
+  if (
+    /contrairement (a|à) (ce qu|l accroche|au titre)/.test(b) ||
+    /l inverse (est|serait) vrai/.test(b)
+  ) {
+    throw new Error("flash : contredit l'accroche (négation frontale)");
+  }
+}

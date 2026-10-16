@@ -177,3 +177,18 @@ export function extractHttpUrl(text: string): string | null {
   if (!match) return null;
   return match[0]!.replace(/[.,;:!?)]+$/, "");
 }
+
+/** Texte hors URL dans le même message (directives de recherche pour Kimi). */
+export function extractResearchNotes(text: string): string | null {
+  const url = extractHttpUrl(text);
+  let notes = text.trim();
+  if (url) {
+    notes = notes.replace(url, " ").replace(/\s+/g, " ").trim();
+  }
+  notes = notes
+    .replace(/^(notes?\s*(de\s*recherche)?\s*[:：\-–—]\s*)/i, "")
+    .replace(/^(consigne|angle|brief)\s*[:：\-–—]\s*/i, "")
+    .trim();
+  if (notes.length < 12) return null;
+  return notes.slice(0, 1200);
+}

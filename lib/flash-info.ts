@@ -1,10 +1,12 @@
 import { moonshotChat, isKimiContentFilter } from "@/lib/moonshot";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
 import {
+  assertFlashDoesNotNegateThesis,
   assertFlashOnSubject,
   polishFrenchCopy,
   subjectTokens,
 } from "@/lib/french-copy";
+import { searchWebForSubject } from "@/lib/research/web-search";
 
 const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const MIN_CHARS = 80;
@@ -264,93 +266,152 @@ function assertFlashLeadAnchored(title: string, body: string): void {
 
 const SYSTEM_PROMPT = `Tu rédiges le FLASH INFO Facebook pour Le Rempart — média de droite, argumenté.
 
-SUJET — PRIORITÉ ABSOLUE :
-- L'ACCROCHE définit le sujet unique du flash (ex. Bardella / Mediapart / amis de collège).
-- La matière source peut parler d'AUTRES choses : IGNORE tout hors-sujet. N'écris QUE l'angle de l'accroche.
-- Si la source mélange plusieurs infos, extrais UNIQUEMENT les passages qui collent à l'accroche.
+THÈSE — PRIORITÉ ABSOLUE (plus important que n'importe quelle source) :
+- L'ACCROCHE CANVA est la THÈSE du flash : ce que Le Rempart affirme / met en avant.
+- Tu DOIS écrire DANS LE SENS de cette accroche. INTERDIT de la contredire, de la « corriger », de dire « en réalité ce n'est pas… », « contrairement à ce qu'on croit… », « ce n'est pas un accident… » si l'accroche dit le contraire.
+- Si un article de référence (Telegraph, Yahoo, etc.) dit L'INVERSE de l'accroche : IGNORE ce passage. Cherche dans la matière web / notes ce qui CORROBORE l'accroche. Ne relaie JAMAIS la négation.
+- Les NOTES DE RECHERCHE (si fournies) sont des directives éditoriales : suis-les pour trouver / formuler l'angle.
 
 OUVERTURE — FAIT D'ABORD :
-- La PREMIÈRE phrase doit dire QUI / QUOI / QUAND (noms, objet de la fuite, média qui révèle). Ex. « Le Canard enchaîné révèle que le portable de Sébastien Lecornu… »
+- La PREMIÈRE phrase doit dire QUI / QUOI / QUAND dans le sens de l'accroche.
 - INTERDIT d'ouvrir sur du commentaire (« L'affaire ne se limite pas… », « Cette proportion… », « Le contribuable… », « Le timing… »).
-- Si la matière est polluée (cookies, abonnement), ignore-la : appuie-toi sur l'excerpt / les phrases factuelles.
 
 RÈGLE D'OR — ENTREMÊLER, NE JAMAIS SÉPARER :
 - CHAQUE paragraphe = faits concrets (qui / quoi / où / quand / citation / réaction NOMÉÉE) + UNE courte lecture de droite tissée DANS le même paragraphe.
-- INTERDIT le schéma « §1 = faits seuls, §2 et §3 = critique / édito ». Si tu fais ça, le flash est refusé.
+- INTERDIT le schéma « §1 = faits seuls, §2 et §3 = critique / édito ».
 - INTERDIT un dernier paragraphe qui n'est que du commentaire sans fait nouveau.
-- INTERDIT de relayer platement puis de coller un slam réac à la fin.
 
 FAITS :
-- FAITS = passages de la matière qui concernent l'accroche. Ignore peines/chiffres Canva s'ils divergent.
-- INTERDIT d'inventer noms, réactions, citations, peines, chiffres absents de la matière.
+- Priorité : NOTES + résultats WEB qui vont DANS LE SENS de l'accroche.
+- L'article de référence est SECONDAIRE : utile pour dates/noms/chiffres neutres, JAMAIS pour inverser la thèse.
+- INTERDIT d'inventer noms, réactions, citations, chiffres absents de la matière.
 - N'attribue un fait à un média que s'il est dans la matière.
 
 LANGAGE — VARIÉ, PAS DE TICS :
-- INTERDIT absolu : « on notera », « on notera que », « on notera ici », « on observe », « on observe ici », « on remarque », « la méthode est classique », « force est de constater », « il convient de noter ».
+- INTERDIT absolu : « on notera », « on observe », « on remarque », « la méthode est classique », « force est de constater », « il convient de noter ».
 - Varie les formulations. Écris comme un journaliste humain, pas un template.
 
 TYPO FRANÇAISE :
 - Espace avant les deux-points : « exemple : » (JAMAIS « exemple: »). Idem ; ! ?
 
 LIGNE ÉDITORIALE :
-- Public patriote, souverainiste. Tu écris POUR eux, sans les prendre pour des crétins.
-- Lecture : deux poids deux mesures, coups de com', coût pour le contribuable, incohérences — argumentée, pas une insulte.
-- JAMAIS ridiculiser une position patriotique / RN / droite dure comme si elle était en tort.
+- Public patriote, souverainiste. Tu écris POUR eux.
+- Lecture : deux poids deux mesures, coups de com', coût pour le contribuable — argumentée.
+- JAMAIS ridiculiser une position patriotique / RN / droite dure.
 - INTERDIT « on croit rêver », « les Français apprécieront », « scandale », gueulante gratuite.
 
 STRUCTURE (3 paragraphes, ligne vide entre eux) — CHAQUE § = fait(s) + lecture :
-1) Accroche factuelle (qui/quoi) + déjà une phrase de lecture.
-2) Suite factuelle (réactions nommées si dans la matière) + lecture.
+1) Accroche factuelle (qui/quoi) dans le sens de la thèse + lecture.
+2) Suite factuelle + lecture.
 3) Fait ou conséquence + lecture — PAS un slam isolé.
 
 FORME :
 - 110 à 160 mots. Vise ~130–140.
-- EXACTEMENT 3 paragraphes (4 max si beaucoup de faits), séparés par UNE LIGNE VIDE (\\n\\n).
+- EXACTEMENT 3 paragraphes (4 max), séparés par UNE LIGNE VIDE (\\n\\n).
 - Une ou deux citations courtes max, toujours fermées (« … »).
-- Termine par une phrase COMPLÈTE qui finit par . ! ? ou ». JAMAIS couper au milieu d'un mot ou d'une phrase.
+- Termine par une phrase COMPLÈTE (. ! ? ou »).
 - SANS préfixe ‼️🇫🇷 FLASH INFO (ajouté après).
-- INTERDIT : emojis, hashtags, markdown, URL, nom de domaine (ex. site.com), lien, « Source : » dans le corps (la source est ajoutée après, hors de ton texte).
+- INTERDIT : emojis, hashtags, markdown, URL, nom de domaine, « Source : » dans le corps.
 - N'invente rien. N'écris jamais « non sourcé ».
 
 Réponds UNIQUEMENT avec les 3–4 paragraphes du flash.`;
+
+async function gatherFlashWebBrief(
+  title: string,
+  researchNotes?: string,
+): Promise<string> {
+  try {
+    const extra = [
+      researchNotes?.trim() || "",
+      title,
+      `${title} révélations OR affaire OR scandale`,
+    ].filter(Boolean);
+    const hits = await Promise.race([
+      searchWebForSubject({
+        subject: researchNotes?.trim()
+          ? `${title} — ${researchNotes.trim().slice(0, 200)}`
+          : title,
+        extraQueries: extra.slice(0, 3),
+        fast: true,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("flash search timeout")), 18_000),
+      ),
+    ]);
+    if (!hits.length) return "";
+    return hits
+      .slice(0, 10)
+      .map(
+        (h, i) =>
+          `${i + 1}. ${h.title}\n   ${h.url}\n   ${(h.snippet || "").slice(0, 420)}`,
+      )
+      .join("\n\n");
+  } catch (err) {
+    console.error("flash web search skipped", err);
+    return "";
+  }
+}
 
 /**
  * Flash Facebook Rempart. Réessaie Kimi jusqu'à un vrai flash — jamais de texte de secours.
  */
 export async function buildFlashInfoText(input: {
+  /** Accroche Canva = thèse (pas le titre site reformulé). */
   title: string;
   excerpt: string;
   sourceText?: string;
   sourceUrl?: string;
   articleUrl?: string;
+  /** Directives éditoriales Telegram (« trouve des sources qui disent que… »). */
+  researchNotes?: string;
   onRetry?: (attempt: number, reason: string) => void | Promise<void>;
 }): Promise<string> {
   if (!process.env.MOONSHOT_API_KEY) {
     throw new Error("MOONSHOT_API_KEY manquante — flash Facebook impossible");
   }
 
-  // Excerpt / résumé article EN PREMIER : le scrape brut est souvent un mur
-  // de cookies (ex. lamontagne.fr) qui pousse le modèle à baratiner.
-  const excerpt = scrubBoilerplate((input.excerpt || "").trim());
-  const scraped = scrubBoilerplate((input.sourceText || "").slice(0, 3500));
+  const accroche = (input.title || "").trim();
+  const notes = (input.researchNotes || "").trim();
+  const webBrief = await gatherFlashWebBrief(accroche, notes || undefined);
+
+  // Web + notes d'abord. Scrape / article = secondaire (souvent angle inverse).
+  const excerpt = scrubBoilerplate((input.excerpt || "").trim()).slice(0, 900);
+  const scraped = scrubBoilerplate((input.sourceText || "").slice(0, 2200));
   const corpus = scrubBoilerplate(
-    [excerpt, scraped].filter(Boolean).join("\n\n"),
-  ).slice(0, 4500);
+    [
+      notes ? `NOTES ÉDITORIALES (suis-les) :\n${notes}` : "",
+      webBrief
+        ? `RÉSULTATS WEB (privilégie ce qui CORROBORE l'accroche) :\n${webBrief}`
+        : "",
+      excerpt
+        ? `Extrait site (secondaire — ignore s'il contredit l'accroche) :\n${excerpt}`
+        : "",
+      scraped
+        ? `Article référence (secondaire — IGNORE les passages qui nient / inversent l'accroche) :\n${scraped}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  ).slice(0, 5500);
+
   const outlet = outletFromUrl(input.sourceUrl);
   const userContent = [
-    `ACCROCHE = SUJET UNIQUE DU FLASH (ignore le reste de la source) : ${input.title}`,
+    `ACCROCHE CANVA = THÈSE DU FLASH (écris DANS CE SENS, ne la contredis JAMAIS) :`,
+    accroche,
+    notes ? `\nNOTES DE RECHERCHE / ANGLE (directives) :\n${notes}` : null,
     outlet
-      ? `Média de l'URL fournie (faits uniquement s'ils sont dans la matière) : ${outlet}`
+      ? `\nURL de référence fournie (${outlet}) : ne sers-t'en QUE pour faits neutres ; si elle dit l'inverse de l'accroche, ignore cet angle.`
       : null,
     "",
-    "Matière (ne prends QUE ce qui concerne l'accroche ; ignore cookies / abonnements / autres sujets) :",
-    corpus || "(matière vide — rédige UNIQUEMENT à partir de l'accroche, sans inventer)",
+    "Matière :",
+    corpus ||
+      "(matière web vide — reste dans le sens de l'accroche ; n'invente pas de citations)",
     "",
-    "Écris le flash : 3 paragraphes, ligne vide entre eux — UNIQUEMENT sur le sujet de l'accroche.",
-    "OBLIGATOIRE : 1re phrase = fait concret (qui/quoi). Dans CHAQUE §, faits + courte lecture — jamais §1 faits puis §2–3 édito.",
+    "Écris le flash : 3 paragraphes — THÈSE = accroche. INTERDIT de dire que « ce n'est pas » ce que l'accroche affirme.",
+    "OBLIGATOIRE : 1re phrase = fait concret (qui/quoi) dans le sens de l'accroche.",
     "INTERDIT : on notera / on observe / la méthode est classique. Typo : espace avant « : ».",
     "Pas d'URL, pas de nom de domaine, pas de « Source : » dans ton texte.",
-    "Termine par une phrase COMPLÈTE. Ligne droite dure : jamais un patriote / le RN « en tort ».",
+    "Termine par une phrase COMPLÈTE.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -359,10 +420,6 @@ export async function buildFlashInfoText(input: {
   for (;;) {
     attempt += 1;
     try {
-      // k2.6 + thinking off : un flash de 130 mots. k3 « réfléchit » et
-      // dépasse 18 s, d’où la boucle de timeouts.
-      // 700 tokens : à 450 le modèle coupait souvent en plein milieu
-      // (« face à la jeunes »).
       const text = await moonshotChat({
         model: "kimi-k2.6",
         maxTokens: 700,
@@ -389,8 +446,9 @@ export async function buildFlashInfoText(input: {
       );
       assertFlashEndsComplete(body);
       assertFlashNotSegregated(body);
-      assertFlashLeadAnchored(input.title, body);
-      assertFlashOnSubject(input.title, body);
+      assertFlashLeadAnchored(accroche, body);
+      assertFlashOnSubject(accroche, body);
+      assertFlashDoesNotNegateThesis(accroche, body);
       if (wordCount(body) < MIN_WORDS) {
         throw new Error("flash trop court après coupe");
       }

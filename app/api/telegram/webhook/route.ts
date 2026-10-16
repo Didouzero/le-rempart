@@ -10,6 +10,7 @@ import {
   deletePublishDraft,
   draftHasCover,
   extractHttpUrl,
+  extractResearchNotes,
   getActivePublishDraft,
   setPublishDraftCoverFile,
   setPublishDraftCoverUrl,
@@ -713,8 +714,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             [
               "Illustration enregistrée (fichier).",
               "",
-              "Envoie maintenant le lien de l’article source (URL http/https).",
-              "Je m’en sers pour rédiger l’article + le flash Facebook.",
+              "Envoie le lien source (URL http/https).",
+              "OPTIONNEL — dans le MÊME message, ajoute des NOTES pour forcer l’angle, ex. :",
+              "https://… trouve des sources qui disent que Macron a décidé le transport et endommagé la tapisserie",
+              "",
+              "Sans notes : je cherche quand même dans le sens du titre Canva (pas l’inverse de la source).",
               "",
               "/cancel pour annuler.",
             ].join("\n"),
@@ -818,8 +822,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         [
           "Illustration enregistrée.",
           "",
-          "Envoie maintenant le lien de l’article source (URL http/https).",
-          "Je m’en sers pour rédiger l’article + le flash Facebook.",
+          "Envoie le lien source (URL http/https).",
+          "OPTIONNEL — dans le MÊME message, ajoute des NOTES pour forcer l’angle, ex. :",
+          "https://… trouve des sources qui disent que Macron a décidé le transport et endommagé la tapisserie",
           "",
           "/cancel pour annuler.",
         ].join("\n"),
@@ -828,9 +833,18 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     if (draft && url && draftHasCover(draft)) {
+      const researchNotes = text ? extractResearchNotes(text) : null;
       await telegramSendMessage(
         chatId,
-        `Lien source reçu. Publication en cours…\n${url}`,
+        [
+          "Lien source reçu. Publication en cours…",
+          url,
+          researchNotes
+            ? `\nNotes angle : ${researchNotes.slice(0, 200)}${researchNotes.length > 200 ? "…" : ""}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
       );
 
       try {
@@ -838,6 +852,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           caption: draft.headline,
           headline: draft.headline,
           sourceUrl: url,
+          researchNotes: researchNotes || undefined,
           coverImageUrl: draft.coverImageUrl || undefined,
           coverImage:
             draft.coverImageData && draft.coverImageData.length > 0
@@ -863,7 +878,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         chatId,
         [
           draftHasCover(draft)
-            ? "J’attends encore le lien de la source (URL complète http/https)."
+            ? [
+                "J’attends le lien source (URL http/https).",
+                "Tu peux ajouter des NOTES dans le même message pour forcer l’angle",
+                "(ex. « trouve des sources qui disent que… »).",
+              ].join("\n")
             : "J’attends encore l’illustration : un JPG/PNG, ou une URL http/https.",
           draft.headline.trim()
             ? `Titre en attente : ${draft.headline.slice(0, 120)}`

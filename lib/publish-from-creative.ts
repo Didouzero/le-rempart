@@ -72,6 +72,8 @@ export async function publishArticleFromCreative(input: {
   sourceUrl?: string;
   sourceTitle?: string;
   headline?: string;
+  /** Directives de recherche / angle (« trouve des sources qui… »). */
+  researchNotes?: string;
   /** URL illustration fournie par l'utilisateur (prioritaire). */
   coverImageUrl?: string;
   /** Fichier illustration Telegram (alternative à l’URL). */
@@ -192,6 +194,7 @@ export async function publishArticleFromCreative(input: {
       creativeTitle,
       sourceUrl,
       sourceText: scrapedText,
+      researchNotes: input.researchNotes?.trim() || undefined,
       onProgress: (msg) => notify(msg),
     });
   } finally {
