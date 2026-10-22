@@ -8,7 +8,11 @@ import {
   publishFacebookStory,
   FacebookGraphError,
 } from "@/lib/facebook";
-import { publishArticleFromCreative } from "@/lib/publish-from-creative";
+import { researchAndWrite } from "@/lib/brief-writer";
+import {
+  publishArticleFromCreative,
+  saveGeneratedArticle,
+} from "@/lib/publish-from-creative";
 import { telegramSendMessage } from "@/lib/telegram";
 
 export type PipelineNotify = (text: string) => Promise<void>;
@@ -35,6 +39,8 @@ export async function publishFacebookForArticle(input: {
   sourceText?: string | null;
   sourceUrl?: string | null;
   researchNotes?: string | null;
+  /** Flash déjà rédigé (moteur brief) : on saute la rédaction. */
+  flash?: string;
   notify: PipelineNotify;
 }): Promise<CreativePipelineResult["facebook"]> {
   const facebook: CreativePipelineResult["facebook"] = {};
@@ -49,8 +55,8 @@ export async function publishFacebookForArticle(input: {
     "://www.le-rempart.org",
   );
 
-  await input.notify("Facebook : recherche web + flash…");
-  const flash = await buildFlashInfoText({
+  if (!input.flash) await input.notify("Facebook : recherche web + flash…");
+  const flash = input.flash || await buildFlashInfoText({
     title: (input.accroche || input.title).trim(),
     excerpt: input.excerpt,
     sourceText: input.sourceText || undefined,
@@ -257,6 +263,83 @@ export async function publishCreativePipeline(input: {
   });
 
   return { article, facebook: fb };
+}
+
+/**
+ * Flux manuel Telegram : créative + illustration + brief libre de l'éditeur.
+ * Kimi cherche lui-même ses sources, rédige le flash puis l'article (moteur Flambeau),
+ * et tout est publié directement : article site, post Facebook, lien épinglé, story.
+ */
+export async function publishBriefPipeline(input: {
+  headline: string;
+  brief: string;
+  image: { buffer: Buffer; mime: string };
+  coverImageUrl?: string;
+  coverImage?: { buffer: Buffer; mime: string };
+  notify?: PipelineNotify;
+}): Promise<CreativePipelineResult> {
+  const notify = input.notify || (async () => {});
+
+  const research = await researchAndWrite({
+    headline: input.headline,
+    brief: input.brief,
+    creative: input.image,
+    onProgress: notify,
+    onSearch: (queries) =>
+      queries.length
+        ? notify(`🔎 ${queries.map((q) => `« ${q} »`).join(" · ")}`)
+        : undefined,
+  });
+
+  const sourceList = research.sources
+    .slice(0, 6)
+    .map((s) => `• ${s.title} (${hostOf(s.url)})`)
+    .join("\n");
+  await notify(
+    [`📝 Flash et article rédigés.`, sourceList && `📚 Sources :\n${sourceList}`]
+      .filter(Boolean)
+      .join("\n\n"),
+  );
+
+  const article = await saveGeneratedArticle({
+    generated: research.article,
+    sourceText: research.matter,
+    sourceUrl: research.sources[0]?.url,
+    coverImageUrl: input.coverImageUrl,
+    coverImage: input.coverImage,
+    image: input.image,
+    notify,
+  });
+
+  await notify(["Article publié.", "", article.title, article.url].join("\n"));
+
+  if (!isFacebookConfigured()) {
+    await notify("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
+    return { article, facebook: { error: "non configuré" } };
+  }
+  if (!article.creative) {
+    await notify("Facebook : pas de créative à envoyer (image manquante).");
+    return { article, facebook: { error: "pas de créative" } };
+  }
+
+  const facebook = await publishFacebookForArticle({
+    articleId: article.id,
+    title: article.title,
+    excerpt: article.excerpt,
+    articleUrl: article.url,
+    creative: article.creative,
+    flash: research.flash,
+    notify,
+  });
+  return { article, facebook };
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 /** Notifier un chat Telegram (helper pour pipeline). */

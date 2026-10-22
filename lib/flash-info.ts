@@ -12,7 +12,7 @@ const PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const MIN_CHARS = 80;
 const MIN_WORDS = 90;
 
-function outletFromUrl(url?: string): string | null {
+export function outletFromUrl(url?: string): string | null {
   if (!url) return null;
   try {
     const host = new URL(url).hostname.replace(/^www\./, "");

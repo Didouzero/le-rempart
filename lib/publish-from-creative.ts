@@ -67,6 +67,20 @@ function detectImageMime(buffer: Buffer, declared?: string): string {
   return "image/jpeg";
 }
 
+export type SavedArticle = {
+  id: string;
+  publicId: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  sourceText: string | null;
+  sourceUrl: string | null;
+  url: string;
+  coverImageUrl: string | null;
+  creative?: { buffer: Buffer; mime: string };
+};
+
 export async function publishArticleFromCreative(input: {
   caption?: string;
   sourceUrl?: string;
@@ -81,19 +95,7 @@ export async function publishArticleFromCreative(input: {
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
   requireSource?: boolean;
-}): Promise<{
-  id: string;
-  publicId: number;
-  slug: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  sourceText: string | null;
-  sourceUrl: string | null;
-  url: string;
-  coverImageUrl: string | null;
-  creative?: { buffer: Buffer; mime: string };
-}> {
+}): Promise<SavedArticle> {
   const caption = input.caption?.trim() || "Actualité du jour";
   const sourceUrl = input.sourceUrl?.trim() || undefined;
   const notify = input.notify || (async () => {});
@@ -201,6 +203,30 @@ export async function publishArticleFromCreative(input: {
     await prisma.appSetting.delete({ where: { key: lockKey } }).catch(() => {});
   }
 
+  return saveGeneratedArticle({
+    generated,
+    sourceText: scrapedText?.slice(0, 12000) || caption,
+    sourceUrl,
+    coverImageUrl: input.coverImageUrl,
+    coverImage: input.coverImage,
+    image: input.image,
+    notify,
+  });
+}
+
+/** Enregistre un article déjà rédigé : illustration, slug, catégorie, auteur. */
+export async function saveGeneratedArticle(input: {
+  generated: { title: string; excerpt: string; content: string };
+  sourceText: string;
+  sourceUrl?: string;
+  coverImageUrl?: string;
+  coverImage?: { buffer: Buffer; mime: string };
+  image?: { buffer: Buffer; mime: string };
+  notify?: (text: string) => Promise<void>;
+}): Promise<SavedArticle> {
+  const { generated, sourceUrl } = input;
+  const notify = input.notify || (async () => {});
+
   const preparedCover = input.coverImage?.buffer.length
     ? await prepareSiteIllustration(input.coverImage)
     : null;
@@ -251,7 +277,7 @@ export async function publishArticleFromCreative(input: {
     title: utf8Text(generated.title, 500),
     excerpt: utf8Text(generated.excerpt, 1500),
     content: utf8Text(generated.content, 80_000),
-    sourceText: utf8Text(scrapedText?.slice(0, 12000) || caption, 12000),
+    sourceText: utf8Text(input.sourceText, 12000),
     sourceUrl: utf8TextOrNull(sourceUrl, 2000),
     slug,
     category,

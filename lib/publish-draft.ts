@@ -171,6 +171,28 @@ export async function deletePublishDraft(chatId: number): Promise<boolean> {
   }
 }
 
+/** Recrée un brouillon retiré avant une publication qui a échoué. */
+export async function restorePublishDraft(
+  draft: PublishDraftRecord,
+): Promise<void> {
+  await prisma.publishDraft
+    .create({
+      data: {
+        chatId: draft.chatId,
+        userId: draft.userId,
+        headline: draft.headline,
+        imageMime: draft.imageMime,
+        imageData: Buffer.from(draft.imageData),
+        coverImageUrl: draft.coverImageUrl,
+        coverImageMime: draft.coverImageMime,
+        coverImageData: draft.coverImageData
+          ? Buffer.from(draft.coverImageData)
+          : null,
+      },
+    })
+    .catch((err) => console.error("restorePublishDraft", err));
+}
+
 /** Extraire la première URL http(s) d'un message Telegram. */
 export function extractHttpUrl(text: string): string | null {
   const match = text.match(/https?:\/\/[^\s<>"')\]]+/i);

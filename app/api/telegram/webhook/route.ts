@@ -10,15 +10,15 @@ import {
   deletePublishDraft,
   draftHasCover,
   extractHttpUrl,
-  extractResearchNotes,
   getActivePublishDraft,
+  restorePublishDraft,
   setPublishDraftCoverFile,
   setPublishDraftCoverUrl,
   setPublishDraftHeadline,
   upsertPublishDraft,
 } from "@/lib/publish-draft";
 import {
-  publishCreativePipeline,
+  publishBriefPipeline,
   telegramNotifier,
 } from "@/lib/publish-pipeline";
 import {
@@ -37,7 +37,8 @@ import {
 } from "@/lib/veille/approve";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+// Recherche + rédaction Kimi (flash puis article) + Facebook : plusieurs minutes.
+export const maxDuration = 800;
 
 /** Normalise `/veille_on@MonBot` → `/veille_on`. */
 function normalizeCommand(text: string): string {
@@ -57,6 +58,14 @@ function illustrationPromptLines(): string[] {
   ];
 }
 
+const SUBJECT_QUESTION = [
+  "🧭 Sur quel sujet doit porter ce flash ?",
+  "",
+  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Je fais les recherches, je rédige le flash et l’article, et je publie.",
+  "",
+  "/cancel pour annuler.",
+].join("\n");
+
 function commandsHelpText(): string {
   return [
     "📘 COMMANDES LE REMPART",
@@ -64,8 +73,8 @@ function commandsHelpText(): string {
     "── Manuel (toujours dispo) ──",
     "1) Envoie une créative PNG/JPG",
     "2) Envoie l’illustration du site : fichier JPG/PNG ou URL — 1600×900, 16:9",
-    "3) Envoie le lien de l’article source",
-    "→ article site + Facebook",
+    "3) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
+    "→ recherches + flash + article site + Facebook",
     "/cancel — annuler la créative en attente",
     "",
     "── Veille auto ──",
@@ -184,8 +193,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "Flux manuel :",
           "1) Envoie ta créative Canva (PNG/JPG)",
           "2) Envoie l’illustration de l’article (fichier JPG/PNG ou URL)",
-          "3) Envoie le lien de l’article source",
-          "4) Je publie l’article site + Facebook",
+          "3) Décris le sujet : événement, angle, noms, liens si tu en as",
+          "4) Je cherche, je rédige et je publie l’article site + Facebook",
           "",
           "/cancel pour abandonner une créative en attente.",
         ].join("\n"),
@@ -286,7 +295,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             "Veille : ON.",
             "1 proposition/jour vers 8h (heure FR) — limite plan Hobby Vercel.",
             "Chaque créative attend ton OK (/veille_ok) — max 3 essais si tu refuses.",
-            "Le manuel (créative puis lien source) reste toujours possible.",
+            "Le manuel (créative, illustration, sujet) reste toujours possible.",
           ].join("\n"),
         );
         return;
@@ -711,17 +720,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           if (!saved) throw new Error("Illustration non enregistrée");
           await telegramSendMessage(
             chatId,
-            [
-              "Illustration enregistrée (fichier).",
-              "",
-              "Envoie le lien source (URL http/https).",
-              "OPTIONNEL — dans le MÊME message, ajoute des NOTES pour forcer l’angle, ex. :",
-              "https://… trouve des sources qui disent que Macron a décidé le transport et endommagé la tapisserie",
-              "",
-              "Sans notes : je cherche quand même dans le sens du titre Canva (pas l’inverse de la source).",
-              "",
-              "/cancel pour annuler.",
-            ].join("\n"),
+            `Illustration enregistrée (fichier).\n\n${SUBJECT_QUESTION}`,
           );
         } catch (err) {
           await telegramSendMessage(
@@ -774,7 +773,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         [
           ...illustrationPromptLines(),
           "",
-          "Ensuite je te demanderai le lien de l’article source.",
+          "Ensuite je te demanderai le sujet du flash.",
           "/cancel pour annuler.",
         ].join("\n"),
       );
@@ -819,12 +818,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await setPublishDraftCoverUrl(chatId, url);
       await telegramSendMessage(
         chatId,
+        `Illustration enregistrée.\n\n${SUBJECT_QUESTION}`,
+      );
+      return;
+    }
+
+    if (draft && !draftHasCover(draft)) {
+      await telegramSendMessage(
+        chatId,
         [
-          "Illustration enregistrée.",
-          "",
-          "Envoie le lien source (URL http/https).",
-          "OPTIONNEL — dans le MÊME message, ajoute des NOTES pour forcer l’angle, ex. :",
-          "https://… trouve des sources qui disent que Macron a décidé le transport et endommagé la tapisserie",
+          "J’attends encore l’illustration : un JPG/PNG, ou une URL http/https.",
+          `Titre en attente : ${draft.headline.slice(0, 120)}`,
           "",
           "/cancel pour annuler.",
         ].join("\n"),
@@ -832,27 +836,22 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (draft && url && draftHasCover(draft)) {
-      const researchNotes = text ? extractResearchNotes(text) : null;
+    if (draft) {
+      const brief = cmd.startsWith("/") ? "" : text;
+      if (brief.length < 10) {
+        await telegramSendMessage(chatId, SUBJECT_QUESTION);
+        return;
+      }
       await telegramSendMessage(
         chatId,
-        [
-          "Lien source reçu. Publication en cours…",
-          url,
-          researchNotes
-            ? `\nNotes angle : ${researchNotes.slice(0, 200)}${researchNotes.length > 200 ? "…" : ""}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        "Sujet reçu. Je cherche, je rédige et je publie (2 à 5 min).",
       );
-
+      // Supprimé d'abord : un second message pendant la rédaction ne relance pas une publication.
+      await deletePublishDraft(chatId);
       try {
-        await publishCreativePipeline({
-          caption: draft.headline,
+        await publishBriefPipeline({
           headline: draft.headline,
-          sourceUrl: url,
-          researchNotes: researchNotes || undefined,
+          brief,
           coverImageUrl: draft.coverImageUrl || undefined,
           coverImage:
             draft.coverImageData && draft.coverImageData.length > 0
@@ -862,41 +861,19 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
                 }
               : undefined,
           image: { buffer: draft.imageData, mime: draft.imageMime },
-          requireSource: true,
           notify: telegramNotifier(chatId),
         });
-        await deletePublishDraft(chatId);
       } catch (err) {
-        // Garde le brouillon pour renvoyer une autre URL source
+        // Échec avant publication : on remet le brouillon pour pouvoir renvoyer le sujet.
+        await restorePublishDraft(draft);
         throw err;
       }
       return;
     }
 
-    if (draft && !url) {
-      await telegramSendMessage(
-        chatId,
-        [
-          draftHasCover(draft)
-            ? [
-                "J’attends le lien source (URL http/https).",
-                "Tu peux ajouter des NOTES dans le même message pour forcer l’angle",
-                "(ex. « trouve des sources qui disent que… »).",
-              ].join("\n")
-            : "J’attends encore l’illustration : un JPG/PNG, ou une URL http/https.",
-          draft.headline.trim()
-            ? `Titre en attente : ${draft.headline.slice(0, 120)}`
-            : "Il me manque encore le titre (un message texte).",
-          "",
-          "/cancel pour annuler.",
-        ].join("\n"),
-      );
-      return;
-    }
-
     await telegramSendMessage(
       chatId,
-      "Envoie d’abord une créative (PNG/JPG), puis l’illustration (fichier ou URL), puis le lien source.",
+      "Envoie d’abord une créative (PNG/JPG), puis l’illustration (fichier ou URL), puis le sujet du flash.",
     );
   } catch (err) {
     console.error("telegram process error", err);
@@ -905,7 +882,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       const friendly = /aborted due to timeout|AbortError|TimeoutError/i.test(
         raw,
       )
-        ? "Timeout (opération trop longue). Renvoie le lien une fois, sans spammer."
+        ? "Timeout (opération trop longue). Renvoie le sujet une fois, sans spammer."
         : /high risk|content_filter|Kimi a bloqué/i.test(raw)
           ? "Kimi a bloqué ce sujet (filtre de contenu). Réessaie avec une autre source, ou reformule le titre."
           : /22021|invalid byte sequence|UTF8/i.test(raw)
