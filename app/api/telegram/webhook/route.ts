@@ -608,7 +608,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               );
               return;
             }
-          } else if (text && !cmd.startsWith("/")) {
+          } else if (text && !text.startsWith("/")) {
             prompt = text.trim();
           } else if (doc) {
             await telegramSendMessage(
@@ -786,7 +786,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     if (draft && !draft.headline.trim()) {
       const typed = (text || "").trim();
-      if (typed && !url && !cmd.startsWith("/")) {
+      if (typed && !url && !text.startsWith("/")) {
         const saved = await setPublishDraftHeadline(chatId, typed);
         if (!saved) {
           await telegramSendMessage(
@@ -837,7 +837,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     if (draft) {
-      const brief = cmd.startsWith("/") ? "" : text;
+      const brief = text.startsWith("/") ? "" : text;
       if (brief.length < 10) {
         await telegramSendMessage(chatId, SUBJECT_QUESTION);
         return;
