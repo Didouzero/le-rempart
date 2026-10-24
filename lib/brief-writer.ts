@@ -13,7 +13,11 @@ import { italicizeCitations } from "@/lib/italicize-citations";
 
 const BASE = "https://api.moonshot.ai/v1";
 const MODEL = process.env.KIMI_MODEL || "kimi-k3";
-const CALL_TIMEOUT_MS = 180_000;
+/** Un appel k3 qui rédige l'article peut dépasser 3 min ; au-delà, on relance en raisonnement court. */
+const CALL_TIMEOUT_MS = 300_000;
+const FALLBACK_TIMEOUT_MS = 150_000;
+/** Recherche + rédaction ; le reste des 800 s Vercel sert à l'article en base et à Facebook. */
+const TOTAL_BUDGET_MS = 600_000;
 
 export const FLASH_PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const FLASH_MIN_WORDS = 60;
@@ -136,6 +140,7 @@ export async function researchAndWrite(input: {
   brief: string;
   creative?: { buffer: Buffer; mime: string };
 } & Hooks): Promise<BriefResult> {
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
   const sources = new Map<string, BriefSource>();
   const notes = new Map<string, string>();
 
@@ -174,6 +179,8 @@ export async function researchAndWrite(input: {
     sources,
     notes,
     onSearch: input.onSearch,
+    onProgress: input.onProgress,
+    deadline,
     check: (raw) => flashIssues(splitFlash(raw).body),
   });
   const flash = finishFlash(flashRaw, provided[0]?.url);
@@ -196,6 +203,8 @@ export async function researchAndWrite(input: {
     sources,
     notes,
     onSearch: input.onSearch,
+    onProgress: input.onProgress,
+    deadline,
     check: (raw) => {
       try {
         return articleIssues(parseArticle(raw));
@@ -223,6 +232,8 @@ async function runAgent(input: {
   system: string;
   messages: ChatMessage[];
   maxRounds: number;
+  onProgress?: Hooks["onProgress"];
+  deadline: number;
   sources: Map<string, BriefSource>;
   notes: Map<string, string>;
   onSearch?: Hooks["onSearch"];
@@ -236,7 +247,19 @@ async function runAgent(input: {
 
   for (let round = 0; round < input.maxRounds; round++) {
     const isLast = round === input.maxRounds - 1;
-    const msg = await chat(messages, !isLast);
+    let msg: ChatMessage;
+    try {
+      msg = await chat(messages, !isLast, {
+        timeoutMs: budget(input.deadline, CALL_TIMEOUT_MS - FALLBACK_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (!isTimeout(err)) throw err;
+      await input.onProgress?.("⏳ Kimi est lent, nouvel essai en mode rapide…");
+      msg = await chat(messages, !isLast, {
+        timeoutMs: budget(input.deadline, 0),
+        reasoningEffort: "low",
+      });
+    }
     messages.push(msg);
 
     if (msg.tool_calls?.length) {
@@ -301,9 +324,24 @@ function parseQuery(call: ToolCall): string {
   }
 }
 
+/** Temps accordé à un appel : plafonné, et toujours de quoi tenter le mode rapide après. */
+function budget(deadline: number, reserve: number): number {
+  const left = deadline - Date.now() - reserve;
+  if (left < 30_000) {
+    throw new Error("Kimi trop lent aujourd’hui : rédaction abandonnée. Renvoie le sujet un peu plus tard.");
+  }
+  return Math.min(CALL_TIMEOUT_MS, left);
+}
+
+function isTimeout(err: unknown): boolean {
+  const name = err && typeof err === "object" && "name" in err ? String(err.name) : "";
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 async function chat(
   messages: ChatMessage[],
   allowTools: boolean,
+  opts: { timeoutMs?: number; reasoningEffort?: "low" } = {},
 ): Promise<ChatMessage> {
   const apiKey = process.env.MOONSHOT_API_KEY;
   if (!apiKey) throw new Error("MOONSHOT_API_KEY is not set");
@@ -317,8 +355,9 @@ async function chat(
       model: MODEL,
       messages,
       ...(allowTools && { tools: TOOLS }),
+      ...(opts.reasoningEffort && { reasoning_effort: opts.reasoningEffort }),
     }),
-    signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? CALL_TIMEOUT_MS),
   });
   const data = (await res.json().catch(() => ({}))) as {
     choices?: Array<{ message?: ChatMessage }>;
