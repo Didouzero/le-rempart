@@ -13,9 +13,19 @@ import { italicizeCitations } from "@/lib/italicize-citations";
 
 const BASE = "https://api.moonshot.ai/v1";
 const MODEL = process.env.KIMI_MODEL || "kimi-k3";
-/** Un appel k3 qui rédige l'article peut dépasser 3 min ; au-delà, on relance en raisonnement court. */
-const CALL_TIMEOUT_MS = 300_000;
-const FALLBACK_TIMEOUT_MS = 150_000;
+/**
+ * Réglages Kimi. Mesuré sur un article de ~750 mots : k3 par défaut 125 s (5 500 tokens
+ * de réflexion), k3 en réflexion courte 30 s, k2.6 sans réflexion 19 s.
+ * Le flash garde la réflexion complète ; l'article part en réflexion courte.
+ */
+type Mode = "deep" | "low" | "fast";
+const MODE_TIMEOUT_MS: Record<Mode, number> = {
+  deep: 240_000,
+  low: 150_000,
+  fast: 120_000,
+};
+/** En cas de timeout, on relance une fois dans le mode suivant. */
+const FALLBACK: Record<Mode, Mode> = { deep: "low", low: "fast", fast: "fast" };
 /** Recherche + rédaction ; le reste des 800 s Vercel sert à l'article en base et à Facebook. */
 const TOTAL_BUDGET_MS = 600_000;
 
@@ -176,6 +186,7 @@ export async function researchAndWrite(input: {
     system: FLASH_SYSTEM,
     messages: [{ role: "user", content: userContent }],
     maxRounds: 6,
+    mode: "deep",
     sources,
     notes,
     onSearch: input.onSearch,
@@ -200,6 +211,7 @@ export async function researchAndWrite(input: {
       },
     ],
     maxRounds: 4,
+    mode: "low",
     sources,
     notes,
     onSearch: input.onSearch,
@@ -232,6 +244,7 @@ async function runAgent(input: {
   system: string;
   messages: ChatMessage[];
   maxRounds: number;
+  mode: Mode;
   onProgress?: Hooks["onProgress"];
   deadline: number;
   sources: Map<string, BriefSource>;
@@ -248,16 +261,16 @@ async function runAgent(input: {
   for (let round = 0; round < input.maxRounds; round++) {
     const isLast = round === input.maxRounds - 1;
     let msg: ChatMessage;
+    const fallback = FALLBACK[input.mode];
     try {
-      msg = await chat(messages, !isLast, {
-        timeoutMs: budget(input.deadline, CALL_TIMEOUT_MS - FALLBACK_TIMEOUT_MS),
+      msg = await chat(messages, !isLast, input.mode, {
+        timeoutMs: budget(input.deadline, input.mode, MODE_TIMEOUT_MS[fallback]),
       });
     } catch (err) {
       if (!isTimeout(err)) throw err;
       await input.onProgress?.("⏳ Kimi est lent, nouvel essai en mode rapide…");
-      msg = await chat(messages, !isLast, {
-        timeoutMs: budget(input.deadline, 0),
-        reasoningEffort: "low",
+      msg = await chat(messages, !isLast, fallback, {
+        timeoutMs: budget(input.deadline, fallback, 0),
       });
     }
     messages.push(msg);
@@ -324,13 +337,13 @@ function parseQuery(call: ToolCall): string {
   }
 }
 
-/** Temps accordé à un appel : plafonné, et toujours de quoi tenter le mode rapide après. */
-function budget(deadline: number, reserve: number): number {
+/** Temps accordé à un appel : plafonné par mode, en gardant de quoi tenter le mode suivant. */
+function budget(deadline: number, mode: Mode, reserve: number): number {
   const left = deadline - Date.now() - reserve;
   if (left < 30_000) {
     throw new Error("Kimi trop lent aujourd’hui : rédaction abandonnée. Renvoie le sujet un peu plus tard.");
   }
-  return Math.min(CALL_TIMEOUT_MS, left);
+  return Math.min(MODE_TIMEOUT_MS[mode], left);
 }
 
 function isTimeout(err: unknown): boolean {
@@ -341,7 +354,8 @@ function isTimeout(err: unknown): boolean {
 async function chat(
   messages: ChatMessage[],
   allowTools: boolean,
-  opts: { timeoutMs?: number; reasoningEffort?: "low" } = {},
+  mode: Mode,
+  opts: { timeoutMs: number },
 ): Promise<ChatMessage> {
   const apiKey = process.env.MOONSHOT_API_KEY;
   if (!apiKey) throw new Error("MOONSHOT_API_KEY is not set");
@@ -352,12 +366,17 @@ async function chat(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
       messages,
       ...(allowTools && { tools: TOOLS }),
-      ...(opts.reasoningEffort && { reasoning_effort: opts.reasoningEffort }),
+      ...(mode === "deep" && { model: MODEL }),
+      ...(mode === "low" && { model: MODEL, reasoning_effort: "low", max_tokens: 8000 }),
+      ...(mode === "fast" && {
+        model: "kimi-k2.6",
+        thinking: { type: "disabled" },
+        max_tokens: 8000,
+      }),
     }),
-    signal: AbortSignal.timeout(opts.timeoutMs ?? CALL_TIMEOUT_MS),
+    signal: AbortSignal.timeout(opts.timeoutMs),
   });
   const data = (await res.json().catch(() => ({}))) as {
     choices?: Array<{ message?: ChatMessage }>;
