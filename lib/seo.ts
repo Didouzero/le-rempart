@@ -108,6 +108,8 @@ export function authorPersonJsonLd() {
     name: SITE_AUTHOR.name,
     url: absoluteUrl(SITE_AUTHOR.path),
     jobTitle: SITE_AUTHOR.jobTitle,
+    description: SITE_AUTHOR.bio,
+    ...(SITE_AUTHOR.photo ? { image: absoluteUrl(SITE_AUTHOR.photo) } : {}),
     worksFor: { "@id": ORGANIZATION_ID },
   };
 }
