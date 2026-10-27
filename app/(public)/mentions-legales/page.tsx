@@ -26,26 +26,27 @@ export default function MentionsLegalesPage() {
         <a href="https://www.le-rempart.org">https://www.le-rempart.org</a>, est
         un site d&apos;information et d&apos;actualité.
       </p>
+      <p>
+        Le Site est édité à titre non professionnel par une personne physique.
+        Conformément à l&apos;article 6, III, 2 de la LCEN, l&apos;éditeur a
+        choisi de préserver son anonymat : ses éléments d&apos;identification
+        ont été communiqués à l&apos;hébergeur désigné ci-dessous.
+      </p>
       <ul>
         <li>
-          <strong>Nom / raison sociale de l&apos;éditeur :</strong> Le Rempart
-        </li>
-        <li>
-          <strong>Directeur de la publication :</strong> à compléter (nom du
-          responsable éditorial)
+          <strong>Responsable de la rédaction :</strong>{" "}
+          <Link href="/auteurs/dimitri-scudo">Dimitri Scudo</Link> (nom de
+          plume)
         </li>
         <li>
           <strong>Contact :</strong>{" "}
           <a href="mailto:contact@le-rempart.org">contact@le-rempart.org</a>
         </li>
         <li>
-          <strong>Statut :</strong> site d&apos;information en ligne
+          <strong>Présentation du média :</strong>{" "}
+          <Link href="/qui-sommes-nous">Qui sommes-nous</Link>
         </li>
       </ul>
-      <p className="text-sm text-muted">
-        Si vous exercez en société ou en micro-entreprise, indiquez ici le
-        numéro SIREN/SIRET, la forme juridique et l&apos;adresse du siège.
-      </p>
 
       <h2>2. Hébergement</h2>
       <p>Le Site est hébergé par :</p>
@@ -135,7 +136,7 @@ export default function MentionsLegalesPage() {
       </p>
 
       <p className="mt-10 text-sm text-muted">
-        Dernière mise à jour : 25 juillet 2026
+        Dernière mise à jour : 27 octobre 2026
       </p>
     </article>
   );

@@ -9,6 +9,7 @@ import {
   SITE_NAME,
   SITE_URL,
 } from "@/lib/seo";
+import { SITE_AUTHOR } from "@/lib/authors";
 import "./globals.css";
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() || "GTM-M53Q8GGZ";
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  authors: [{ name: "Rédaction Le Rempart", url: SITE_URL }],
+  authors: [{ name: SITE_AUTHOR.name, url: `${SITE_URL}${SITE_AUTHOR.path}` }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
   category: "news",

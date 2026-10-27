@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { siteUrlBase } from "@/lib/article-url";
+import { SITE_AUTHOR } from "@/lib/authors";
 
 export const SITE_NAME = "Le Rempart";
 export const SITE_TAGLINE = "Le média de droite radicale";
@@ -45,7 +46,7 @@ export function buildPageMetadata(input: {
     title,
     description: input.description,
     applicationName: SITE_NAME,
-    authors: [{ name: "Rédaction Le Rempart", url: absoluteUrl("/") }],
+    authors: [{ name: SITE_AUTHOR.name, url: absoluteUrl(SITE_AUTHOR.path) }],
     creator: SITE_NAME,
     publisher: SITE_NAME,
     alternates: { canonical: url },
@@ -79,11 +80,44 @@ export function buildPageMetadata(input: {
   };
 }
 
+/** Identifiants stables : relient articles, auteur et éditeur dans le graphe Google. */
+export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+export const AUTHOR_ID = `${SITE_URL}${SITE_AUTHOR.path}#person`;
+export const ABOUT_PATH = "/qui-sommes-nous";
+
+function publisherRef() {
+  return {
+    "@type": "NewsMediaOrganization",
+    "@id": ORGANIZATION_ID,
+    name: SITE_NAME,
+    url: absoluteUrl("/"),
+    logo: {
+      "@type": "ImageObject",
+      url: absoluteUrl(SITE_LOGO_SQUARE),
+      width: 512,
+      height: 512,
+    },
+  };
+}
+
+/** Schema Person du rédacteur en chef (page auteur, articles, organisation). */
+export function authorPersonJsonLd() {
+  return {
+    "@type": "Person",
+    "@id": AUTHOR_ID,
+    name: SITE_AUTHOR.name,
+    url: absoluteUrl(SITE_AUTHOR.path),
+    jobTitle: SITE_AUTHOR.jobTitle,
+    worksFor: { "@id": ORGANIZATION_ID },
+  };
+}
+
 export function organizationJsonLd() {
   const url = absoluteUrl("/");
   return {
     "@context": "https://schema.org",
     "@type": "NewsMediaOrganization",
+    "@id": ORGANIZATION_ID,
     name: SITE_NAME,
     alternateName: "Rempart",
     url,
@@ -97,6 +131,11 @@ export function organizationJsonLd() {
     sameAs: [FACEBOOK_PAGE].filter(Boolean),
     foundingDate: "2025",
     description: SITE_DESCRIPTION,
+    founder: { "@id": AUTHOR_ID },
+    publishingPrinciples: absoluteUrl(ABOUT_PATH),
+    actionableFeedbackPolicy: absoluteUrl(ABOUT_PATH),
+    correctionsPolicy: absoluteUrl(ABOUT_PATH),
+    email: "contact@le-rempart.org",
     address: {
       "@type": "PostalAddress",
       addressCountry: "FR",
@@ -117,16 +156,7 @@ export function websiteJsonLd() {
     alternateName: "Rempart",
     url: absoluteUrl("/"),
     inLanguage: "fr-FR",
-    publisher: {
-      "@type": "NewsMediaOrganization",
-      name: SITE_NAME,
-      logo: {
-        "@type": "ImageObject",
-        url: absoluteUrl(SITE_LOGO_SQUARE),
-        width: 512,
-        height: 512,
-      },
-    },
+    publisher: publisherRef(),
   };
 }
 
@@ -144,8 +174,7 @@ export function newsArticleJsonLd(input: {
     input.publishedAt?.toISOString() || new Date().toISOString();
   const modified = input.updatedAt?.toISOString() || published;
   const image = input.imageUrl || absoluteUrl(SITE_LOGO_SQUARE);
-  const author =
-    input.authorName?.trim() || "Rédaction Le Rempart";
+  const author = input.authorName?.trim() || SITE_AUTHOR.name;
 
   return {
     "@context": "https://schema.org",
@@ -159,20 +188,11 @@ export function newsArticleJsonLd(input: {
       "@type": "WebPage",
       "@id": input.url,
     },
-    author: {
-      "@type": "Person",
-      name: author,
-    },
-    publisher: {
-      "@type": "NewsMediaOrganization",
-      name: SITE_NAME,
-      logo: {
-        "@type": "ImageObject",
-        url: absoluteUrl(SITE_LOGO_SQUARE),
-        width: 512,
-        height: 512,
-      },
-    },
+    author:
+      author === SITE_AUTHOR.name
+        ? authorPersonJsonLd()
+        : { "@type": "Person", name: author },
+    publisher: publisherRef(),
     articleSection: input.section,
     inLanguage: "fr-FR",
     isAccessibleForFree: true,

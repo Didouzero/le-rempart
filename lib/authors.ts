@@ -1,31 +1,20 @@
-import { prisma } from "@/lib/prisma";
+/**
+ * Signature unique du site : le nom de plume du fondateur, qui assume
+ * la direction éditoriale. C'est aussi l'auteur déclaré à Google (schema Person).
+ */
+export const SITE_AUTHOR = {
+  name: "Dimitri Scudo",
+  slug: "dimitri-scudo",
+  path: "/auteurs/dimitri-scudo",
+  jobTitle: "Fondateur et rédacteur en chef",
+} as const;
 
-/** Alias éditoriaux affichés à la place de « Rédaction ». */
-export const AUTHOR_ALIASES = [
-  "Clarence Azolina",
-  "Rudy Levasseur",
-  "Dimitri Scudo",
-  "Roman Thill",
-] as const;
-
-export type AuthorAlias = (typeof AUTHOR_ALIASES)[number];
-
-export function authorFromIndex(index: number): AuthorAlias {
-  const i =
-    ((index % AUTHOR_ALIASES.length) + AUTHOR_ALIASES.length) %
-    AUTHOR_ALIASES.length;
-  return AUTHOR_ALIASES[i]!;
+/** Auteur affiché d'un article (les anciens alias en base sont remplacés). */
+export function articleAuthorName(stored?: string | null): string {
+  return stored?.trim() || SITE_AUTHOR.name;
 }
 
-/** Rotation stable pour un article déjà en base (backfill / fallback). */
-export function authorFromPublicId(publicId: number): AuthorAlias {
-  return authorFromIndex(Math.max(0, publicId - 1));
-}
-
-/** Prochain alias en round-robin (articles déjà pourvus d’un auteur). */
-export async function allocateNextAuthorName(): Promise<AuthorAlias> {
-  const count = await prisma.article.count({
-    where: { authorName: { not: null } },
-  });
-  return authorFromIndex(count);
+/** Auteur attribué à un nouvel article. */
+export async function allocateNextAuthorName(): Promise<string> {
+  return SITE_AUTHOR.name;
 }

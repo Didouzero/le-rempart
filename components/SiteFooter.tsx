@@ -4,8 +4,9 @@ import { CrownCircleIcon } from "@/components/BrandIcons";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 const links = [
-  { href: "/s-abonner", label: "Rempart+" },
-  { href: "/connexion", label: "Connexion" },
+  { href: "/qui-sommes-nous", label: "Qui sommes-nous" },
+  { href: "/s-abonner", label: "Rempart+", plusHref: "/rubriques/enquetes" },
+  { href: "/connexion", label: "Connexion", hideForPlus: true },
   { href: "/contact", label: "Nous contacter" },
   { href: "/nous-soutenir", label: "Nous soutenir" },
   { href: "/mentions-legales", label: "Mentions légales" },
@@ -31,7 +32,12 @@ function FacebookIcon({ className }: { className?: string }) {
   );
 }
 
-export function SiteFooter() {
+type SiteFooterProps = {
+  /** Abonné Rempart+ connecté : pas d'appel à s'abonner, Rempart+ mène aux enquêtes. */
+  isPlus?: boolean;
+};
+
+export function SiteFooter({ isPlus = false }: SiteFooterProps) {
   return (
     <footer className="mt-0 bg-ink text-white">
       <div
@@ -76,35 +82,39 @@ export function SiteFooter() {
                 </span>
               </span>
             </a>
-            <Link
-              href="/s-abonner"
-              className="group inline-flex w-fit items-center gap-2 rounded-lg border border-accent/50 bg-accent px-3 py-2 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
-            >
-              <CrownCircleIcon className="h-[1.6rem] w-[1.6rem]" />
-              <span className="flex flex-col leading-tight">
-                <span className="font-display text-[0.76rem] tracking-[0.12em]">
-                  S&apos;abonner au Rempart+
+            {isPlus ? null : (
+              <Link
+                href="/s-abonner"
+                className="group inline-flex w-fit items-center gap-2 rounded-lg border border-accent/50 bg-accent px-3 py-2 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
+              >
+                <CrownCircleIcon className="h-[1.6rem] w-[1.6rem]" />
+                <span className="flex flex-col leading-tight">
+                  <span className="font-display text-[0.76rem] tracking-[0.12em]">
+                    S&apos;abonner au Rempart+
+                  </span>
+                  <span className="text-[0.6rem] text-ink/70">
+                    Enquêtes, brief, site sans pub
+                  </span>
                 </span>
-                <span className="text-[0.6rem] text-ink/70">
-                  Enquêtes, brief, site sans pub
-                </span>
-              </span>
-            </Link>
+              </Link>
+            )}
           </div>
         </div>
         <nav
           className="flex flex-wrap gap-x-4 gap-y-2"
           aria-label="Liens du pied de page"
         >
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-white/75 no-underline underline-offset-4 hover:text-accent hover:underline"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links
+            .filter((link) => !(isPlus && "hideForPlus" in link))
+            .map((link) => (
+              <Link
+                key={link.href}
+                href={isPlus && "plusHref" in link ? link.plusHref : link.href}
+                className="text-white/75 no-underline underline-offset-4 hover:text-accent hover:underline"
+              >
+                {link.label}
+              </Link>
+            ))}
         </nav>
         <p className="max-w-3xl text-xs leading-relaxed text-white/50">
           © {new Date().getFullYear()} Le Rempart — le-rempart.org. Site

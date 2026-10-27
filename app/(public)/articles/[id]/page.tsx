@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
 import { PublishedAt } from "@/components/PublishedAt";
-import { authorFromPublicId } from "@/lib/authors";
+import { articleAuthorName, SITE_AUTHOR } from "@/lib/authors";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
 import {
   categoryLabel,
@@ -86,8 +86,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const url = articlePublicUrl(article.publicId);
     const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
     const section = categoryLabel(article.category);
-    const author =
-      article.authorName?.trim() || authorFromPublicId(article.publicId);
+    const author = articleAuthorName(article.authorName);
 
     return {
       ...buildPageMetadata({
@@ -98,6 +97,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         image: imageUrl,
         imageAlt: article.title,
       }),
+      authors: [
+        author === SITE_AUTHOR.name
+          ? { name: author, url: absoluteUrl(SITE_AUTHOR.path) }
+          : { name: author },
+      ],
       // Le template ajoute déjà « — Le Rempart » ; OG title = titre seul + siteName
       openGraph: {
         title: article.title,
@@ -168,8 +172,7 @@ export default async function ArticlePage({ params }: Props) {
   const section = categoryLabel(article.category);
   const plus = await hasActiveRempartPlus();
   const rubriquePath = categoryPath(article.category);
-  const author =
-    article.authorName?.trim() || authorFromPublicId(article.publicId);
+  const author = articleAuthorName(article.authorName);
 
   return (
     <article className="animate-fade-up">
@@ -241,7 +244,18 @@ export default async function ArticlePage({ params }: Props) {
           {article.title}
         </h1>
         <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
-          Par {author}
+          Par{" "}
+          {author === SITE_AUTHOR.name ? (
+            <Link
+              href={SITE_AUTHOR.path}
+              rel="author"
+              className="text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+            >
+              {author}
+            </Link>
+          ) : (
+            author
+          )}
         </p>
         <div className="gold-rule animate-line-grow mt-5 max-w-md" />
         <p className="mt-5 max-w-2xl text-lg italic text-black">

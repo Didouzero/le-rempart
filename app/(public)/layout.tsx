@@ -57,7 +57,7 @@ export default async function PublicLayout({
           </aside>
         ) : null}
       </div>
-      <SiteFooter />
+      <SiteFooter isPlus={plus} />
       <BackToTop />
     </div>
   );
