@@ -22,7 +22,7 @@ export default function ContactPage() {
   return (
     <div className="animate-fade-up grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
       {/* À gauche : l'adresse, en grand, sur fond sombre. */}
-      <section className="flex flex-col justify-between rounded-lg bg-ink p-8 text-paper sm:p-10">
+      <section className="flex flex-col rounded-lg bg-ink p-8 text-paper sm:p-10">
         <div>
           <p className="font-display text-sm tracking-[0.24em] text-accent uppercase">Contact</p>
           <h1 className="font-display mt-4 text-5xl leading-[0.9] uppercase sm:text-6xl">
@@ -30,18 +30,22 @@ export default function ContactPage() {
           </h1>
           <p className="mt-5 text-white/70">
             Une seule adresse, lue chaque jour. Précisez l&apos;objet de votre
-            message et, si besoin, l&apos;adresse de l&apos;article concerné.
+            message et, si besoin, l&apos;adresse de l&apos;article concerné,
+            nous ferons au mieux pour répondre à votre requête.
           </p>
         </div>
-        <a
-          href={`mailto:${EMAIL}`}
-          className="font-display mt-12 block text-[1.55rem] tracking-[0.02em] text-accent underline decoration-accent/40 decoration-2 underline-offset-8 transition hover:decoration-accent sm:text-4xl"
-        >
-          {/* Coupure permise seulement après l'arobase, jamais au milieu du domaine. */}
-          contact@
-          <wbr />
-          <span className="whitespace-nowrap">le-rempart.org</span>
-        </a>
+        {/* L'adresse occupe l'espace restant, centrée entre le texte et le bas du panneau. */}
+        <div className="flex flex-1 items-center py-10 lg:py-0">
+          <a
+            href={`mailto:${EMAIL}`}
+            className="font-display block text-[1.35rem] tracking-[0.03em] text-accent underline decoration-accent/40 decoration-2 underline-offset-8 transition hover:decoration-accent sm:text-2xl"
+          >
+            {/* Coupure permise seulement après l'arobase, jamais au milieu du domaine. */}
+            contact@
+            <wbr />
+            <span className="whitespace-nowrap">le-rempart.org</span>
+          </a>
+        </div>
       </section>
 
       {/* À droite : les motifs, en liste cliquable. */}
@@ -62,12 +66,6 @@ export default function ContactPage() {
                     {title}
                   </span>
                   <span className="mt-1 block text-muted">{text}</span>
-                </span>
-                <span
-                  aria-hidden
-                  className="font-display flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink text-xl transition group-hover:translate-x-1 group-hover:border-accent group-hover:bg-accent"
-                >
-                  →
                 </span>
               </a>
             </li>

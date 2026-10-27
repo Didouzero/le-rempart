@@ -52,7 +52,7 @@ export default function QuiSommesNousPage() {
           <span className="live-dot" aria-hidden />
           Qui sommes-nous
         </p>
-        <h1 className="font-display mt-4 max-w-5xl text-5xl leading-[0.92] tracking-[0.02em] uppercase sm:text-7xl lg:text-8xl">
+        <h1 className="font-display mt-4 max-w-4xl text-4xl leading-[0.95] tracking-[0.02em] uppercase sm:text-5xl lg:text-6xl">
           Raconter jusqu&apos;au bout ce que{" "}
           <span className="text-accent-deep">les autres taisent.</span>
         </h1>

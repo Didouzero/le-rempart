@@ -311,11 +311,13 @@ export default async function ArticlePage({ params }: Props) {
       ) : null}
 
       <ArticleSideAds show={!plus}>
-        <ArticleBody
-          content={article.content}
-          showNewsletterCta
-          showInArticleAd={!plus}
-        />
+        <div className="article-dropcap">
+          <ArticleBody
+            content={article.content}
+            showNewsletterCta
+            showInArticleAd={!plus}
+          />
+        </div>
       </ArticleSideAds>
 
       <AdSlot slot="article-bottom" />
