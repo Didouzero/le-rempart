@@ -25,6 +25,13 @@ function internalId(href: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+// Jamais de lien vers un réseau social dans un article : seulement la presse.
+const SOCIAL = /^https?:\/\/([a-z0-9-]+\.)*(instagram\.com|facebook\.com|fb\.watch|x\.com|twitter\.com|tiktok\.com|youtube\.com|youtu\.be|t\.me|threads\.net|snapchat\.com|linkedin\.com)\//i;
+
+export function isSocialUrl(href: string): boolean {
+  return SOCIAL.test(href);
+}
+
 /** Garde les liens autorisés (internes normalisés en /articles/ID), retire les autres. */
 export function enforceLinks(markdown: string, policy: LinkPolicy): string {
   return markdown.replace(MD_LINK, (full, text: string, href: string) => {
@@ -32,7 +39,7 @@ export function enforceLinks(markdown: string, policy: LinkPolicy): string {
     if (id !== null) {
       return policy.internal.has(id) ? `[${text}](${articlePublicPath(id)})` : text;
     }
-    return policy.external.has(href) ? full : text;
+    return policy.external.has(href) && !isSocialUrl(href) ? full : text;
   });
 }
 

@@ -10,11 +10,8 @@ import { fetchSourceText, scrubBoilerplate } from "@/lib/fetch-source";
 import { outletFromUrl } from "@/lib/flash-info";
 import { fixFrenchPunctuation } from "@/lib/french-copy";
 import {
-  citedUrls,
-  countLinks,
   enforceLinks,
   outsideLinkTargets,
-  sourcesSection,
   stripSourcesSection,
   type LinkPolicy,
 } from "@/lib/article-links";
@@ -106,9 +103,9 @@ FORMAT DE L'ARTICLE
 - Chapô (excerpt) : une ou deux phrases strictement factuelles.
 
 LIENS DANS LE CORPS (Markdown)
-- Sources : quand un fait, un chiffre ou une citation vient d'un média, cite-le et place le lien sur son nom, par exemple : selon [Le Figaro](https://…). Utilise UNIQUEMENT les adresses de la liste « Sources déjà lues » ou celles renvoyées par tes recherches, recopiées à l'identique. Vise deux à cinq sources citées en lien, chacune au moment où elle sert.
+- Liens vers la presse : uniquement quand le texte renvoie explicitement à un article précis d'un média (« a-t-il déclaré sur BFMTV », « révèle Le Parisien », « selon Le Figaro »). Le lien porte alors sur le nom du média, discrètement : a-t-il déclaré sur [BFMTV](https://…). Utilise UNIQUEMENT les adresses de la liste « Sources déjà lues » ou celles renvoyées par tes recherches, recopiées à l'identique. Aucun lien quand le texte ne cite pas de média. Jamais de lien vers un réseau social (Instagram, Facebook, X, TikTok, YouTube, Telegram).
 - Liens internes : si la liste « Articles du Rempart sur des sujets proches » est fournie, place un à trois liens vers ceux qui éclairent vraiment le sujet (antécédents, affaire liée), sur un texte d'ancre descriptif et naturel, par exemple : la [condamnation du député en 2025](/articles/123). Recopie l'adresse /articles/… telle quelle. N'en mets aucun si rien n'est pertinent.
-- Jamais d'adresse inventée, jamais de lien nu, pas de section « Sources » : elle est ajoutée automatiquement.
+- Jamais d'adresse inventée, jamais de lien nu, jamais de section ou de liste de sources.
 - Réponds UNIQUEMENT avec un JSON valide : {"title":"...","excerpt":"...","content":"..."}`;
 
 const TOOLS = [
@@ -249,13 +246,13 @@ export async function researchAndWrite(input: {
     deadline,
     check: (raw) => {
       try {
-        return articleIssues(parseArticle(raw), linkPolicy());
+        return articleIssues(parseArticle(raw));
       } catch (err) {
         return [err instanceof Error ? err.message : "JSON invalide"];
       }
     },
   });
-  const article = finishArticle(parseArticle(articleRaw), linkPolicy(), sources);
+  const article = finishArticle(parseArticle(articleRaw), linkPolicy());
 
   return {
     flash,
@@ -631,17 +628,8 @@ function parseArticle(raw: string): {
   };
 }
 
-function articleIssues(
-  a: { title: string; excerpt: string; content: string },
-  policy: LinkPolicy,
-) {
+function articleIssues(a: { title: string; excerpt: string; content: string }) {
   const issues: string[] = [];
-  const links = countLinks(enforceLinks(a.content, policy));
-  if (policy.external.size > 0 && links.external === 0) {
-    issues.push(
-      "aucune source n'est citée en lien : place le lien sur le nom du média, avec une adresse de la liste « Sources déjà lues »",
-    );
-  }
   if (a.title.length < 15) issues.push("le titre manque ou est trop court");
   if (a.excerpt.length < 20) issues.push("le chapô (excerpt) manque");
   const words = countWords(a.content);
@@ -655,7 +643,6 @@ function articleIssues(
 function finishArticle(
   a: { title: string; excerpt: string; content: string },
   policy: LinkPolicy,
-  sources: Map<string, BriefSource>,
 ) {
   const dashes = (s: string) =>
     s.replace(/\s+[–—]\s+/g, ", ").replace(/[–—]/g, ", ").replace(EMOJI, "");
@@ -668,10 +655,9 @@ function finishArticle(
         .replace(/\n{3,}/g, "\n\n"),
     ),
   );
-  const cited = citedUrls(body).map((url) => ({ url, title: sources.get(url)?.title }));
   return {
     title: fixFrenchPunctuation(dashes(a.title)).replace(/\.$/, "").slice(0, 220),
     excerpt: fixFrenchPunctuation(dashes(a.excerpt)),
-    content: [body, sourcesSection(cited)].filter(Boolean).join("\n\n"),
+    content: body,
   };
 }

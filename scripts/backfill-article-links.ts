@@ -1,6 +1,6 @@
 /**
- * Rattrapage des articles existants : section « Sources » (lien vers la source
- * d'origine) et encadré « À lire aussi » (liens internes) dans le corps.
+ * Rattrapage des articles existants : encadré « À lire aussi » (liens internes)
+ * dans le corps.
  *
  *   npx tsx scripts/backfill-article-links.ts            # essai à blanc
  *   npx tsx scripts/backfill-article-links.ts --apply    # écrit en base (sauvegarde avant)
@@ -15,7 +15,7 @@ for (const line of readFileSync(".env", "utf8").split("\n")) {
 const APPLY = process.argv.includes("--apply");
 async function main() {
   const { PrismaClient } = await import("@prisma/client");
-  const { READ_ALSO, insertReadAlso, sourcesSection, stripSourcesSection } = await import("../lib/article-links");
+  const { READ_ALSO, insertReadAlso } = await import("../lib/article-links");
   const { pickReadAlso } = await import("../lib/related-articles");
   const prisma = new PrismaClient();
 
@@ -43,16 +43,10 @@ async function main() {
       (b) => b.id !== a.id && (b.publishedAt?.getTime() ?? 0) < (a.publishedAt?.getTime() ?? 0),
     );
     const related = pickReadAlso(a, older);
-    const src =
-      a.sourceUrl && /^https?:\/\//.test(a.sourceUrl) && !a.content.includes(a.sourceUrl)
-        ? sourcesSection([{ url: a.sourceUrl }])
-        : "";
-    // Rien à ajouter : l'article reste intact (sa section Sources éventuelle comprise).
-    if (!related.length && !src) continue;
-    if (related.length) withLinks += 1;
-    if (src) withSources += 1;
-    const base = src ? stripSourcesSection(a.content) : a.content;
-    const after = [insertReadAlso(base, related), src].filter(Boolean).join("\n\n");
+    // Plus de section « Sources » : seul l'encadré « À lire aussi » est ajouté.
+    if (!related.length) continue;
+    withLinks += 1;
+    const after = insertReadAlso(a.content, related);
     if (after !== a.content) {
       changes.push({ id: a.id, publicId: a.publicId, before: a.content, after });
     }

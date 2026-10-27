@@ -22,6 +22,7 @@ export default async function AdminEditArticlePage({ params }: Props) {
       sourceText: true,
       sourceUrl: true,
       coverImageUrl: true,
+      coverCaption: true,
       category: true,
       status: true,
     },
@@ -46,6 +47,7 @@ export default async function AdminEditArticlePage({ params }: Props) {
           sourceText: article.sourceText ?? "",
           sourceUrl: article.sourceUrl ?? "",
           coverImageUrl: article.coverImageUrl ?? "",
+          coverCaption: article.coverCaption ?? "",
           category: article.category,
           status: article.status,
         }}

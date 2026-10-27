@@ -184,9 +184,11 @@ export async function restorePublishDraft(
 
 /** Extraire la première URL http(s) d'un message Telegram. */
 export function extractHttpUrl(text: string): string | null {
-  const match = text.match(/https?:\/\/[^\s<>"')\]]+/i);
+  // Les parenthèses équilibrées font partie de l'adresse (ex. « filters:format(jpg) ») :
+  // les couper donnait un lien tronqué, donc une image introuvable.
+  const match = text.match(/https?:\/\/(?:[^\s<>"'()\]]|\([^\s()]*\))+/i);
   if (!match) return null;
-  return match[0]!.replace(/[.,;:!?)]+$/, "");
+  return match[0]!.replace(/[.,;:!?]+$/, "");
 }
 
 /** Texte hors URL dans le même message (directives de recherche pour Kimi). */

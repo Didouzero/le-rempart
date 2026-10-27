@@ -19,6 +19,7 @@ type ArticleEditorProps = {
     sourceText: string;
     sourceUrl: string;
     coverImageUrl?: string;
+    coverCaption?: string;
     category?: ArticleCategory;
     status: "draft" | "published";
   };
@@ -42,7 +43,10 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
   );
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [refreshingCover, setRefreshingCover] = useState(false);
+  const [savingCover, setSavingCover] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverLink, setCoverLink] = useState("");
+  const [coverCaption, setCoverCaption] = useState(initial?.coverCaption ?? "");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -92,7 +96,6 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
         content,
         sourceText: sourceText || null,
         sourceUrl: sourceUrl || null,
-        coverImageUrl: coverImageUrl.trim() || null,
         category,
         status: nextStatus,
       };
@@ -137,29 +140,38 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
     }
   }
 
-  async function onRefreshCover() {
+  /** Fichier ou lien : l'image est copiée et hébergée sur le site, avec sa légende. */
+  async function onSaveCover() {
     if (!articleId) return;
-    setRefreshingCover(true);
+    setSavingCover(true);
     setError("");
     setMessage("");
     try {
+      const form = new FormData();
+      if (coverFile) form.append("file", coverFile);
+      else if (coverLink.trim()) form.append("url", coverLink.trim());
+      form.append("caption", coverCaption);
       const response = await fetch(
-        `/api/admin/articles/${articleId}/refresh-cover`,
-        { method: "POST" },
+        `/api/admin/articles/${articleId}/illustration`,
+        { method: "POST", body: form },
       );
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Régénération impossible");
+        throw new Error(data.error || "Illustration impossible");
       }
       setCoverImageUrl(data.coverImageUrl || "");
-      setMessage("Illustration régénérée.");
+      setCoverFile(null);
+      setCoverLink("");
+      setMessage(
+        data.width && data.width < 1200
+          ? `Illustration enregistrée, mais elle ne fait que ${data.width} px de large (Google Discover demande 1 200 px).`
+          : "Illustration enregistrée sur le site.",
+      );
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Erreur régénération illustration",
-      );
+      setError(err instanceof Error ? err.message : "Erreur illustration");
     } finally {
-      setRefreshingCover(false);
+      setSavingCover(false);
     }
   }
 
@@ -286,33 +298,45 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
               <p className="text-sm text-muted">Aucune illustration.</p>
             )}
             <label className="block text-sm font-semibold">
-              URL de l&apos;image
+              Nouvelle illustration (fichier)
+              <input
+                className="admin-input mt-2"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+              />
+              <span className="mt-1 block text-xs font-normal text-muted">
+                JPG, PNG ou WebP, idéalement 1600×900 (16:9). L&apos;image est hébergée sur le site.
+              </span>
+            </label>
+            <label className="block text-sm font-semibold">
+              Ou un lien vers une image
               <input
                 className="admin-input mt-2"
                 type="url"
-                placeholder="https://… — 1600×900 (16:9)"
-                value={coverImageUrl}
-                onChange={(e) => setCoverImageUrl(e.target.value)}
+                placeholder="https://… (l'image sera copiée sur le site)"
+                value={coverLink}
+                onChange={(e) => setCoverLink(e.target.value)}
               />
-              <span className="mt-1 block text-xs font-normal text-muted">
-                Format maître : 1600×900 (16:9), sujet centré.
-              </span>
             </label>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                className="admin-btn admin-btn-secondary"
-                disabled={refreshingCover || saving}
-                onClick={onRefreshCover}
-              >
-                {refreshingCover
-                  ? "Recherche…"
-                  : "Régénérer une illustration"}
-              </button>
-              <p className="text-xs text-muted self-center">
-                Ou colle une URL puis enregistre / publie.
-              </p>
-            </div>
+            <label className="block text-sm font-semibold">
+              Légende et crédit
+              <input
+                className="admin-input mt-2"
+                type="text"
+                placeholder="Ex. Sébastien Lecornu à Matignon, le 26 octobre. Photo : AFP"
+                value={coverCaption}
+                onChange={(e) => setCoverCaption(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="admin-btn admin-btn-secondary"
+              disabled={savingCover || saving}
+              onClick={onSaveCover}
+            >
+              {savingCover ? "Enregistrement…" : "Enregistrer l’illustration"}
+            </button>
           </div>
         ) : null}
 
