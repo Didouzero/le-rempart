@@ -77,11 +77,7 @@ export default async function AuthorPage() {
           url: absoluteUrl(SITE_AUTHOR.path),
           name: SITE_AUTHOR.name,
           inLanguage: "fr-FR",
-          mainEntity: {
-            ...authorPersonJsonLd(),
-            description: DESCRIPTION,
-            ...(SITE_AUTHOR.photo ? { image: absoluteUrl(SITE_AUTHOR.photo) } : {}),
-          },
+          mainEntity: authorPersonJsonLd(),
         }}
       />
 
