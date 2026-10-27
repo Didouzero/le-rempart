@@ -268,7 +268,7 @@ export default async function ArticlePage({ params }: Props) {
           value={article.publishedAt}
           className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"
         />
-        <h1 className="font-display mt-3 text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
+        <h1 className="font-display mt-3 max-w-2xl text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
           {article.title}
         </h1>
         <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
