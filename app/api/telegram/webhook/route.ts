@@ -59,6 +59,7 @@ function illustrationPromptLines(): string[] {
   return [
     "Envoie l’illustration de l’article en FICHIER (JPG, PNG ou WebP) : trombone › Fichier, pour garder la pleine qualité.",
     "Au moins 1 200 px de large, idéal 1600×900 (16:9). Elle sera hébergée sur le site.",
+    "Facultatif : écris la légende et le crédit dans la légende du fichier (ex. « Sébastien Lecornu à Matignon, le 26 octobre. Photo : AFP »).",
   ];
 }
 
@@ -66,9 +67,10 @@ function illustrationPromptLines(): string[] {
 async function saveCoverAndAskSubject(
   chatId: number,
   image: { buffer: Buffer; mime: string },
+  caption?: string,
 ): Promise<void> {
   const width = await preparedIllustrationWidth(image.buffer);
-  const saved = await setPublishDraftCoverFile(chatId, image);
+  const saved = await setPublishDraftCoverFile(chatId, image, caption);
   if (!saved) throw new Error("Illustration non enregistrée");
   const sizeNote =
     width && width < DISCOVER_MIN_WIDTH
@@ -76,7 +78,7 @@ async function saveCoverAndAskSubject(
       : "";
   await telegramSendMessage(
     chatId,
-    `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${sizeNote}\n\n${SUBJECT_QUESTION}`,
+    `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${caption?.trim() ? `\nLégende : « ${caption.trim().slice(0, 200)} »` : ""}${sizeNote}\n\n${SUBJECT_QUESTION}`,
   );
 }
 
@@ -737,7 +739,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         !draftHasCover(pendingCover)
       ) {
         try {
-          await saveCoverAndAskSubject(chatId, await telegramDownloadFile(fileId));
+          await saveCoverAndAskSubject(
+            chatId,
+            await telegramDownloadFile(fileId),
+            manualCaption,
+          );
         } catch (err) {
           await telegramSendMessage(
             chatId,
@@ -833,7 +839,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     if (draft && url && !draftHasCover(draft)) {
       // Un lien est téléchargé puis hébergé sur le site, comme un fichier.
       try {
-        await saveCoverAndAskSubject(chatId, await downloadIllustration(url));
+        // Le texte autour du lien sert de légende.
+        const linkCaption = text.replace(url, " ").replace(/\s+/g, " ").trim();
+        await saveCoverAndAskSubject(chatId, await downloadIllustration(url), linkCaption);
       } catch (err) {
         await telegramSendMessage(
           chatId,
@@ -873,6 +881,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           headline: draft.headline,
           brief,
           coverImageUrl: draft.coverImageUrl || undefined,
+          coverCaption: draft.coverCaption || undefined,
           coverImage:
             draft.coverImageData && draft.coverImageData.length > 0
               ? {

@@ -221,6 +221,7 @@ export async function saveGeneratedArticle(input: {
   sourceUrl?: string;
   coverImageUrl?: string;
   coverImage?: { buffer: Buffer; mime: string };
+  coverCaption?: string;
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
 }): Promise<SavedArticle> {
@@ -291,6 +292,7 @@ export async function saveGeneratedArticle(input: {
     illustrationData: preparedCover
       ? Buffer.from(preparedCover.buffer)
       : null,
+    coverCaption: utf8TextOrNull(input.coverCaption?.trim() || null, 400),
   };
 
   let article;

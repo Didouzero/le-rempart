@@ -277,6 +277,8 @@ export async function publishBriefPipeline(input: {
   image: { buffer: Buffer; mime: string };
   coverImageUrl?: string;
   coverImage?: { buffer: Buffer; mime: string };
+  /** Légende de l'illustration (description et crédit). */
+  coverCaption?: string;
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
@@ -316,6 +318,7 @@ export async function publishBriefPipeline(input: {
     sourceUrl: research.sources[0]?.url,
     coverImageUrl: input.coverImageUrl,
     coverImage: input.coverImage,
+    coverCaption: input.coverCaption,
     image: input.image,
     notify,
   });

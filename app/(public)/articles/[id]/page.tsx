@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
@@ -49,8 +50,34 @@ type ArticleRow = {
   publishedAt: Date | null;
   updatedAt: Date;
   coverImageUrl: string | null;
+  coverCaption: string | null;
   category: ArticleCategory;
 };
+
+// L'adresse peut contenir une paire de parenthèses (fréquent sur Wikimedia Commons).
+const CAPTION_LINK = /\[([^\]]+)\]\((https?:\/\/(?:[^()\s]|\([^()\s]*\))+)\)/g;
+
+/** Légende sans balisage, pour l'attribut alt. */
+function captionText(source: string): string {
+  return source.replace(CAPTION_LINK, "$1");
+}
+
+/** Légende d'illustration : texte simple, liens [texte](url) permis pour les crédits. */
+function Caption({ source }: { source: string }) {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  for (const m of source.matchAll(CAPTION_LINK)) {
+    parts.push(source.slice(last, m.index));
+    parts.push(
+      <a key={m.index} href={m[2]} target="_blank" rel="noopener noreferrer" className="underline">
+        {m[1]}
+      </a>,
+    );
+    last = (m.index ?? 0) + m[0].length;
+  }
+  parts.push(source.slice(last));
+  return <>{parts}</>;
+}
 
 async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
   return withDbTimeout(
@@ -66,6 +93,7 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
         publishedAt: true,
         updatedAt: true,
         coverImageUrl: true,
+        coverCaption: true,
         category: true,
       },
     }),
@@ -264,15 +292,22 @@ export default async function ArticlePage({ params }: Props) {
       </header>
 
       {article.coverImageUrl ? (
-        {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
-        <div className="media-frame mb-10 aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={article.coverImageUrl}
-            alt={article.title}
-            className="h-full w-full object-cover"
-          />
-        </div>
+        <figure className="mb-10">
+          {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
+          <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={article.coverImageUrl}
+              alt={article.coverCaption ? captionText(article.coverCaption) : article.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          {article.coverCaption ? (
+            <figcaption className="mt-2 text-sm italic text-muted">
+              <Caption source={article.coverCaption} />
+            </figcaption>
+          ) : null}
+        </figure>
       ) : null}
 
       <ArticleSideAds show={!plus}>

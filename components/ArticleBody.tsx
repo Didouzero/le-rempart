@@ -240,6 +240,16 @@ function splitMarkdownBeforeLast(markdown: string): [string, string] {
   return [blocks.slice(0, -1).join("\n\n"), blocks[blocks.length - 1] ?? ""];
 }
 
+/**
+ * Sépare la fin de l'article (section « Sources », crédit d'illustration) du texte :
+ * la newsletter se place avant le dernier paragraphe du texte, jamais dans ces annexes.
+ */
+function splitTrailingNotes(markdown: string): [string, string] {
+  const m = markdown.match(/\n(## Sources\n|\*Illustration :)/);
+  if (!m || m.index === undefined) return [markdown, ""];
+  return [markdown.slice(0, m.index), markdown.slice(m.index)];
+}
+
 function ProseBlock({ source }: { source: string }) {
   if (!source.trim()) return null;
   return (
@@ -254,7 +264,9 @@ export function ArticleBody({
   showNewsletterCta = true,
   showInArticleAd = false,
 }: ArticleBodyProps) {
-  const md = autolinkBareUrls(markStandaloneVideos(content));
+  const [md, notes] = splitTrailingNotes(
+    autolinkBareUrls(markStandaloneVideos(content)),
+  );
 
   let lead = "";
   let remaining = md;
@@ -281,6 +293,7 @@ export function ArticleBody({
         <NewsletterSignup source="article-before-last" />
       ) : null}
       {last ? <ProseBlock source={last} /> : null}
+      {notes ? <ProseBlock source={notes} /> : null}
     </>
   );
 }

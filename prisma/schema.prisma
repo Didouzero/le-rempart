@@ -39,6 +39,8 @@ model Article {
   /// Illustration site (fichier Telegram), distincte de la créative Facebook.
   illustrationMime String?
   illustrationData Bytes?
+  /// Légende sous l'illustration (description et crédit), en Markdown simple.
+  coverCaption   String?
   category       ArticleCategory @default(insolite)
   status         ArticleStatus   @default(draft)
   createdAt      DateTime        @default(now())
@@ -101,6 +103,8 @@ model PublishDraft {
   coverImageUrl  String?
   coverImageMime String?
   coverImageData Bytes?
+  /// Légende de l'illustration, tapée dans la légende du fichier Telegram.
+  coverCaption   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

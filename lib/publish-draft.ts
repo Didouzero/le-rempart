@@ -15,6 +15,7 @@ export type PublishDraftRecord = {
   coverImageUrl: string | null;
   coverImageMime: string | null;
   coverImageData: Buffer | null;
+  coverCaption: string | null;
   createdAt: Date;
 };
 
@@ -28,6 +29,7 @@ function toRecord(row: {
   coverImageUrl: string | null;
   coverImageMime?: string | null;
   coverImageData?: Uint8Array | Buffer | null;
+  coverCaption?: string | null;
   createdAt: Date;
 }): PublishDraftRecord {
   return {
@@ -42,6 +44,7 @@ function toRecord(row: {
     coverImageData: row.coverImageData
       ? Buffer.from(row.coverImageData)
       : null,
+    coverCaption: row.coverCaption ?? null,
     createdAt: row.createdAt,
   };
 }
@@ -75,6 +78,7 @@ export async function upsertPublishDraft(input: {
       coverImageUrl: null,
       coverImageMime: null,
       coverImageData: null,
+      coverCaption: null,
     },
     update: {
       userId: BigInt(input.userId),
@@ -84,6 +88,7 @@ export async function upsertPublishDraft(input: {
       coverImageUrl: null,
       coverImageMime: null,
       coverImageData: null,
+      coverCaption: null,
     },
   });
   return toRecord(row);
@@ -109,6 +114,7 @@ export async function setPublishDraftHeadline(
 export async function setPublishDraftCoverFile(
   chatId: number,
   image: { buffer: Buffer; mime: string },
+  caption?: string | null,
 ): Promise<PublishDraftRecord | null> {
   const prepared = await prepareSiteIllustration(image);
   try {
@@ -118,6 +124,7 @@ export async function setPublishDraftCoverFile(
         coverImageUrl: null,
         coverImageMime: prepared.mime,
         coverImageData: Buffer.from(prepared.buffer),
+        coverCaption: caption?.trim() ? utf8Text(caption.trim(), 400) : null,
       },
     });
     return toRecord(row);
@@ -169,6 +176,7 @@ export async function restorePublishDraft(
         coverImageData: draft.coverImageData
           ? Buffer.from(draft.coverImageData)
           : null,
+        coverCaption: draft.coverCaption,
       },
     })
     .catch((err) => console.error("restorePublishDraft", err));
