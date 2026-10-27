@@ -142,6 +142,11 @@ body {
   max-width: 42rem;
 }
 
+/* Articles: the text fills the centred reading column. */
+.article-dropcap .prose-article {
+  max-width: none;
+}
+
 .article-side-ad iframe,
 .article-side-ad img,
 .article-side-ad [data-type="_mgwidget"] {

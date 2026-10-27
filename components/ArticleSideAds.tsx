@@ -70,9 +70,13 @@ export function ArticleSideAds({ children, show }: ArticleSideAdsProps) {
         ? "xl:grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)]"
         : "xl:grid-cols-[minmax(0,1fr)_minmax(0,9.5rem)]";
 
+  // Rails sit outside the centred reading column instead of squeezing it.
+  const bleed =
+    left && right ? "xl:-mx-[10.75rem]" : left ? "xl:-ml-[10.75rem]" : "xl:-mr-[10.75rem]";
+
   return (
     <>
-      <div className={`xl:grid xl:items-start xl:gap-5 ${cols}`}>
+      <div className={`xl:grid xl:items-start xl:gap-5 ${cols} ${bleed}`}>
         {left ? <Rail widgetId={left} label="Publicité gauche" /> : null}
         <div className="min-w-0">{children}</div>
         {right ? <Rail widgetId={right} label="Publicité droite" /> : null}

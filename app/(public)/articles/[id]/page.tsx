@@ -224,101 +224,104 @@ export default async function ArticlePage({ params }: Props) {
         ])}
       />
 
-      <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
-        <ol className="flex flex-wrap items-center gap-2">
-          <li>
-            <Link
-              href="/"
-              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
-            >
-              Dernières news
-            </Link>
-          </li>
-          <li aria-hidden className="text-accent">
-            /
-          </li>
-          <li>
+      {/* Colonne de lecture centrée : fil d'Ariane, titre, photo et texte alignés. */}
+      <div className="mx-auto max-w-3xl">
+        <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
+          <ol className="flex flex-wrap items-center gap-2">
+            <li>
+              <Link
+                href="/"
+                className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+              >
+                Dernières news
+              </Link>
+            </li>
+            <li aria-hidden className="text-accent">
+              /
+            </li>
+            <li>
+              <Link
+                href={rubriquePath}
+                className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+              >
+                {section}
+              </Link>
+            </li>
+            <li aria-hidden className="text-accent">
+              /
+            </li>
+            <li className="text-muted">
+              {breadcrumbTitle(article.title)}
+            </li>
+          </ol>
+        </nav>
+
+        <header className="mb-8 pb-8">
+          <p className="section-kicker">
+            <span className="live-dot" aria-hidden />
             <Link
               href={rubriquePath}
-              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+              className="text-inherit no-underline hover:underline"
             >
               {section}
             </Link>
-          </li>
-          <li aria-hidden className="text-accent">
-            /
-          </li>
-          <li className="text-muted">
-            {breadcrumbTitle(article.title)}
-          </li>
-        </ol>
-      </nav>
+          </p>
+          <PublishedAt
+            value={article.publishedAt}
+            className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"
+          />
+          <h1 className="font-display mt-3 text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
+            {article.title}
+          </h1>
+          <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
+            Par{" "}
+            {author === SITE_AUTHOR.name ? (
+              <Link
+                href={SITE_AUTHOR.path}
+                rel="author"
+                className="text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+              >
+                {author}
+              </Link>
+            ) : (
+              author
+            )}
+          </p>
+          <div className="gold-rule animate-line-grow mt-5 max-w-md" />
+          <p className="mt-5 text-lg italic text-black">
+            {article.excerpt}
+          </p>
+        </header>
 
-      <header className="mb-8 pb-8">
-        <p className="section-kicker">
-          <span className="live-dot" aria-hidden />
-          <Link
-            href={rubriquePath}
-            className="text-inherit no-underline hover:underline"
-          >
-            {section}
-          </Link>
-        </p>
-        <PublishedAt
-          value={article.publishedAt}
-          className="mt-3 block text-xs uppercase tracking-[0.14em] text-muted"
-        />
-        <h1 className="font-display mt-3 max-w-2xl text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
-          {article.title}
-        </h1>
-        <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
-          Par{" "}
-          {author === SITE_AUTHOR.name ? (
-            <Link
-              href={SITE_AUTHOR.path}
-              rel="author"
-              className="text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
-            >
-              {author}
-            </Link>
-          ) : (
-            author
-          )}
-        </p>
-        <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-        <p className="mt-5 max-w-2xl text-lg italic text-black">
-          {article.excerpt}
-        </p>
-      </header>
+        {article.coverImageUrl ? (
+          <figure className="mb-10">
+            {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
+            <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={article.coverImageUrl}
+                alt={article.coverCaption ? captionText(article.coverCaption) : article.title}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            {article.coverCaption ? (
+              <figcaption className="mt-2 text-sm italic text-muted">
+                <Caption source={article.coverCaption} />
+              </figcaption>
+            ) : null}
+          </figure>
+        ) : null}
 
-      {article.coverImageUrl ? (
-        <figure className="mb-10 max-w-2xl">
-          {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
-          <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={article.coverImageUrl}
-              alt={article.coverCaption ? captionText(article.coverCaption) : article.title}
-              className="h-full w-full object-cover"
+        <ArticleSideAds show={!plus}>
+          <div className="article-dropcap">
+            <ArticleBody
+              content={article.content}
+              showNewsletterCta
+              showInArticleAd={!plus}
             />
           </div>
-          {article.coverCaption ? (
-            <figcaption className="mt-2 text-sm italic text-muted">
-              <Caption source={article.coverCaption} />
-            </figcaption>
-          ) : null}
-        </figure>
-      ) : null}
-
-      <ArticleSideAds show={!plus}>
-        <div className="article-dropcap">
-          <ArticleBody
-            content={article.content}
-            showNewsletterCta
-            showInArticleAd={!plus}
-          />
-        </div>
-      </ArticleSideAds>
+        </ArticleSideAds>
+      </div>
 
       <AdSlot slot="article-bottom" />
 
