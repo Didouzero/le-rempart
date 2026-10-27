@@ -86,46 +86,12 @@ export default async function AuthorPage() {
       />
 
       <div className="grid gap-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-14">
-        {/* Fiche d'identité : fixe à côté du texte sur ordinateur, après le texte sur téléphone. */}
-        <aside className="order-2 lg:sticky lg:top-8 lg:order-1 lg:self-start">
-          <div className="relative mx-auto w-48 lg:mx-0 lg:w-full">
-            <div
-              aria-hidden
-              className="absolute -right-3 -bottom-3 h-full w-full rounded-lg border-2 border-accent"
-            />
-            {SITE_AUTHOR.photo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={SITE_AUTHOR.photo}
-                alt={`Portrait de ${SITE_AUTHOR.name}`}
-                className="relative aspect-[4/5] w-full rounded-lg object-cover grayscale-[35%]"
-              />
-            ) : (
-              <div className="font-display relative flex aspect-[4/5] w-full items-center justify-center rounded-lg bg-ink text-7xl tracking-[0.08em] text-accent">
-                DS
-              </div>
-            )}
-          </div>
-
-          <dl className="mt-8 divide-y divide-ink/15 border-y border-ink/15 text-sm">
-            {FACTS.map(([label, value]) => (
-              <div key={label} className="flex items-baseline justify-between gap-4 py-2.5">
-                <dt className="font-display text-xs tracking-[0.16em] text-muted uppercase">
-                  {label}
-                </dt>
-                <dd className="text-right text-ink">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <a
-            href="mailto:contact@le-rempart.org"
-            className="font-display mt-6 block rounded-lg bg-ink px-4 py-3 text-center tracking-[0.14em] text-accent no-underline transition hover:bg-accent hover:text-ink hover:no-underline"
-          >
-            M&apos;écrire
-          </a>
+        {/* Fiche d'identité : fixe à côté du texte sur ordinateur, sous l'intro sur téléphone. */}
+        <aside className="hidden lg:sticky lg:top-8 lg:block lg:self-start">
+          <IdentityCard />
         </aside>
 
-        <article className="order-1 min-w-0 lg:order-2">
+        <article className="min-w-0">
           <p className="section-kicker">
             <span className="live-dot" aria-hidden />
             L&apos;auteur
@@ -143,6 +109,10 @@ export default async function AuthorPage() {
             que je refusais de laisser le récit de l&apos;actualité à un seul
             camp.
           </p>
+
+          <div className="mt-10 lg:hidden">
+            <IdentityCard />
+          </div>
 
           {/* Frise : d'où vient le projet. */}
           <ol className="relative mt-12 list-none space-y-8 border-l-2 border-accent/60 p-0 pl-8">
@@ -223,5 +193,47 @@ export default async function AuthorPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+function IdentityCard() {
+  return (
+    <>
+      <div className="relative mx-auto w-48 lg:mx-0 lg:w-full">
+        <div
+          aria-hidden
+          className="absolute -right-3 -bottom-3 h-full w-full rounded-lg border-2 border-accent"
+        />
+        {SITE_AUTHOR.photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={SITE_AUTHOR.photo}
+            alt={`Portrait de ${SITE_AUTHOR.name}`}
+            className="relative aspect-[4/5] w-full rounded-lg object-cover grayscale-[35%]"
+          />
+        ) : (
+          <div className="font-display relative flex aspect-[4/5] w-full items-center justify-center rounded-lg bg-ink text-7xl tracking-[0.08em] text-accent">
+            DS
+          </div>
+        )}
+      </div>
+
+      <dl className="mt-8 divide-y divide-ink/15 border-y border-ink/15 text-sm">
+        {FACTS.map(([label, value]) => (
+          <div key={label} className="flex items-baseline justify-between gap-4 py-2.5">
+            <dt className="font-display text-xs tracking-[0.16em] text-muted uppercase">
+              {label}
+            </dt>
+            <dd className="text-right text-ink">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <a
+        href="mailto:contact@le-rempart.org"
+        className="font-display mt-6 block rounded-lg bg-ink px-4 py-3 text-center tracking-[0.14em] text-accent no-underline transition hover:bg-accent hover:text-ink hover:no-underline"
+      >
+        M&apos;écrire
+      </a>
+    </>
   );
 }
