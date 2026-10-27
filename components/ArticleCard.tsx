@@ -44,7 +44,7 @@ export function ArticleCard({
       <article className={`group animate-fade-up ${delayClass}`}>
         <Link href={href} className="block no-underline hover:no-underline">
           {src ? (
-            <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)] sm:aspect-[21/9]">
+            <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={title} />
             </div>
@@ -93,13 +93,13 @@ export function ArticleCard({
     >
       {src ? (
         <Link href={href} className="block no-underline hover:no-underline">
-          <div className="media-frame aspect-[16/10] w-full">
+          <div className="media-frame aspect-[16/9] w-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={src} alt={title} />
           </div>
         </Link>
       ) : (
-        <div className="hidden aspect-[16/10] bg-ink/5 sm:block" />
+        <div className="hidden aspect-[16/9] bg-ink/5 sm:block" />
       )}
       <div>
         <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em] text-muted">

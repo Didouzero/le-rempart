@@ -5,6 +5,8 @@ import { useId, useState } from "react";
 type ListPageHeaderProps = {
   kicker: string;
   title: string;
+  /** Nom du site lu par Google et les lecteurs d'écran en tête du titre, sans changer l'affichage. */
+  hiddenTitlePrefix?: string;
   description?: string;
   basePath: string;
   q?: string;
@@ -31,6 +33,7 @@ function SearchIcon({ className }: { className?: string }) {
 export function ListPageHeader({
   kicker,
   title,
+  hiddenTitlePrefix,
   description,
   basePath,
   q = "",
@@ -48,6 +51,9 @@ export function ListPageHeader({
       </p>
       <div className="mt-2 flex items-center gap-3">
         <h1 className="font-display min-w-0 text-4xl tracking-[0.08em] sm:text-5xl">
+          {hiddenTitlePrefix ? (
+            <span className="sr-only">{hiddenTitlePrefix}</span>
+          ) : null}
           {title}
         </h1>
         <button

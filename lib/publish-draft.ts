@@ -106,25 +106,6 @@ export async function setPublishDraftHeadline(
   }
 }
 
-export async function setPublishDraftCoverUrl(
-  chatId: number,
-  coverImageUrl: string,
-): Promise<PublishDraftRecord | null> {
-  try {
-    const row = await prisma.publishDraft.update({
-      where: { chatId: BigInt(chatId) },
-      data: {
-        coverImageUrl: coverImageUrl.slice(0, 2000),
-        coverImageMime: null,
-        coverImageData: null,
-      },
-    });
-    return toRecord(row);
-  } catch {
-    return null;
-  }
-}
-
 export async function setPublishDraftCoverFile(
   chatId: number,
   image: { buffer: Buffer; mime: string },

@@ -1,6 +1,9 @@
 import sharp from "sharp";
 
-const MAX_EDGE = 1600;
+// 2048 px de côté : même une image portrait garde plus de 1 200 px de large (Google Discover).
+const MAX_EDGE = 2048;
+/** Largeur minimale demandée par Google Discover pour les grandes vignettes. */
+export const DISCOVER_MIN_WIDTH = 1200;
 const MAX_BYTES = 3_500_000;
 
 function sniffMime(buffer: Buffer, declared?: string): string {
@@ -29,7 +32,36 @@ function sniffMime(buffer: Buffer, declared?: string): string {
   return "image/jpeg";
 }
 
-/** Réduit une illustration Telegram pour le site (JPEG 1600px). */
+/** Largeur qu'aura l'illustration une fois préparée pour le site (0 si illisible). */
+export async function preparedIllustrationWidth(buffer: Buffer): Promise<number> {
+  try {
+    const meta = await sharp(buffer, { failOn: "none" }).metadata();
+    const rotated = (meta.orientation ?? 1) >= 5;
+    const w = (rotated ? meta.height : meta.width) ?? 0;
+    const h = (rotated ? meta.width : meta.height) ?? 0;
+    return Math.round(w * Math.min(1, MAX_EDGE / Math.max(w, h, 1)));
+  } catch {
+    return 0;
+  }
+}
+
+/** Télécharge une image distante pour l'héberger sur le site (plus de lien vers un autre serveur). */
+export async function downloadIllustration(
+  url: string,
+): Promise<{ buffer: Buffer; mime: string }> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; LeRempartBot/1.0)" },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new Error(`image introuvable (HTTP ${res.status})`);
+  const mime = res.headers.get("content-type") || "";
+  if (!mime.startsWith("image/")) throw new Error("ce lien n'est pas une image");
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length > 15_000_000) throw new Error("image trop lourde (max 15 Mo)");
+  return { buffer, mime };
+}
+
+/** Réduit une illustration Telegram pour le site (JPEG, 2048 px de côté au plus). */
 export async function prepareSiteIllustration(input: {
   buffer: Buffer;
   mime?: string;

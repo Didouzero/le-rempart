@@ -42,12 +42,12 @@ export function RelatedArticles({ articles }: RelatedArticlesProps) {
                 className="group block no-underline hover:no-underline"
               >
                 {item.coverImageUrl ? (
-                  <div className="media-frame aspect-[16/10] w-full">
+                  <div className="media-frame aspect-[16/9] w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={item.coverImageUrl} alt={item.title} />
                   </div>
                 ) : (
-                  <div className="flex aspect-[16/10] w-full items-end rounded-lg bg-ink p-3">
+                  <div className="flex aspect-[16/9] w-full items-end rounded-lg bg-ink p-3">
                     <span className="font-display text-sm tracking-[0.12em] text-accent">
                       Le Rempart
                     </span>

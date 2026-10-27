@@ -264,12 +264,13 @@ export default async function ArticlePage({ params }: Props) {
       </header>
 
       {article.coverImageUrl ? (
-        <div className="media-frame mb-10 max-h-[32rem] w-full shadow-[var(--shadow-soft)]">
+        {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
+        <div className="media-frame mb-10 aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={article.coverImageUrl}
             alt={article.title}
-            className="max-h-[32rem] w-full object-cover"
+            className="h-full w-full object-cover"
           />
         </div>
       ) : null}

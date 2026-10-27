@@ -2,6 +2,11 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { isFacebookConfigured } from "@/lib/facebook";
 import {
+  DISCOVER_MIN_WIDTH,
+  downloadIllustration,
+  preparedIllustrationWidth,
+} from "@/lib/illustration";
+import {
   isKimiQuotaError,
   KIMI_QUOTA_USER_MESSAGE,
 } from "@/lib/moonshot";
@@ -13,7 +18,6 @@ import {
   getActivePublishDraft,
   restorePublishDraft,
   setPublishDraftCoverFile,
-  setPublishDraftCoverUrl,
   setPublishDraftHeadline,
   upsertPublishDraft,
 } from "@/lib/publish-draft";
@@ -53,9 +57,27 @@ function normalizeCommand(text: string): string {
 
 function illustrationPromptLines(): string[] {
   return [
-    "Envoie l’illustration de l’article : un fichier JPG/PNG, ou une URL http/https.",
-    "Idéal : 1600×900 (16:9), sujet au centre.",
+    "Envoie l’illustration de l’article en FICHIER (JPG, PNG ou WebP) : trombone › Fichier, pour garder la pleine qualité.",
+    "Au moins 1 200 px de large, idéal 1600×900 (16:9). Elle sera hébergée sur le site.",
   ];
+}
+
+/** Enregistre l'illustration (hébergée sur le site) et signale si elle est trop petite pour Discover. */
+async function saveCoverAndAskSubject(
+  chatId: number,
+  image: { buffer: Buffer; mime: string },
+): Promise<void> {
+  const width = await preparedIllustrationWidth(image.buffer);
+  const saved = await setPublishDraftCoverFile(chatId, image);
+  if (!saved) throw new Error("Illustration non enregistrée");
+  const sizeNote =
+    width && width < DISCOVER_MIN_WIDTH
+      ? `\n⚠️ Elle ne fait que ${width} px de large : Google Discover demande au moins ${DISCOVER_MIN_WIDTH} px. Renvoie-en une plus grande (en fichier) si tu en as une, sinon continue.`
+      : "";
+  await telegramSendMessage(
+    chatId,
+    `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${sizeNote}\n\n${SUBJECT_QUESTION}`,
+  );
 }
 
 const SUBJECT_QUESTION = [
@@ -72,7 +94,7 @@ function commandsHelpText(): string {
     "",
     "── Manuel (toujours dispo) ──",
     "1) Envoie une créative PNG/JPG",
-    "2) Envoie l’illustration du site : fichier JPG/PNG ou URL — 1600×900, 16:9",
+    "2) Envoie l’illustration du site en fichier (JPG, PNG, WebP), 1 200 px de large minimum",
     "3) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
     "→ recherches + flash + article site + Facebook",
     "/cancel — annuler la créative en attente",
@@ -192,7 +214,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "",
           "Flux manuel :",
           "1) Envoie ta créative Canva (PNG/JPG)",
-          "2) Envoie l’illustration de l’article (fichier JPG/PNG ou URL)",
+          "2) Envoie l’illustration de l’article en fichier (JPG, PNG, WebP)",
           "3) Décris le sujet : événement, angle, noms, liens si tu en as",
           "4) Je cherche, je rédige et je publie l’article site + Facebook",
           "",
@@ -715,17 +737,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         !draftHasCover(pendingCover)
       ) {
         try {
-          const cover = await telegramDownloadFile(fileId);
-          const saved = await setPublishDraftCoverFile(chatId, cover);
-          if (!saved) throw new Error("Illustration non enregistrée");
-          await telegramSendMessage(
-            chatId,
-            `Illustration enregistrée (fichier).\n\n${SUBJECT_QUESTION}`,
-          );
+          await saveCoverAndAskSubject(chatId, await telegramDownloadFile(fileId));
         } catch (err) {
           await telegramSendMessage(
             chatId,
-            `Illustration : ${err instanceof Error ? err.message : "fichier illisible"}. Envoie un JPG/PNG, ou une URL.`,
+            `Illustration : ${err instanceof Error ? err.message : "fichier illisible"}. Envoie un fichier JPG, PNG ou WebP.`,
           );
         }
         return;
@@ -815,11 +831,15 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     if (draft && url && !draftHasCover(draft)) {
-      await setPublishDraftCoverUrl(chatId, url);
-      await telegramSendMessage(
-        chatId,
-        `Illustration enregistrée.\n\n${SUBJECT_QUESTION}`,
-      );
+      // Un lien est téléchargé puis hébergé sur le site, comme un fichier.
+      try {
+        await saveCoverAndAskSubject(chatId, await downloadIllustration(url));
+      } catch (err) {
+        await telegramSendMessage(
+          chatId,
+          `Illustration : ${err instanceof Error ? err.message : "lien illisible"}. Envoie plutôt l’image en fichier (JPG, PNG ou WebP).`,
+        );
+      }
       return;
     }
 
@@ -827,7 +847,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(
         chatId,
         [
-          "J’attends encore l’illustration : un JPG/PNG, ou une URL http/https.",
+          "J’attends encore l’illustration : un fichier JPG, PNG ou WebP.",
           `Titre en attente : ${draft.headline.slice(0, 120)}`,
           "",
           "/cancel pour annuler.",
@@ -873,7 +893,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
     await telegramSendMessage(
       chatId,
-      "Envoie d’abord une créative (PNG/JPG), puis l’illustration (fichier ou URL), puis le sujet du flash.",
+      "Envoie d’abord une créative (PNG/JPG), puis l’illustration (en fichier), puis le sujet du flash.",
     );
   } catch (err) {
     console.error("telegram process error", err);

@@ -128,6 +128,7 @@ export default async function HomePage({ searchParams }: Props) {
       <ListPageHeader
         kicker="Fil d'actualité"
         title="L'actualité à la une"
+        hiddenTitlePrefix={!q && page === 1 ? "Le Rempart : " : undefined}
         basePath="/"
         q={q}
         placeholder="Rechercher dans toutes les news…"

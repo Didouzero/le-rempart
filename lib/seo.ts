@@ -119,7 +119,7 @@ export function organizationJsonLd() {
     "@type": "NewsMediaOrganization",
     "@id": ORGANIZATION_ID,
     name: SITE_NAME,
-    alternateName: "Rempart",
+    alternateName: "Le Rempart Média",
     url,
     logo: {
       "@type": "ImageObject",
@@ -153,8 +153,9 @@ export function websiteJsonLd() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
-    alternateName: "Rempart",
-    url: absoluteUrl("/"),
+    alternateName: "Le Rempart Média",
+    // Même forme que l'URL d'accueil indexée par Google (barre finale).
+    url: `${absoluteUrl("/")}/`,
     inLanguage: "fr-FR",
     publisher: publisherRef(),
   };
