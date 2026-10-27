@@ -140,6 +140,8 @@ export function organizationJsonLd() {
     email: "contact@le-rempart.org",
     address: {
       "@type": "PostalAddress",
+      postalCode: "75008",
+      addressLocality: "Paris",
       addressCountry: "FR",
     },
   };
