@@ -35,9 +35,12 @@ export default function ContactPage() {
         </div>
         <a
           href={`mailto:${EMAIL}`}
-          className="font-display mt-12 block break-all text-3xl tracking-[0.04em] text-accent underline decoration-accent/40 decoration-2 underline-offset-8 transition hover:decoration-accent sm:text-4xl"
+          className="font-display mt-12 block text-[1.55rem] tracking-[0.02em] text-accent underline decoration-accent/40 decoration-2 underline-offset-8 transition hover:decoration-accent sm:text-4xl"
         >
-          {EMAIL}
+          {/* Coupure permise seulement après l'arobase, jamais au milieu du domaine. */}
+          contact@
+          <wbr />
+          le-rempart.org
         </a>
       </section>
 

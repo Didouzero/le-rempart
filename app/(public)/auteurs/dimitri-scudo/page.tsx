@@ -86,8 +86,8 @@ export default async function AuthorPage() {
       />
 
       <div className="grid gap-10 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-14">
-        {/* Fiche d'identité, fixe à côté du texte sur ordinateur. */}
-        <aside className="lg:sticky lg:top-8 lg:self-start">
+        {/* Fiche d'identité : fixe à côté du texte sur ordinateur, après le texte sur téléphone. */}
+        <aside className="order-2 lg:sticky lg:top-8 lg:order-1 lg:self-start">
           <div className="relative mx-auto w-48 lg:mx-0 lg:w-full">
             <div
               aria-hidden
@@ -125,7 +125,7 @@ export default async function AuthorPage() {
           </a>
         </aside>
 
-        <article className="min-w-0">
+        <article className="order-1 min-w-0 lg:order-2">
           <p className="section-kicker">
             <span className="live-dot" aria-hidden />
             L&apos;auteur
