@@ -10,22 +10,28 @@ export type RelatedArticleItem = {
 
 type RelatedArticlesProps = {
   articles: RelatedArticleItem[];
+  kicker?: string;
+  title?: string;
 };
 
-export function RelatedArticles({ articles }: RelatedArticlesProps) {
+export function RelatedArticles({
+  articles,
+  kicker = "Suite",
+  title = "Dans l'actualité également",
+}: RelatedArticlesProps) {
   if (articles.length === 0) return null;
 
   return (
     <section className="mt-14 border-t border-ink pt-10" aria-labelledby="related-heading">
       <p className="section-kicker">
         <span className="live-dot" aria-hidden />
-        Suite
+        {kicker}
       </p>
       <h2
         id="related-heading"
         className="font-display mt-2 text-2xl tracking-[0.08em] sm:text-3xl"
       >
-        Dans l&apos;actualité également
+        {title}
       </h2>
       <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
 

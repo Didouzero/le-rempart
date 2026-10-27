@@ -7,6 +7,8 @@ export const SITE_AUTHOR = {
   slug: "dimitri-scudo",
   path: "/auteurs/dimitri-scudo",
   jobTitle: "Fondateur et rédacteur en chef",
+  /** Portrait affiché sur la page auteur (fichier dans public/), ou null tant qu'il n'est pas fourni. */
+  photo: null as string | null,
 } as const;
 
 /** Auteur affiché d'un article (les anciens alias en base sont remplacés). */
