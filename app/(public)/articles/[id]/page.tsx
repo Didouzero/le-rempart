@@ -292,7 +292,7 @@ export default async function ArticlePage({ params }: Props) {
       </header>
 
       {article.coverImageUrl ? (
-        <figure className="mb-10">
+        <figure className="mb-10 max-w-2xl">
           {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
           <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
