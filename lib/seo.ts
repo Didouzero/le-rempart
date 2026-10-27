@@ -140,6 +140,7 @@ export function organizationJsonLd() {
     email: "contact@le-rempart.org",
     address: {
       "@type": "PostalAddress",
+      streetAddress: "Impasse du Docteur-Jacques-Bertillon",
       postalCode: "75008",
       addressLocality: "Paris",
       addressCountry: "FR",
