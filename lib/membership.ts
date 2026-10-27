@@ -30,19 +30,37 @@ export function plusCookieOptions() {
   };
 }
 
+/** Signature du cookie de session : sans elle, n'importe qui pourrait y écrire l'e-mail d'un abonné. */
+function sessionSignature(email: string): string {
+  return createHmac("sha256", signingSecret())
+    .update(`plus-session|${email}`)
+    .digest("base64url");
+}
+
 export function applyPlusCookie(res: NextResponse, email: string) {
-  res.cookies.set(
-    REMPART_PLUS_COOKIE,
-    email.trim().toLowerCase(),
-    plusCookieOptions(),
-  );
+  const normalized = email.trim().toLowerCase();
+  const value = Buffer.from(
+    `${normalized}|${sessionSignature(normalized)}`,
+  ).toString("base64url");
+  res.cookies.set(REMPART_PLUS_COOKIE, value, plusCookieOptions());
 }
 
 export async function getPlusEmail(): Promise<string | null> {
   const jar = await cookies();
-  const email = jar.get(REMPART_PLUS_COOKIE)?.value?.trim().toLowerCase();
-  if (!email || !email.includes("@")) return null;
-  return email;
+  const raw = jar.get(REMPART_PLUS_COOKIE)?.value;
+  if (!raw) return null;
+  try {
+    const [email, sig] = Buffer.from(raw, "base64url")
+      .toString("utf8")
+      .split("|");
+    if (!email || !sig || !email.includes("@")) return null;
+    const a = Buffer.from(sig);
+    const b = Buffer.from(sessionSignature(email));
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+    return email;
+  } catch {
+    return null;
+  }
 }
 
 export async function isActiveMembership(email: string): Promise<boolean> {
