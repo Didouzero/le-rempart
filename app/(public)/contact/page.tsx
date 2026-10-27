@@ -25,7 +25,7 @@ export default function ContactPage() {
       <section className="flex flex-col rounded-lg bg-ink p-8 text-paper sm:p-10">
         <div>
           <p className="font-display text-sm tracking-[0.24em] text-accent uppercase">Contact</p>
-          <h1 className="font-display mt-4 text-5xl leading-[0.9] uppercase sm:text-6xl">
+          <h1 className="font-display mt-4 text-5xl leading-[1.05] uppercase sm:text-6xl">
             Écrivez à la rédaction
           </h1>
           <p className="mt-5 text-white/70">

@@ -33,17 +33,17 @@ const TIMELINE = [
   {
     when: "2025",
     title: "Quatre, autour d'une table",
-    text: "Trois journalistes et moi. Un constat commun : la droite progresse dans les urnes, mais perd presque toujours la bataille du récit.",
+    text: "Au départ, nous étions trois amis politiquement marqués à droite et moi. Nous avions un constat commun : la droite stagne dans l'opinion publique. Il fallait accélérer le processus.",
   },
   {
     when: "Le pari",
-    title: "Ne céder aucun terrain",
-    text: "Un média qui raconte les faits jusqu'au bout, qui fait avancer les idées de droite et ne laisse aucun espace à la gauche dans la bataille des idées.",
+    title: "Gagner le débat des idées",
+    text: "Notre mission : raconter les faits, parfois avec une opinion clairement assumée, pour faire avancer nos idées et ne laisser aucune possibilité à la gauche de triompher dans le débat public.",
   },
   {
     when: "Aujourd'hui",
-    title: "Seul, avec l'IA",
-    text: "Nos chemins se sont séparés. J'ai choisi de continuer, en m'appuyant sur l'intelligence artificielle là où je m'appuyais hier sur une rédaction.",
+    title: "Je suis resté seul aux commandes",
+    text: "Travailler bénévolement n'est pas chose facile au lancement d'un projet d'une telle ambition. Pour diverses raisons, je suis resté seul aux commandes depuis février 2026. Je m'appuie sur l'intelligence artificielle là où je m'appuyais hier sur une rédaction.",
   },
 ] as const;
 
@@ -135,19 +135,19 @@ export default async function AuthorPage() {
           <div className="mt-4 space-y-4 text-ink">
             <p>
               Je m&apos;aide de l&apos;intelligence artificielle pour chercher,
-              recouper et rédiger. Je le dis franchement : je n&apos;ai rien à
-              cacher sur ma méthode.
+              recouper et rédiger. Je le dis franchement, je n&apos;ai rien à
+              cacher sur la méthode en soi.
             </p>
             <p>
-              Mais l&apos;IA n&apos;est pas aux commandes. Je choisis chaque
-              sujet, je fixe chaque angle et j&apos;écris moi-même une partie
-              des articles. La ligne éditoriale, ses choix et ses partis pris
-              sont les miens, et j&apos;en réponds.
+              L&apos;IA n&apos;est en revanche pas aux commandes. Je choisis
+              chaque sujet, je fixe la ligne éditoriale et j&apos;écris
+              moi-même une bonne partie des articles. Les choix et les partis
+              pris sont les miens, et j&apos;en réponds.
             </p>
           </div>
 
           <blockquote className="my-10 border-y-2 border-ink py-6">
-            <p className="font-display text-3xl leading-tight tracking-[0.03em] sm:text-4xl">
+            <p className="font-display text-2xl leading-tight tracking-[0.03em] sm:text-3xl">
               « Un article du Rempart peut prendre parti.{" "}
               <span className="text-accent-deep">Il ne doit jamais arranger les faits.</span> »
             </p>
