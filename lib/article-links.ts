@@ -96,3 +96,38 @@ export function citedUrls(markdown: string): string[] {
   }
   return urls;
 }
+
+export const READ_ALSO = "**À lire aussi :**";
+
+/**
+ * Insère l'encadré « À lire aussi » après le deuxième paragraphe du texte
+ * (avant le premier intertitre s'il vient plus tôt).
+ */
+export function insertReadAlso(
+  markdown: string,
+  items: Array<{ publicId: number; title: string }>,
+): string {
+  if (!items.length || markdown.includes(READ_ALSO)) return markdown;
+  const block = `${READ_ALSO} ${items
+    .map((b) => `[${b.title.replace(/[[\]]/g, "")}](${articlePublicPath(b.publicId)})`)
+    .join(" · ")}`;
+  const paras = markdown.split(/\n{2,}/);
+  let at = 0;
+  let seen = 0;
+  for (let i = 0; i < paras.length; i++) {
+    if (paras[i]!.startsWith("#")) {
+      if (seen > 0) break;
+      continue;
+    }
+    seen += 1;
+    at = i + 1;
+    if (seen === 2) break;
+  }
+  paras.splice(at, 0, block);
+  return paras.join("\n\n");
+}
+
+/** Articles du Rempart déjà liés dans le texte (/articles/ID). */
+export function linkedArticleIds(markdown: string): number[] {
+  return [...markdown.matchAll(/\]\(\/articles\/(\d+)\)/g)].map((m) => Number(m[1]));
+}

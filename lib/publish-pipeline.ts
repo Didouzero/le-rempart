@@ -14,7 +14,8 @@ import {
   saveGeneratedArticle,
 } from "@/lib/publish-from-creative";
 import { purgeOldCreatives } from "@/lib/creatives-retention";
-import { findLinkableArticles } from "@/lib/related-articles";
+import { insertReadAlso, linkedArticleIds } from "@/lib/article-links";
+import { findLinkableArticles, findReadAlso } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
 
 export type PipelineNotify = (text: string) => Promise<void>;
@@ -315,8 +316,21 @@ export async function publishBriefPipeline(input: {
       .join("\n\n"),
   );
 
+  // Encadré « À lire aussi » : mêmes règles que pour les anciens articles.
+  const readAlso = await findReadAlso({
+    title: research.article.title,
+    excerpt: research.article.excerpt,
+    excludePublicIds: linkedArticleIds(research.article.content),
+  }).catch((err) => {
+    console.error("à lire aussi ignoré", err);
+    return [];
+  });
+
   const article = await saveGeneratedArticle({
-    generated: research.article,
+    generated: {
+      ...research.article,
+      content: insertReadAlso(research.article.content, readAlso),
+    },
     sourceText: research.matter,
     sourceUrl: research.sources[0]?.url,
     coverImageUrl: input.coverImageUrl,

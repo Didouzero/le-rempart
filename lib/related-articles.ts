@@ -222,3 +222,74 @@ export async function findLinkableArticles(input: {
     .slice(0, input.take ?? 8)
     .map(({ row }) => ({ publicId: row.publicId, title: row.title }));
 }
+
+const COMMON_CAPS = new Set([
+  "france", "francais", "francaise", "etat", "gouvernement", "paris", "europe",
+  "president", "ministre", "premier", "assemblee", "nationale", "republique",
+  // Présents dans trop de sujets pour signaler un lien réel.
+  "macron", "emmanuel", "rassemblement", "insoumise",
+]);
+
+/** Noms propres (mots à majuscule hors début de phrase), repliés sans accents. */
+export function properNouns(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const sentence of text.split(/[.!?:;«»"()]\s*/)) {
+    const words = sentence.trim().split(/\s+/).slice(1);
+    for (const w of words) {
+      const clean = w.replace(/[^\p{L}'-]/gu, "");
+      if (clean.length < 4 || !/^\p{Lu}/u.test(clean) || clean === clean.toUpperCase()) continue;
+      const folded = fold(clean);
+      if (!COMMON_CAPS.has(folded)) out.add(folded);
+    }
+  }
+  return out;
+}
+
+type ReadAlsoCandidate = { publicId: number; title: string; excerpt: string };
+
+/**
+ * Règle de l'encadré « À lire aussi » : au moins un nom propre en commun
+ * et un score (mots-clés + 2 par nom propre partagé) d'au moins 4. Deux articles au plus.
+ */
+export function pickReadAlso(
+  subject: { title: string; excerpt: string },
+  candidates: ReadAlsoCandidate[],
+): ReadAlsoCandidate[] {
+  const mine = themeTokens(subject.title, subject.excerpt);
+  const myNames = properNouns(`${subject.title}. ${subject.excerpt}`);
+  return candidates
+    .map((b) => {
+      let score = 0;
+      for (const t of themeTokens(b.title, b.excerpt)) if (mine.has(t)) score += 1;
+      let shared = 0;
+      for (const n of properNouns(`${b.title}. ${b.excerpt}`)) if (myNames.has(n)) shared += 1;
+      return { b, score: score + 2 * shared, shared };
+    })
+    .filter((x) => x.shared >= 1 && x.score >= 4)
+    .sort((x, y) => y.score - x.score)
+    .slice(0, 2)
+    .map((x) => x.b);
+}
+
+/** Encadré « À lire aussi » d'un nouvel article, parmi les 600 derniers publiés. */
+export async function findReadAlso(input: {
+  title: string;
+  excerpt: string;
+  /** Articles déjà liés dans le texte : inutile de les répéter. */
+  excludePublicIds?: number[];
+}): Promise<ReadAlsoCandidate[]> {
+  const rows = await withDbTimeout(
+    prisma.article.findMany({
+      where: {
+        status: "published",
+        ...(input.excludePublicIds?.length
+          ? { NOT: { publicId: { in: input.excludePublicIds } } }
+          : {}),
+      },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 600,
+      select: { publicId: true, title: true, excerpt: true },
+    }),
+  );
+  return pickReadAlso(input, rows);
+}
