@@ -1,5 +1,10 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
+import {
+  ARTICLE_CATEGORIES,
+  CATEGORY_META,
+  isArticleCategory,
+} from "@/lib/categories";
 import { isFacebookConfigured } from "@/lib/facebook";
 import {
   DISCOVER_MIN_WIDTH,
@@ -17,6 +22,7 @@ import {
   extractHttpUrl,
   getActivePublishDraft,
   restorePublishDraft,
+  setPublishDraftCategory,
   setPublishDraftCoverFile,
   setPublishDraftHeadline,
   upsertPublishDraft,
@@ -63,6 +69,17 @@ function illustrationPromptLines(): string[] {
   ];
 }
 
+const CATEGORY_QUESTION = "📂 Dans quelle rubrique publier cette news ?";
+
+/** Un bouton par rubrique du site ; le choix revient toujours à l'éditeur. */
+function categoryKeyboard() {
+  const buttons = ARTICLE_CATEGORIES.map((key) => ({
+    text: CATEGORY_META[key].label,
+    callback_data: `cat:${key}`,
+  }));
+  return { inline_keyboard: [buttons.slice(0, 3), buttons.slice(3)] };
+}
+
 /** Enregistre l'illustration (hébergée sur le site) et signale si elle est trop petite pour Discover. */
 async function saveCoverAndAskSubject(
   chatId: number,
@@ -78,7 +95,8 @@ async function saveCoverAndAskSubject(
       : "";
   await telegramSendMessage(
     chatId,
-    `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${caption?.trim() ? `\nLégende : « ${caption.trim().slice(0, 200)} »` : ""}${sizeNote}\n\n${SUBJECT_QUESTION}`,
+    `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${caption?.trim() ? `\nLégende : « ${caption.trim().slice(0, 200)} »` : ""}${sizeNote}\n\n${CATEGORY_QUESTION}`,
+    { reply_markup: categoryKeyboard() },
   );
 }
 
@@ -97,7 +115,8 @@ function commandsHelpText(): string {
     "── Manuel (toujours dispo) ──",
     "1) Envoie une créative PNG/JPG",
     "2) Envoie l’illustration du site en fichier (JPG, PNG, WebP), 1 200 px de large minimum",
-    "3) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
+    "3) Choisis la rubrique avec les boutons",
+    "4) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
     "→ recherches + flash + article site + Facebook",
     "/cancel — annuler la créative en attente",
     "",
@@ -180,6 +199,21 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     const data = cq.data || "";
+    if (data.startsWith("cat:")) {
+      const key = data.slice(4);
+      const draft = await getActivePublishDraft(chatId);
+      if (!draft || !isArticleCategory(key)) {
+        await telegramAnswerCallbackQuery(cq.id, "Brouillon expiré : renvoie la créative");
+        return;
+      }
+      await setPublishDraftCategory(chatId, key);
+      await telegramAnswerCallbackQuery(cq.id, `Rubrique : ${CATEGORY_META[key].label}`);
+      await telegramSendMessage(
+        chatId,
+        `Rubrique : ${CATEGORY_META[key].label}.\n\n${SUBJECT_QUESTION}`,
+      );
+      return;
+    }
     if (data.startsWith("tt:")) {
       const { handleTiktokCallback } = await import("@/lib/tiktok/telegram");
       await handleTiktokCallback({
@@ -217,8 +251,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "Flux manuel :",
           "1) Envoie ta créative Canva (PNG/JPG)",
           "2) Envoie l’illustration de l’article en fichier (JPG, PNG, WebP)",
-          "3) Décris le sujet : événement, angle, noms, liens si tu en as",
-          "4) Je cherche, je rédige et je publie l’article site + Facebook",
+          "3) Choisis la rubrique avec les boutons",
+          "4) Décris le sujet : événement, angle, noms, liens si tu en as",
+          "5) Je cherche, je rédige et je publie l’article site + Facebook",
           "",
           "/cancel pour abandonner une créative en attente.",
         ].join("\n"),
@@ -864,6 +899,13 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
+    if (draft && !draft.category) {
+      await telegramSendMessage(chatId, CATEGORY_QUESTION, {
+        reply_markup: categoryKeyboard(),
+      });
+      return;
+    }
+
     if (draft) {
       const brief = text.startsWith("/") ? "" : text;
       if (brief.length < 10) {
@@ -882,6 +924,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           brief,
           coverImageUrl: draft.coverImageUrl || undefined,
           coverCaption: draft.coverCaption || undefined,
+          category: draft.category || undefined,
           coverImage:
             draft.coverImageData && draft.coverImageData.length > 0
               ? {

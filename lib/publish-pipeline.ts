@@ -13,6 +13,7 @@ import {
   publishArticleFromCreative,
   saveGeneratedArticle,
 } from "@/lib/publish-from-creative";
+import type { ArticleCategory } from "@/lib/categories";
 import { purgeOldCreatives } from "@/lib/creatives-retention";
 import { insertReadAlso, linkedArticleIds } from "@/lib/article-links";
 import { findLinkableArticles, findReadAlso } from "@/lib/related-articles";
@@ -281,6 +282,8 @@ export async function publishBriefPipeline(input: {
   coverImage?: { buffer: Buffer; mime: string };
   /** Légende de l'illustration (description et crédit). */
   coverCaption?: string;
+  /** Rubrique choisie par l'éditeur dans le bot. */
+  category?: ArticleCategory;
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
@@ -336,6 +339,7 @@ export async function publishBriefPipeline(input: {
     coverImageUrl: input.coverImageUrl,
     coverImage: input.coverImage,
     coverCaption: input.coverCaption,
+    category: input.category,
     image: input.image,
     notify,
   });

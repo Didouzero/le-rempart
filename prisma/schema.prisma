@@ -105,6 +105,8 @@ model PublishDraft {
   coverImageData Bytes?
   /// Légende de l'illustration, tapée dans la légende du fichier Telegram.
   coverCaption   String?
+  /// Rubrique choisie par l'éditeur avec les boutons du bot.
+  category       String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

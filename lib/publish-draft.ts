@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { prepareSiteIllustration } from "@/lib/illustration";
+import { isArticleCategory, type ArticleCategory } from "@/lib/categories";
 import { utf8Text } from "@/lib/utf8";
 
 /** Brouillon créative → image → lien : expire après 30 min. */
@@ -16,6 +17,7 @@ export type PublishDraftRecord = {
   coverImageMime: string | null;
   coverImageData: Buffer | null;
   coverCaption: string | null;
+  category: ArticleCategory | null;
   createdAt: Date;
 };
 
@@ -30,6 +32,7 @@ function toRecord(row: {
   coverImageMime?: string | null;
   coverImageData?: Uint8Array | Buffer | null;
   coverCaption?: string | null;
+  category?: string | null;
   createdAt: Date;
 }): PublishDraftRecord {
   return {
@@ -45,6 +48,8 @@ function toRecord(row: {
       ? Buffer.from(row.coverImageData)
       : null,
     coverCaption: row.coverCaption ?? null,
+    category:
+      row.category && isArticleCategory(row.category) ? row.category : null,
     createdAt: row.createdAt,
   };
 }
@@ -79,6 +84,7 @@ export async function upsertPublishDraft(input: {
       coverImageMime: null,
       coverImageData: null,
       coverCaption: null,
+      category: null,
     },
     update: {
       userId: BigInt(input.userId),
@@ -89,6 +95,7 @@ export async function upsertPublishDraft(input: {
       coverImageMime: null,
       coverImageData: null,
       coverCaption: null,
+      category: null,
     },
   });
   return toRecord(row);
@@ -126,6 +133,22 @@ export async function setPublishDraftCoverFile(
         coverImageData: Buffer.from(prepared.buffer),
         coverCaption: caption?.trim() ? utf8Text(caption.trim(), 400) : null,
       },
+    });
+    return toRecord(row);
+  } catch {
+    return null;
+  }
+}
+
+/** Rubrique choisie avec les boutons du bot. */
+export async function setPublishDraftCategory(
+  chatId: number,
+  category: ArticleCategory,
+): Promise<PublishDraftRecord | null> {
+  try {
+    const row = await prisma.publishDraft.update({
+      where: { chatId: BigInt(chatId) },
+      data: { category },
     });
     return toRecord(row);
   } catch {

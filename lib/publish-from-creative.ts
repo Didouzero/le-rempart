@@ -1,6 +1,6 @@
 import { allocateNextAuthorName } from "@/lib/authors";
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
-import { classifyArticleCategory } from "@/lib/categories";
+import { classifyArticleCategory, type ArticleCategory } from "@/lib/categories";
 import { fetchSourceText } from "@/lib/fetch-source";
 import { prepareSiteIllustration } from "@/lib/illustration";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
@@ -222,6 +222,8 @@ export async function saveGeneratedArticle(input: {
   coverImageUrl?: string;
   coverImage?: { buffer: Buffer; mime: string };
   coverCaption?: string;
+  /** Rubrique choisie par l'éditeur ; à défaut, classement automatique. */
+  category?: ArticleCategory;
   image?: { buffer: Buffer; mime: string };
   notify?: (text: string) => Promise<void>;
 }): Promise<SavedArticle> {
@@ -266,11 +268,13 @@ export async function saveGeneratedArticle(input: {
     input.image.buffer.length > 0 &&
     input.image.buffer.length < 4_000_000;
 
-  const category = classifyArticleCategory({
-    title: generated.title,
-    excerpt: generated.excerpt,
-    content: generated.content,
-  });
+  const category =
+    input.category ||
+    classifyArticleCategory({
+      title: generated.title,
+      excerpt: generated.excerpt,
+      content: generated.content,
+    });
 
   const authorName = await allocateNextAuthorName();
 
