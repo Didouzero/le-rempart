@@ -47,14 +47,49 @@ export function outletFromUrl(url?: string): string | null {
       "lexpress.fr": "L'Express",
       "lesechos.fr": "Les Echos",
       "mediapart.fr": "Mediapart",
+      "la-croix.com": "La Croix",
+      "rfi.fr": "RFI",
+      "ledauphine.com": "Le Dauphiné libéré",
+      "laprovence.com": "La Provence",
+      "i24news.tv": "i24NEWS",
+      "lejdd.fr": "JDD",
+      "europe1.fr": "Europe 1",
+      "publicsenat.fr": "Public Sénat",
+      "tf1info.fr": "TF1 Info",
+      "francebleu.fr": "France Bleu",
+      "ici.fr": "ici",
+      "actu.fr": "Actu.fr",
+      "leprogres.fr": "Le Progrès",
+      "letelegramme.fr": "Le Télégramme",
+      "nicematin.com": "Nice-Matin",
+      "lavoixdunord.fr": "La Voix du Nord",
+      "lalsace.fr": "L'Alsace",
+      "dna.fr": "DNA",
+      "midilibre.fr": "Midi Libre",
+      "lindependant.fr": "L'Indépendant",
+      "ledauphine.fr": "Le Dauphiné libéré",
+      "lefigaro.fr": "Le Figaro",
+      "boulevard-voltaire.fr": "Boulevard Voltaire",
+      "frontieresmedia.fr": "Frontières",
+      "causeur.fr": "Causeur",
+      "lopinion.fr": "L'Opinion",
+      "challenges.fr": "Challenges",
+      "capital.fr": "Capital",
+      "humanite.fr": "L'Humanité",
+      "afp.com": "AFP",
+      "reuters.com": "Reuters",
     };
     if (map[host]) return map[host];
     // sous-domaine type region.lamontagne.fr
     for (const [key, label] of Object.entries(map)) {
       if (host.endsWith(`.${key}`) || host === key) return label;
     }
-    const base = host.split(".")[0] || host;
-    return base.charAt(0).toUpperCase() + base.slice(1);
+    // Repli : « la-croix.com » → « La Croix ».
+    const base = host.split(".").slice(-2, -1)[0] || host;
+    return base
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
   } catch {
     return null;
   }

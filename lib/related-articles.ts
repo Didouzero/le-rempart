@@ -188,3 +188,37 @@ export async function findRelatedArticles(input: {
     coverImageUrl,
   }));
 }
+
+export type LinkableArticle = { publicId: number; title: string };
+
+/**
+ * Articles déjà publiés qui partagent au moins deux mots-clés avec un sujet :
+ * candidats aux liens internes placés dans le corps d'un nouvel article.
+ */
+export async function findLinkableArticles(input: {
+  text: string;
+  excludePublicId?: number;
+  take?: number;
+}): Promise<LinkableArticle[]> {
+  const tokens = themeTokens(input.text);
+  if (tokens.size === 0) return [];
+  const rows = await withDbTimeout(
+    prisma.article.findMany({
+      where: {
+        status: "published",
+        ...(input.excludePublicId
+          ? { NOT: { publicId: input.excludePublicId } }
+          : {}),
+      },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 600,
+      select: { publicId: true, title: true, excerpt: true, publishedAt: true },
+    }),
+  );
+  return rows
+    .map((row) => ({ row, score: overlapScore(tokens, row.title, row.excerpt) }))
+    .filter((x) => x.score >= 2)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, input.take ?? 8)
+    .map(({ row }) => ({ publicId: row.publicId, title: row.title }));
+}

@@ -13,6 +13,7 @@ import {
   publishArticleFromCreative,
   saveGeneratedArticle,
 } from "@/lib/publish-from-creative";
+import { findLinkableArticles } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
 
 export type PipelineNotify = (text: string) => Promise<void>;
@@ -280,10 +281,18 @@ export async function publishBriefPipeline(input: {
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
 
+  const linkable = await findLinkableArticles({
+    text: `${input.headline} ${input.brief}`,
+  }).catch((err) => {
+    console.error("linkable articles skipped", err);
+    return [];
+  });
+
   const research = await researchAndWrite({
     headline: input.headline,
     brief: input.brief,
     creative: input.image,
+    linkable,
     onProgress: notify,
     onSearch: (queries) =>
       queries.length

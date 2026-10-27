@@ -9,6 +9,15 @@ import { recordTokenUsage } from "@/lib/eval/token-meter";
 import { fetchSourceText, scrubBoilerplate } from "@/lib/fetch-source";
 import { outletFromUrl } from "@/lib/flash-info";
 import { fixFrenchPunctuation } from "@/lib/french-copy";
+import {
+  citedUrls,
+  countLinks,
+  enforceLinks,
+  outsideLinkTargets,
+  sourcesSection,
+  stripSourcesSection,
+  type LinkPolicy,
+} from "@/lib/article-links";
 import { italicizeCitations } from "@/lib/italicize-citations";
 
 const BASE = "https://api.moonshot.ai/v1";
@@ -95,6 +104,11 @@ FORMAT DE L'ARTICLE
 - Citations verbatim courtes, entre guillemets français et en italique : *« phrase exacte »*, toujours attribuées. N'attribue à un média que ce qu'il a réellement écrit.
 - Titre : clair et précis, sur le même sujet que l'accroche de la créative, avec les chiffres exacts des sources. Pas de majuscules partout, pas de point final.
 - Chapô (excerpt) : une ou deux phrases strictement factuelles.
+
+LIENS DANS LE CORPS (Markdown)
+- Sources : quand un fait, un chiffre ou une citation vient d'un média, cite-le et place le lien sur son nom, par exemple : selon [Le Figaro](https://…). Utilise UNIQUEMENT les adresses de la liste « Sources déjà lues » ou celles renvoyées par tes recherches, recopiées à l'identique. Vise deux à cinq sources citées en lien, chacune au moment où elle sert.
+- Liens internes : si la liste « Articles du Rempart sur des sujets proches » est fournie, place un à trois liens vers ceux qui éclairent vraiment le sujet (antécédents, affaire liée), sur un texte d'ancre descriptif et naturel, par exemple : la [condamnation du député en 2025](/articles/123). Recopie l'adresse /articles/… telle quelle. N'en mets aucun si rien n'est pertinent.
+- Jamais d'adresse inventée, jamais de lien nu, pas de section « Sources » : elle est ajoutée automatiquement.
 - Réponds UNIQUEMENT avec un JSON valide : {"title":"...","excerpt":"...","content":"..."}`;
 
 const TOOLS = [
@@ -149,6 +163,8 @@ export async function researchAndWrite(input: {
   /** Consignes libres de l'éditeur (sujet, angle, noms, liens…). */
   brief: string;
   creative?: { buffer: Buffer; mime: string };
+  /** Articles déjà publiés sur des sujets proches, proposés en liens internes. */
+  linkable?: Array<{ publicId: number; title: string }>;
 } & Hooks): Promise<BriefResult> {
   const deadline = Date.now() + TOTAL_BUDGET_MS;
   const sources = new Map<string, BriefSource>();
@@ -196,6 +212,13 @@ export async function researchAndWrite(input: {
   });
   const flash = finishFlash(flashRaw, provided[0]?.url);
 
+  const linkable = input.linkable || [];
+  // Relu à chaque appel : les recherches faites pendant l'article ajoutent des sources.
+  const linkPolicy = (): LinkPolicy => ({
+    external: new Set(sources.keys()),
+    internal: new Set(linkable.map((a) => a.publicId)),
+  });
+
   await input.onProgress?.("✍️ Rédaction de l'article du site…");
   const articleRaw = await runAgent({
     system: ARTICLE_SYSTEM,
@@ -206,8 +229,15 @@ export async function researchAndWrite(input: {
           briefBlock,
           `Flash info publié sur Facebook :\n"""${flash}"""`,
           `Sources déjà lues :\n${digest(sources, notes)}`,
+          linkable.length
+            ? `Articles du Rempart sur des sujets proches :\n${linkable
+                .map((a) => `- ${a.title} : /articles/${a.publicId}`)
+                .join("\n")}`
+            : "",
           "Rédige l'article complet du site.",
-        ].join("\n\n"),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
       },
     ],
     maxRounds: 4,
@@ -219,13 +249,13 @@ export async function researchAndWrite(input: {
     deadline,
     check: (raw) => {
       try {
-        return articleIssues(parseArticle(raw));
+        return articleIssues(parseArticle(raw), linkPolicy());
       } catch (err) {
         return [err instanceof Error ? err.message : "JSON invalide"];
       }
     },
   });
-  const article = finishArticle(parseArticle(articleRaw));
+  const article = finishArticle(parseArticle(articleRaw), linkPolicy(), sources);
 
   return {
     flash,
@@ -601,8 +631,17 @@ function parseArticle(raw: string): {
   };
 }
 
-function articleIssues(a: { title: string; excerpt: string; content: string }) {
+function articleIssues(
+  a: { title: string; excerpt: string; content: string },
+  policy: LinkPolicy,
+) {
   const issues: string[] = [];
+  const links = countLinks(enforceLinks(a.content, policy));
+  if (policy.external.size > 0 && links.external === 0) {
+    issues.push(
+      "aucune source n'est citée en lien : place le lien sur le nom du média, avec une adresse de la liste « Sources déjà lues »",
+    );
+  }
   if (a.title.length < 15) issues.push("le titre manque ou est trop court");
   if (a.excerpt.length < 20) issues.push("le chapô (excerpt) manque");
   const words = countWords(a.content);
@@ -613,18 +652,26 @@ function articleIssues(a: { title: string; excerpt: string; content: string }) {
   return issues;
 }
 
-function finishArticle(a: { title: string; excerpt: string; content: string }) {
+function finishArticle(
+  a: { title: string; excerpt: string; content: string },
+  policy: LinkPolicy,
+  sources: Map<string, BriefSource>,
+) {
   const dashes = (s: string) =>
     s.replace(/\s+[–—]\s+/g, ", ").replace(/[–—]/g, ", ").replace(EMOJI, "");
-  return {
-    title: fixFrenchPunctuation(dashes(a.title)).replace(/\.$/, "").slice(0, 220),
-    excerpt: fixFrenchPunctuation(dashes(a.excerpt)),
-    content: italicizeCitations(
-      a.content
+  const body = italicizeCitations(
+    outsideLinkTargets(stripSourcesSection(enforceLinks(a.content, policy)), (text) =>
+      text
         .split("\n")
         .map((line) => (line.trim() ? fixFrenchPunctuation(dashes(line)) : ""))
         .join("\n")
         .replace(/\n{3,}/g, "\n\n"),
     ),
+  );
+  const cited = citedUrls(body).map((url) => ({ url, title: sources.get(url)?.title }));
+  return {
+    title: fixFrenchPunctuation(dashes(a.title)).replace(/\.$/, "").slice(0, 220),
+    excerpt: fixFrenchPunctuation(dashes(a.excerpt)),
+    content: [body, sourcesSection(cited)].filter(Boolean).join("\n\n"),
   };
 }
