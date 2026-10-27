@@ -137,7 +137,7 @@ export default async function AuthorPage() {
             {SITE_AUTHOR.jobTitle} du Rempart
           </p>
 
-          <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-7xl first-letter:leading-[0.8] first-letter:text-accent-deep">
+          <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-[2.95em] first-letter:leading-[0.8] first-letter:text-accent-deep">
             Je ne suis pas journaliste, et je ne prétends pas l&apos;être : je
             n&apos;ai pas de carte de presse. J&apos;ai fondé Le Rempart parce
             que je refusais de laisser le récit de l&apos;actualité à un seul

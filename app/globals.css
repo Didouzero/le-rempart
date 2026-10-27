@@ -154,14 +154,26 @@ body {
   max-width: 100%;
 }
 
-/* Lettrine noire sur le premier paragraphe de chaque article. */
+/* Lettrine noire sur le premier paragraphe de chaque article, haute de 2 lignes.
+   Fallback: Impact cap height (~0.79em) spans line 1 cap top to line 2 baseline. */
 .article-dropcap > .prose-article:first-child > p:first-of-type::first-letter {
   float: left;
-  margin: 0.06em 0.1em 0 0;
+  margin: 0.08em 0.08em 0 0;
   font-family: var(--font-display);
-  font-size: 4.4em;
+  font-size: 2.95em;
   line-height: 0.8;
   color: var(--color-ink);
+}
+
+@supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+  .article-dropcap > .prose-article:first-child > p:first-of-type::first-letter {
+    float: none;
+    margin: 0 0.12em 0 0;
+    font-size: inherit;
+    line-height: inherit;
+    -webkit-initial-letter: 2;
+    initial-letter: 2;
+  }
 }
 
 .prose-article p {
