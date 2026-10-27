@@ -40,7 +40,7 @@ export default function ContactPage() {
           {/* Coupure permise seulement après l'arobase, jamais au milieu du domaine. */}
           contact@
           <wbr />
-          le-rempart.org
+          <span className="whitespace-nowrap">le-rempart.org</span>
         </a>
       </section>
 
