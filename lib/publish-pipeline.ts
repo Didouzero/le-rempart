@@ -13,6 +13,7 @@ import {
   publishArticleFromCreative,
   saveGeneratedArticle,
 } from "@/lib/publish-from-creative";
+import { purgeOldCreatives } from "@/lib/creatives-retention";
 import { findLinkableArticles } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
 
@@ -282,6 +283,8 @@ export async function publishBriefPipeline(input: {
   notify?: PipelineNotify;
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
+  // Chaque publication fait aussi le ménage des créatives de plus de 24 h.
+  await purgeOldCreatives().catch((err) => console.error("purge créatives", err));
 
   const linkable = await findLinkableArticles({
     text: `${input.headline} ${input.brief}`,

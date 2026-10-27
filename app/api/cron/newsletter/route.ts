@@ -24,6 +24,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { purgeOldCreatives } = await import("@/lib/creatives-retention");
+    const purged = await purgeOldCreatives();
+    if (purged > 0) console.log(`newsletter cron: ${purged} créatives de plus de 24 h retirées`);
+  } catch (err) {
+    console.error("newsletter cron: purge des créatives", err);
+  }
+
+  try {
     const { maybeRemindInvestigation } = await import(
       "@/lib/investigation-reminder"
     );

@@ -113,7 +113,7 @@ function commandsHelpText(): string {
     "",
     "── Autres ──",
     "/fb — tester la connexion Facebook",
-    "/fb_retry — republier le dernier article sur Facebook",
+    "/fb_retry — republier le dernier article sur Facebook (dans les 24 h)",
     "/fb_retry 69 — republier l’article #69 sur Facebook",
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
