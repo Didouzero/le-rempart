@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
-import { InfoCard, PageHero, SectionTitle } from "@/components/PageHero";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { CATEGORY_META, ARTICLE_CATEGORIES } from "@/lib/categories";
 import {
@@ -21,21 +20,15 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 const PILLARS = [
-  {
-    kicker: "Indépendant",
-    title: "Aucun maître",
-    text: "Le Rempart ne dépend d'aucun parti politique, d'aucun groupe de presse et d'aucun actionnaire.",
-  },
-  {
-    kicker: "Assumé",
-    title: "Une ligne de droite",
-    text: "Nous sommes un média d'opinion, et nous l'affichons. Notre engagement porte sur le choix des sujets et l'analyse.",
-  },
-  {
-    kicker: "Sourcé",
-    title: "Des faits vérifiables",
-    text: "Afficher une ligne n'autorise pas à arranger les faits. Chaque information s'appuie sur une source que nous citons.",
-  },
+  ["Indépendant", "Aucun parti, aucun groupe de presse, aucun actionnaire ne décide de ce que nous publions."],
+  ["Assumé", "Nous sommes un média d'opinion de droite, et nous l'affichons plutôt que de feindre la neutralité."],
+  ["Sourcé", "Afficher une ligne n'autorise pas à arranger les faits. Chaque information s'appuie sur une source citée."],
+] as const;
+
+const METHOD = [
+  ["Les faits d'abord", "Dépêches et articles de presse, décisions de justice, documents officiels, déclarations publiques. Les citations sont reproduites entre guillemets et attribuées."],
+  ["L'IA comme outil", "La recherche et la rédaction s'appuient sur l'intelligence artificielle, à partir des sujets et des angles choisis par la rédaction, qui en garde la responsabilité."],
+  ["Le doute signalé", "Une information non confirmée est présentée comme telle. Nous n'inventons ni chiffre, ni citation, ni témoin."],
 ] as const;
 
 export default function QuiSommesNousPage() {
@@ -53,152 +46,128 @@ export default function QuiSommesNousPage() {
         }}
       />
 
-      <PageHero
-        kicker="Le Rempart"
-        title="Qui sommes-nous"
-        lead="Un média d'actualité indépendant, ancré à droite, fondé en 2025 pour raconter jusqu'au bout ce que les autres taisent ou minimisent."
-        image="/rempart-plus-hero.jpg"
-      />
+      {/* Ouverture façon manifeste : du texte, pas d'image. */}
+      <header className="border-b-4 border-ink pb-10">
+        <p className="section-kicker">
+          <span className="live-dot" aria-hidden />
+          Qui sommes-nous
+        </p>
+        <h1 className="font-display mt-4 max-w-5xl text-5xl leading-[0.92] tracking-[0.02em] uppercase sm:text-7xl lg:text-8xl">
+          Raconter jusqu&apos;au bout ce que{" "}
+          <span className="text-accent-deep">les autres taisent.</span>
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg text-muted">
+          Le Rempart est un média d&apos;actualité indépendant, ancré à droite,
+          fondé en 2025 et dirigé par{" "}
+          <Link href={SITE_AUTHOR.path} className="text-ink underline decoration-accent">
+            {SITE_AUTHOR.name}
+          </Link>
+          , qui choisit les sujets, fixe l&apos;angle de chaque article et
+          répond de tout ce qui est publié.
+        </p>
+      </header>
 
-      <section className="mt-10 grid gap-4 md:grid-cols-3">
-        {PILLARS.map((p, i) => (
-          <InfoCard key={p.title} index={i + 1} kicker={p.kicker} title={p.title}>
-            <p>{p.text}</p>
-          </InfoCard>
+      {/* Trois engagements en colonnes séparées par des filets. */}
+      <section className="grid divide-y divide-ink/15 border-b border-ink/15 md:grid-cols-3 md:divide-x md:divide-y-0">
+        {PILLARS.map(([title, text]) => (
+          <div key={title} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
+            <h2 className="font-display text-3xl tracking-[0.06em] uppercase">
+              {title}
+              <span className="text-accent">.</span>
+            </h2>
+            <p className="mt-3 text-muted">{text}</p>
+          </div>
         ))}
       </section>
 
-      <section className="mt-14 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+      <section className="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div>
-          <SectionTitle kicker="La rédaction" title="Qui le dirige" />
-          <div className="mt-6 space-y-4 text-ink">
-            <p>
-              Le Rempart est dirigé par{" "}
-              <Link href={SITE_AUTHOR.path} className="underline decoration-accent">
-                {SITE_AUTHOR.name}
+          <h2 className="font-display text-4xl tracking-[0.05em]">Notre ligne</h2>
+          <p className="mt-4 text-ink">
+            Nous sommes attachés à l&apos;ordre et à l&apos;autorité de
+            l&apos;État, à la fermeté face à l&apos;immigration illégale et à la
+            délinquance, à la souveraineté nationale, à l&apos;identité et à
+            l&apos;héritage français, à la valeur du travail et au bon usage de
+            l&apos;argent des contribuables.
+          </p>
+          <p className="mt-6 text-sm text-muted">Nos rubriques</p>
+          <ul className="mt-2 flex list-none flex-wrap gap-2 p-0">
+            {ARTICLE_CATEGORIES.map((key) => (
+              <li key={key}>
+                <Link
+                  href={`/rubriques/${CATEGORY_META[key].slug}`}
+                  className="font-display inline-block rounded-full border border-ink px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-ink hover:text-accent hover:no-underline"
+                >
+                  {CATEGORY_META[key].label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link
+                href="/rubriques/enquetes"
+                className="font-display inline-block rounded-full border border-accent bg-accent px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-accent-deep hover:no-underline"
+              >
+                Enquêtes Rempart+
               </Link>
-              , son fondateur et rédacteur en chef. Il choisit les sujets, fixe
-              l&apos;angle de chaque article et répond de l&apos;ensemble des
-              contenus publiés.
-            </p>
-            <p>
-              Le Rempart couvre l&apos;actualité française à travers{" "}
-              {ARTICLE_CATEGORIES.length} rubriques :{" "}
-              {ARTICLE_CATEGORIES.map((key, i) => (
-                <span key={key}>
-                  <Link
-                    href={`/rubriques/${CATEGORY_META[key].slug}`}
-                    className="underline decoration-accent"
-                  >
-                    {CATEGORY_META[key].label.toLowerCase()}
-                  </Link>
-                  {i < ARTICLE_CATEGORIES.length - 2
-                    ? ", "
-                    : i === ARTICLE_CATEGORIES.length - 2
-                      ? " et "
-                      : ""}
-                </span>
-              ))}
-              , complétées par des{" "}
-              <Link href="/rubriques/enquetes" className="underline decoration-accent">
-                enquêtes
-              </Link>{" "}
-              de fond réservées aux abonnés Rempart+.
-            </p>
-          </div>
-
-          <div className="mt-10">
-            <SectionTitle kicker="Nos valeurs" title="Notre ligne éditoriale" />
-            <div className="mt-6 space-y-4 text-ink">
-              <p>
-                Nous sommes attachés à l&apos;ordre et à l&apos;autorité de
-                l&apos;État, à la fermeté face à l&apos;immigration illégale et à
-                la délinquance, à la souveraineté nationale, à l&apos;identité
-                et à l&apos;héritage français, à la valeur du travail et au bon
-                usage de l&apos;argent des contribuables.
-              </p>
-            </div>
-          </div>
+            </li>
+          </ul>
         </div>
 
-        <div className="rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
-          <p className="font-display text-[1.05rem] tracking-[0.18em] text-accent">
-            Notre méthode
-          </p>
-          <ol className="mt-5 list-none space-y-5 p-0">
-            <li className="flex gap-4">
-              <span className="font-display text-accent">1</span>
-              <p className="text-white/80">
-                <strong className="text-paper">Des faits sourcés.</strong> Dépêches
-                et articles de presse, décisions de justice, documents officiels,
-                déclarations publiques. Les citations sont reproduites entre
-                guillemets et attribuées.
-              </p>
-            </li>
-            <li className="flex gap-4">
-              <span className="font-display text-accent">2</span>
-              <p className="text-white/80">
-                <strong className="text-paper">Une rédaction assistée par l&apos;IA.</strong>{" "}
-                La recherche et la rédaction s&apos;appuient sur des outils
-                d&apos;intelligence artificielle, à partir des sujets et des
-                angles choisis par la rédaction, qui en garde la responsabilité.
-              </p>
-            </li>
-            <li className="flex gap-4">
-              <span className="font-display text-accent">3</span>
-              <p className="text-white/80">
-                <strong className="text-paper">Ce qui n&apos;est pas établi est signalé.</strong>{" "}
-                Une information non confirmée est présentée comme telle. Nous
-                n&apos;inventons ni chiffre, ni citation, ni témoin.
-              </p>
-            </li>
+        {/* La méthode en étapes, chiffres géants en filigrane. */}
+        <div>
+          <h2 className="font-display text-4xl tracking-[0.05em]">Notre méthode</h2>
+          <ol className="mt-4 list-none space-y-4 p-0">
+            {METHOD.map(([title, text], i) => (
+              <li
+                key={title}
+                className="relative overflow-hidden rounded-lg border-l-4 border-accent bg-white/55 p-5 pl-6"
+              >
+                <span
+                  aria-hidden
+                  className="font-display pointer-events-none absolute -top-3 right-3 text-8xl leading-none text-ink/[0.06]"
+                >
+                  {i + 1}
+                </span>
+                <h3 className="font-display text-xl tracking-[0.06em]">{title}</h3>
+                <p className="mt-1 text-muted">{text}</p>
+              </li>
+            ))}
           </ol>
         </div>
       </section>
 
-      <section className="mt-14 grid gap-4 md:grid-cols-3">
-        <InfoCard kicker="Exactitude" title="Corrections">
-          <p>
-            Une erreur dans un article ? Écrivez-nous en indiquant son adresse.
-            Les erreurs factuelles avérées sont corrigées dans les meilleurs
-            délais.
-          </p>
-        </InfoCard>
-        <InfoCard kicker="Vos droits" title="Droit de réponse">
-          <p>
-            Toute personne nommée ou désignée dans un article peut exercer son
-            droit de réponse, dans les conditions prévues par la loi.
-          </p>
-        </InfoCard>
-        <InfoCard kicker="Modèle" title="Financement">
-          <p>
-            La publicité, l&apos;abonnement{" "}
-            <Link href="/s-abonner" className="underline decoration-accent">
-              Rempart+
-            </Link>{" "}
-            et les{" "}
-            <Link href="/nous-soutenir" className="underline decoration-accent">
-              dons
-            </Link>{" "}
-            de nos lecteurs.
-          </p>
-        </InfoCard>
+      {/* Engagements pratiques, en bandeau sombre. */}
+      <section className="mt-14 grid gap-px overflow-hidden rounded-lg bg-white/15 text-paper md:grid-cols-3">
+        {[
+          ["Une erreur ?", "Écrivez-nous en indiquant l'adresse de l'article : les erreurs factuelles avérées sont corrigées dans les meilleurs délais."],
+          ["Mis en cause ?", "Toute personne nommée ou désignée dans un article peut exercer son droit de réponse, dans les conditions prévues par la loi."],
+          ["Qui nous finance ?", "La publicité, l'abonnement Rempart+ et les dons de nos lecteurs. Rien d'autre."],
+        ].map(([title, text]) => (
+          <div key={title} className="bg-ink p-6">
+            <h3 className="font-display text-2xl tracking-[0.06em] text-accent">{title}</h3>
+            <p className="mt-2 text-white/75">{text}</p>
+          </div>
+        ))}
       </section>
 
-      <section className="mt-14 rounded-lg border border-accent/50 bg-accent/15 px-5 py-6 sm:px-8">
-        <p className="font-display text-xl tracking-[0.08em]">Nous écrire</p>
-        <p className="mt-2 text-ink">
-          Pour toute demande :{" "}
-          <a href="mailto:contact@le-rempart.org" className="underline decoration-accent">
-            contact@le-rempart.org
-          </a>
-          . Les informations légales figurent dans les{" "}
-          <Link href="/mentions-legales" className="underline decoration-accent">
-            mentions légales
-          </Link>
-          .
-        </p>
-      </section>
+      <p className="mt-8 text-sm text-muted">
+        Nous écrire :{" "}
+        <a href="mailto:contact@le-rempart.org" className="underline decoration-accent">
+          contact@le-rempart.org
+        </a>{" "}
+        ·{" "}
+        <Link href="/s-abonner" className="underline decoration-accent">
+          Rempart+
+        </Link>{" "}
+        ·{" "}
+        <Link href="/nous-soutenir" className="underline decoration-accent">
+          Nous soutenir
+        </Link>{" "}
+        ·{" "}
+        <Link href="/mentions-legales" className="underline decoration-accent">
+          Mentions légales
+        </Link>
+      </p>
     </div>
   );
 }
