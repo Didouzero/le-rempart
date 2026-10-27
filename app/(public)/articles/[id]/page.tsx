@@ -256,7 +256,7 @@ export default async function ArticlePage({ params }: Props) {
           </ol>
         </nav>
 
-        <header className="mb-8 pb-8">
+        <header className="mb-5">
           <p className="section-kicker">
             <span className="live-dot" aria-hidden />
             <Link

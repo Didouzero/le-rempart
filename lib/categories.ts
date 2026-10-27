@@ -21,34 +21,34 @@ export const CATEGORY_META: Record<
     label: "Immigration",
     short: "Immigration",
     description:
-      "Migrants, étrangers, frontières, faits divers liés à l'immigration.",
+      "L'immigration est l'un des problèmes majeurs en France. Tenez-vous au courant de l'actualité migratoire française.",
   },
   justice: {
     slug: "justice",
     label: "Justice",
     short: "Justice",
     description:
-      "Tribunaux, peines, enquêtes, police judiciaire et décisions de justice.",
+      "Découvrez les dernières décisions de justice, les peines et les enquêtes judiciaires en cours.",
   },
   economie: {
     slug: "economie",
     label: "Économie",
     short: "Économie",
     description:
-      "Argent public, fraudes, impôts, escroqueries et gabegie administrative.",
+      "Argent public, fraudes, impôts et gabegie administrative : soyez informés en direct sur l'économie française.",
   },
   politique: {
     slug: "politique",
     label: "Politique",
     short: "Politique",
     description:
-      "Partis, élections, sondages, candidatures et petite musique politicienne.",
+      "Sondages électoraux, petite musique politicienne ou candidatures : découvrez en temps réel l'envers du décor politique.",
   },
   insolite: {
     slug: "insolite",
     label: "Insolite",
     short: "Insolite",
-    description: "Le reste de l'actualité, hors des quatre rubriques principales.",
+    description: "Les faits divers et informations insolites politiques se retrouvent ici.",
   },
 };
 
