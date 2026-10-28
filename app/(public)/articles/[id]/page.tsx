@@ -22,6 +22,7 @@ import { findRelatedArticles } from "@/lib/related-articles";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
+  breadcrumbTitle,
   buildPageMetadata,
   newsArticleJsonLd,
   SITE_LOGO_SQUARE,
@@ -33,12 +34,6 @@ import { hostedIllustrationSize } from "@/lib/illustration-size";
 type Props = {
   params: Promise<{ id: string }>;
 };
-
-function breadcrumbTitle(title: string): string {
-  const t = title.replace(/\s+/g, " ").trim();
-  if (t.length <= 33) return t;
-  return `${t.slice(0, 33).trimEnd()}...`;
-}
 
 export const dynamic = "force-dynamic";
 

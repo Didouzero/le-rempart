@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { articlePublicPath, siteUrlBase } from "@/lib/article-url";
 import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
+import { dossierPath } from "@/lib/seo";
 
 /** Rafraîchit le sitemap au plus toutes les heures. */
 export const revalidate = 3600;
@@ -111,5 +112,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticPages, ...articleEntries];
+  let dossiers: Array<{ slug: string; publishedAt: Date | null; updatedAt: Date }> = [];
+  try {
+    dossiers = await withDbTimeout(
+      prisma.specialDossier.findMany({
+        where: { publishedAt: { not: null } },
+        orderBy: { publishedAt: "desc" },
+        select: { slug: true, publishedAt: true, updatedAt: true },
+        take: 1000,
+      }),
+    );
+  } catch (err) {
+    console.error("sitemap: failed to load dossiers", err);
+  }
+
+  const dossierEntries: MetadataRoute.Sitemap = dossiers.map((d) => ({
+    url: `${base}${dossierPath(d.slug)}`,
+    lastModified: d.updatedAt || d.publishedAt || now,
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }));
+
+  return [...staticPages, ...articleEntries, ...dossierEntries];
 }

@@ -1,44 +1,61 @@
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import { prisma, withDbTimeout } from "@/lib/prisma";
+import { dossierPath } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 900;
 
-/** Google News : articles des ~48 dernières heures. */
+/** Google News : articles et enquêtes Rempart+ des ~48 dernières heures. */
 export async function GET() {
   const base = siteUrlBase().replace(/\/$/, "");
   const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
-  let articles: Array<{
-    publicId: number;
-    title: string;
-    publishedAt: Date | null;
-  }> = [];
+  let entries: Array<{ loc: string; title: string; publishedAt: Date | null }> = [];
 
   try {
-    articles = await withDbTimeout(
-      prisma.article.findMany({
-        where: {
-          status: "published",
-          publishedAt: { gte: since },
-        },
-        orderBy: [{ publishedAt: "desc" }],
-        take: 1000,
-        select: {
-          publicId: true,
-          title: true,
-          publishedAt: true,
-        },
-      }),
+    const [news, dossiers] = await withDbTimeout(
+      Promise.all([
+        prisma.article.findMany({
+          where: {
+            status: "published",
+            publishedAt: { gte: since },
+          },
+          orderBy: [{ publishedAt: "desc" }],
+          take: 1000,
+          select: {
+            publicId: true,
+            title: true,
+            publishedAt: true,
+          },
+        }),
+        prisma.specialDossier.findMany({
+          where: { publishedAt: { gte: since } },
+          orderBy: { publishedAt: "desc" },
+          take: 100,
+          select: { slug: true, title: true, publishedAt: true },
+        }),
+      ]),
     );
+    entries = [
+      ...news.map((a) => ({
+        loc: articlePublicUrl(a.publicId, base),
+        title: a.title,
+        publishedAt: a.publishedAt,
+      })),
+      ...dossiers.map((d) => ({
+        loc: `${base}${dossierPath(d.slug)}`,
+        title: d.title,
+        publishedAt: d.publishedAt,
+      })),
+    ];
   } catch (err) {
     console.error("news-sitemap failed", err);
   }
 
-  const urls = articles
+  const urls = entries
     .map((a) => {
       const pub = (a.publishedAt || new Date()).toISOString();
-      const loc = articlePublicUrl(a.publicId, base);
+      const loc = a.loc;
       const title = escapeXml(a.title);
       return `  <url>
     <loc>${escapeXml(loc)}</loc>

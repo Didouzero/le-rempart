@@ -183,6 +183,8 @@ export function newsArticleJsonLd(input: {
   section: string;
   authorName?: string | null;
   imageSize?: { width: number; height: number } | null;
+  /** false pour une enquête Rempart+ : seul un aperçu est servi aux non-abonnés. */
+  accessibleForFree?: boolean;
 }) {
   const published =
     input.publishedAt?.toISOString() || new Date().toISOString();
@@ -213,8 +215,20 @@ export function newsArticleJsonLd(input: {
     publisher: publisherRef(),
     articleSection: input.section,
     inLanguage: "fr-FR",
-    isAccessibleForFree: true,
+    isAccessibleForFree: input.accessibleForFree ?? true,
   };
+}
+
+/** Dernier maillon du fil d'Ariane : titre raccourci. */
+export function breadcrumbTitle(title: string): string {
+  const t = title.replace(/\s+/g, " ").trim();
+  if (t.length <= 33) return t;
+  return `${t.slice(0, 33).trimEnd()}...`;
+}
+
+/** Adresse publique d'une enquête Rempart+. */
+export function dossierPath(slug: string): string {
+  return `/dossiers/${slug}`;
 }
 
 export function breadcrumbJsonLd(

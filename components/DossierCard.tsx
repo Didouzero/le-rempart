@@ -57,7 +57,9 @@ export function DossierCard({
   locked?: boolean;
   index?: number;
 }) {
-  const href = locked ? "/s-abonner" : `/dossiers/${dossier.slug}`;
+  // Enquête publiée : sa page montre un aperçu aux non-abonnés. Encart à venir : page d'abonnement.
+  const href =
+    locked && !dossier.publishedAt ? "/s-abonner" : `/dossiers/${dossier.slug}`;
   const delayClass =
     index === 0 ? "" : index === 1 ? "delay-1" : index === 2 ? "delay-2" : "delay-3";
 
@@ -96,7 +98,7 @@ export function DossierCard({
             {dossier.excerpt}
           </p>
           <Link href={href} className="read-link mt-5">
-            {locked ? "Débloquer l'enquête →" : "Lire l'enquête →"}
+            {locked ? "Lire le début de l'enquête →" : "Lire l'enquête →"}
           </Link>
         </div>
       </article>

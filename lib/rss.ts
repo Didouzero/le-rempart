@@ -1,12 +1,14 @@
-import { articleAuthorName } from "@/lib/authors";
+import { articleAuthorName, SITE_AUTHOR } from "@/lib/authors";
 import { articlePublicUrl, siteUrlBase } from "@/lib/article-url";
 import {
   CATEGORY_META,
   categoryLabel,
+  PREMIUM_CATEGORY,
   type ArticleCategory,
 } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { rssPath } from "@/lib/rss-links";
+import { dossierPath } from "@/lib/seo";
 
 const FEED_SIZE = 30;
 const SITE_NAME = "Le Rempart";
@@ -27,33 +29,72 @@ function absoluteImage(url: string, base: string): string {
 /** Flux RSS 2.0 des derniers articles publiés (tout le site ou une rubrique). */
 export async function rssResponse(category?: ArticleCategory): Promise<Response> {
   const base = siteUrlBase().replace(/\/$/, "");
-  let articles: Array<{
-    publicId: number;
+  let items: Array<{
+    url: string;
     title: string;
     excerpt: string;
-    authorName: string | null;
+    author: string;
+    section: string;
     publishedAt: Date | null;
     coverImageUrl: string | null;
-    category: ArticleCategory;
   }> = [];
 
   try {
-    articles = await withDbTimeout(
-      prisma.article.findMany({
-        where: { status: "published", ...(category ? { category } : {}) },
-        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-        take: FEED_SIZE,
-        select: {
-          publicId: true,
-          title: true,
-          excerpt: true,
-          authorName: true,
-          publishedAt: true,
-          coverImageUrl: true,
-          category: true,
-        },
-      }),
+    const [articles, dossiers] = await withDbTimeout(
+      Promise.all([
+        prisma.article.findMany({
+          where: { status: "published", ...(category ? { category } : {}) },
+          orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+          take: FEED_SIZE,
+          select: {
+            publicId: true,
+            title: true,
+            excerpt: true,
+            authorName: true,
+            publishedAt: true,
+            coverImageUrl: true,
+            category: true,
+          },
+        }),
+        // Le flux général annonce aussi les enquêtes Rempart+, comme les articles.
+        category
+          ? Promise.resolve([])
+          : prisma.specialDossier.findMany({
+              where: { publishedAt: { not: null } },
+              orderBy: { publishedAt: "desc" },
+              take: FEED_SIZE,
+              select: {
+                slug: true,
+                title: true,
+                excerpt: true,
+                publishedAt: true,
+                coverImageUrl: true,
+              },
+            }),
+      ]),
     );
+    items = [
+      ...articles.map((a) => ({
+        url: articlePublicUrl(a.publicId, base),
+        title: a.title,
+        excerpt: a.excerpt,
+        author: articleAuthorName(a.authorName),
+        section: categoryLabel(a.category),
+        publishedAt: a.publishedAt,
+        coverImageUrl: a.coverImageUrl,
+      })),
+      ...dossiers.map((d) => ({
+        url: `${base}${dossierPath(d.slug)}`,
+        title: d.title,
+        excerpt: d.excerpt,
+        author: SITE_AUTHOR.name,
+        section: PREMIUM_CATEGORY.label,
+        publishedAt: d.publishedAt,
+        coverImageUrl: d.coverImageUrl,
+      })),
+    ]
+      .sort((x, y) => (y.publishedAt?.getTime() ?? 0) - (x.publishedAt?.getTime() ?? 0))
+      .slice(0, FEED_SIZE);
   } catch (err) {
     console.error("rss failed", err);
   }
@@ -65,19 +106,19 @@ export async function rssResponse(category?: ArticleCategory): Promise<Response>
     ? CATEGORY_META[category].description
     : "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.";
   const link = category ? `${base}/rubriques/${CATEGORY_META[category].slug}` : base;
-  const lastBuild = articles[0]?.publishedAt ?? new Date();
+  const lastBuild = items[0]?.publishedAt ?? new Date();
 
-  const items = articles
+  const itemsXml = items
     .map((a) => {
-      const url = articlePublicUrl(a.publicId, base);
+      const url = a.url;
       const image = a.coverImageUrl ? absoluteImage(a.coverImageUrl, base) : null;
       return `    <item>
       <title>${escapeXml(a.title)}</title>
       <link>${escapeXml(url)}</link>
       <guid isPermaLink="true">${escapeXml(url)}</guid>
       <pubDate>${(a.publishedAt ?? new Date()).toUTCString()}</pubDate>
-      <dc:creator>${escapeXml(articleAuthorName(a.authorName))}</dc:creator>
-      <category>${escapeXml(categoryLabel(a.category))}</category>
+      <dc:creator>${escapeXml(a.author)}</dc:creator>
+      <category>${escapeXml(a.section)}</category>
       <description>${escapeXml(a.excerpt)}</description>${
         image
           ? `
@@ -105,7 +146,7 @@ export async function rssResponse(category?: ArticleCategory): Promise<Response>
       <title>${escapeXml(title)}</title>
       <link>${escapeXml(link)}</link>
     </image>
-${items}
+${itemsXml}
   </channel>
 </rss>
 `;
