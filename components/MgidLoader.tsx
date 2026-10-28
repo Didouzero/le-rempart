@@ -17,7 +17,8 @@ export function MgidSiteScript() {
       <Script
         id="mgid-site"
         src={`https://jsc.mgid.com/site/${encodeURIComponent(site)}.js`}
-        strategy="afterInteractive"
+        // Après le chargement de la page : ~1 s de CPU sur mobile, hors affichage initial.
+        strategy="lazyOnload"
       />
       <Script id="mgid-load" strategy="lazyOnload">{`
 (function(w,q){w[q]=w[q]||[];w[q].push(["_mgc.load"])})(window,"_mgq");
