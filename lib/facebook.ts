@@ -277,7 +277,24 @@ export async function commentArticleLinkOnPost(input: {
     "://le-rempart.org",
     "://www.le-rempart.org",
   );
+  await scrapeLinkPreview(url, input.token);
   return commentAndPin(input.postId, message, input.token, input.pin);
+}
+
+/**
+ * Fait lire l'article par Facebook avant le commentaire : sans ce scrape,
+ * l'illustration (servie depuis la base) n'est pas prête au 1er partage et
+ * l'aperçu retombe sur le logo de la page. Best effort.
+ */
+async function scrapeLinkPreview(url: string, token: string): Promise<void> {
+  try {
+    await graphJson(
+      `${GRAPH}/?id=${encodeURIComponent(url)}&scrape=true&access_token=${encodeURIComponent(token)}`,
+      { method: "POST" },
+    );
+  } catch (err) {
+    console.error("facebook scrape", formatFacebookError(err));
+  }
 }
 
 async function publishFeedWithPhoto(input: {
