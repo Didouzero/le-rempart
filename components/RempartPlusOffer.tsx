@@ -105,9 +105,7 @@ export function RempartPlusOffer({
             Pourquoi c’est rentable
           </p>
           <h3 className="font-display mt-2 text-3xl tracking-[0.08em] sm:text-4xl">
-            Vous ne payez pas « un média ».
-            <br />
-            Vous payez un avantage.
+            Financez un média qui pense comme vous.
           </h3>
           <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
           <div className="mt-6 space-y-4 text-ink">
