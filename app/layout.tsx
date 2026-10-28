@@ -10,6 +10,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import { SITE_AUTHOR } from "@/lib/authors";
+import { rssAlternateTypes } from "@/lib/rss-links";
 import "./globals.css";
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() || "GTM-M53Q8GGZ";
@@ -41,10 +42,13 @@ export const metadata: Metadata = {
   publisher: SITE_NAME,
   category: "news",
   metadataBase: new URL(SITE_URL),
-  alternates: { canonical: "/" },
+  alternates: { canonical: "/", types: rssAlternateTypes() },
   robots: {
     index: true,
     follow: true,
+    "max-image-preview": "large",
+    "max-snippet": -1,
+    "max-video-preview": -1,
     googleBot: {
       index: true,
       follow: true,

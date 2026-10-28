@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { siteUrlBase } from "@/lib/article-url";
 import { SITE_AUTHOR } from "@/lib/authors";
+import type { ArticleCategory } from "@/lib/categories";
+import { rssAlternateTypes } from "@/lib/rss-links";
 
 export const SITE_NAME = "Le Rempart";
 export const SITE_TAGLINE = "Le média de droite radicale";
@@ -34,6 +36,10 @@ export function buildPageMetadata(input: {
   ogType?: "website" | "article";
   image?: string | null;
   imageAlt?: string;
+  /** Dimensions réelles de l'image (og:image:width / height). */
+  imageSize?: { width: number; height: number } | null;
+  /** Rubrique dont le flux RSS est annoncé en plus du flux général. */
+  feedCategory?: ArticleCategory;
   noIndex?: boolean;
 }): Metadata {
   const url = absoluteUrl(input.path);
@@ -49,7 +55,7 @@ export function buildPageMetadata(input: {
     authors: [{ name: SITE_AUTHOR.name, url: absoluteUrl(SITE_AUTHOR.path) }],
     creator: SITE_NAME,
     publisher: SITE_NAME,
-    alternates: { canonical: url },
+    alternates: { canonical: url, types: rssAlternateTypes(input.feedCategory) },
     ...(input.noIndex
       ? { robots: { index: false, follow: false } }
       : {}),
@@ -66,6 +72,7 @@ export function buildPageMetadata(input: {
         {
           url: image,
           alt: input.imageAlt || SITE_NAME,
+          ...(input.imageSize ?? {}),
         },
       ],
     },
@@ -175,6 +182,7 @@ export function newsArticleJsonLd(input: {
   updatedAt: Date | null;
   section: string;
   authorName?: string | null;
+  imageSize?: { width: number; height: number } | null;
 }) {
   const published =
     input.publishedAt?.toISOString() || new Date().toISOString();
@@ -187,7 +195,11 @@ export function newsArticleJsonLd(input: {
     "@type": "NewsArticle",
     headline: input.title,
     description: input.excerpt,
-    image: [image],
+    image: [
+      input.imageUrl && input.imageSize
+        ? { "@type": "ImageObject", url: image, ...input.imageSize }
+        : image,
+    ],
     datePublished: published,
     dateModified: modified,
     mainEntityOfPage: {

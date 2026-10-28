@@ -27,6 +27,7 @@ import {
   SITE_NAME,
 } from "@/lib/seo";
 import { hasActiveRempartPlus } from "@/lib/membership";
+import { hostedIllustrationSize } from "@/lib/illustration-size";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -115,6 +116,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
     const section = categoryLabel(article.category);
     const author = articleAuthorName(article.authorName);
+    const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
 
     return {
       ...buildPageMetadata({
@@ -124,6 +126,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ogType: "article",
         image: imageUrl,
         imageAlt: article.title,
+        imageSize,
       }),
       authors: [
         author === SITE_AUTHOR.name
@@ -142,7 +145,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         modifiedTime: article.updatedAt?.toISOString(),
         section,
         authors: [author],
-        images: [{ url: imageUrl, alt: article.title }],
+        images: [{ url: imageUrl, alt: article.title, ...(imageSize ?? {}) }],
       },
       twitter: {
         card: "summary_large_image",
@@ -201,6 +204,7 @@ export default async function ArticlePage({ params }: Props) {
   const plus = await hasActiveRempartPlus();
   const rubriquePath = categoryPath(article.category);
   const author = articleAuthorName(article.authorName);
+  const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
 
   return (
     <article className="animate-fade-up">
@@ -214,6 +218,7 @@ export default async function ArticlePage({ params }: Props) {
           updatedAt: article.updatedAt,
           section,
           authorName: author,
+          imageSize,
         })}
       />
       <JsonLd

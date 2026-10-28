@@ -8,7 +8,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        // Les illustrations sont servies sous /api/media/ : Google et Facebook doivent pouvoir les lire.
+        allow: ["/", "/api/media/"],
         disallow: ["/admin", "/api/"],
       },
     ],

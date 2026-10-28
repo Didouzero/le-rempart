@@ -67,6 +67,7 @@ export async function generateMetadata({
     path,
     image,
     imageAlt: `Rubrique ${meta.label} — Le Rempart`,
+    feedCategory: slug,
   });
 }
 
