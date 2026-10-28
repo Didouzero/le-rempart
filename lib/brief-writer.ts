@@ -96,6 +96,7 @@ ${EDITORIAL_LINE}
 
 FORMAT DE L'ARTICLE
 - Le corps est en Markdown : 2 à 4 intertitres "## " courts et informatifs, des paragraphes construits, très peu de **gras**, aucune liste à puces.
+- Paragraphes courts pour la lecture sur mobile : 60 mots au plus chacun (deux à quatre phrases). Coupe un développement long en deux paragraphes plutôt que de l'allonger.
 - Longueur : de 400 à 900 mots selon la matière. Un sujet pauvre donne un article plus court, jamais du remplissage.
 - Ouverture : le fait principal (qui, quoi, où, quand). Puis le déroulé, le contexte, les réactions nommées, la mise en perspective. Pas de paragraphe final de pur commentaire.
 - Citations verbatim courtes, entre guillemets français et en italique : *« phrase exacte »*, toujours attribuées. N'attribue à un média que ce qu'il a réellement écrit.

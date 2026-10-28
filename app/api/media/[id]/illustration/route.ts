@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
+import { ILLUSTRATION_WIDTHS } from "@/lib/cover-image";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
 type Params = { params: Promise<{ id: string }> };
 
 export const runtime = "nodejs";
+
+// Cache CDN Vercel : sans s-maxage, chaque vue relit l'image entière en base.
+const CACHE_CONTROL = "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800";
 
 function sniffMime(buf: Buffer, declared: string | null): string {
   if (declared && declared.startsWith("image/") && !declared.includes("octet-stream")) {
@@ -27,8 +32,14 @@ function sniffMime(buf: Buffer, declared: string | null): string {
   return "image/jpeg";
 }
 
-export async function GET(_request: Request, { params }: Params) {
+/**
+ * Illustration hébergée. Sans paramètre : fichier original (og:image, Google, Facebook).
+ * Avec ?w=480|800|1200|1600 : copie WebP redimensionnée pour l'affichage sur le site.
+ */
+export async function GET(request: Request, { params }: Params) {
   const { id } = await params;
+  const width = Number(new URL(request.url).searchParams.get("w"));
+  const resize = (ILLUSTRATION_WIDTHS as readonly number[]).includes(width);
 
   try {
     const article = await withDbTimeout(
@@ -43,13 +54,27 @@ export async function GET(_request: Request, { params }: Params) {
     }
 
     const buffer = Buffer.from(article.illustrationData);
-    const mime = sniffMime(buffer, article.illustrationMime);
+
+    if (resize) {
+      try {
+        const webp = await sharp(buffer, { failOn: "none" })
+          .resize({ width, withoutEnlargement: true })
+          .webp({ quality: 74 })
+          .toBuffer();
+        return new NextResponse(new Uint8Array(webp), {
+          status: 200,
+          headers: { "Content-Type": "image/webp", "Cache-Control": CACHE_CONTROL },
+        });
+      } catch (err) {
+        console.error("illustration resize", err);
+      }
+    }
 
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type": mime,
-        "Cache-Control": "public, max-age=86400, immutable",
+        "Content-Type": sniffMime(buffer, article.illustrationMime),
+        "Cache-Control": CACHE_CONTROL,
       },
     });
   } catch {

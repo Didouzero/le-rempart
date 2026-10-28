@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
 import { ArticleSideAds } from "@/components/ArticleSideAds";
+import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
@@ -302,10 +303,11 @@ export default async function ArticlePage({ params }: Props) {
           <figure className="mb-10">
             {/* 16:9 comme les illustrations demandées (1600 × 900) : jamais rognée. */}
             <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={article.coverImageUrl}
+              <CoverImg
+                url={article.coverImageUrl}
                 alt={article.coverCaption ? captionText(article.coverCaption) : article.title}
+                sizes="(min-width: 800px) 48rem, 100vw"
+                priority
                 className="h-full w-full object-cover"
               />
             </div>

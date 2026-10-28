@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CoverImg } from "@/components/CoverImg";
 import { articlePublicPath } from "@/lib/article-url";
 import {
   categoryLabel,
@@ -45,8 +46,12 @@ export function ArticleCard({
         <Link href={href} className="block no-underline hover:no-underline">
           {src ? (
             <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={title} />
+              <CoverImg
+                url={src}
+                alt={title}
+                sizes="(min-width: 1152px) 72rem, 100vw"
+                priority
+              />
             </div>
           ) : (
             <div className="flex aspect-[21/9] w-full items-end rounded-lg bg-ink p-6 sm:p-10">
@@ -94,8 +99,7 @@ export function ArticleCard({
       {src ? (
         <Link href={href} className="block no-underline hover:no-underline">
           <div className="media-frame aspect-[16/9] w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={title} />
+            <CoverImg url={src} alt={title} sizes="(min-width: 640px) 40vw, 100vw" />
           </div>
         </Link>
       ) : (

@@ -11,17 +11,17 @@ import {
 const TILE_IMAGES: Record<ArticleCategory, string> = {
   immigration: "/rubriques/immigration.webp",
   justice:
-    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&h=800&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=400&fit=crop&q=70&fm=webp",
   economie:
-    "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&h=800&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400&h=400&fit=crop&q=70&fm=webp",
   politique:
-    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&h=800&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=400&fit=crop&q=70&fm=webp",
   insolite:
-    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=800&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=400&fit=crop&q=70&fm=webp",
 };
 
 const PREMIUM_TILE_IMAGE =
-  "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=800&fit=crop&q=80";
+  "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=400&fit=crop&q=70&fm=webp";
 
 export function CategoryTiles() {
   return (
@@ -44,6 +44,8 @@ export function CategoryTiles() {
               <img
                 src={TILE_IMAGES[key]}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-55"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent" />
@@ -62,6 +64,8 @@ export function CategoryTiles() {
           <img
             src={PREMIUM_TILE_IMAGE}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-55"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />

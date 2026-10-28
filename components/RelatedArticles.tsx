@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CoverImg } from "@/components/CoverImg";
 import { articlePublicPath } from "@/lib/article-url";
 
 export type RelatedArticleItem = {
@@ -49,8 +50,11 @@ export function RelatedArticles({
               >
                 {item.coverImageUrl ? (
                   <div className="media-frame aspect-[16/9] w-full">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.coverImageUrl} alt={item.title} />
+                    <CoverImg
+                      url={item.coverImageUrl}
+                      alt={item.title}
+                      sizes="(min-width: 640px) 33vw, 100vw"
+                    />
                   </div>
                 ) : (
                   <div className="flex aspect-[16/9] w-full items-end rounded-lg bg-ink p-3">

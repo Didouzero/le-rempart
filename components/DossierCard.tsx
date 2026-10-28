@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CrownIcon } from "@/components/BrandIcons";
+import { CoverImg } from "@/components/CoverImg";
 import { PublishedAt } from "@/components/PublishedAt";
 
 export type DossierTeaser = {
@@ -26,8 +27,7 @@ function Cover({
   if (src) {
     return (
       <div className={frame}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={title} />
+        <CoverImg url={src} alt={title} sizes="(min-width: 640px) 50vw, 100vw" />
       </div>
     );
   }
