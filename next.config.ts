@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/nous-soutenir",
+        destination: "/s-abonner",
+        permanent: true,
+      },
+      {
         source: "/dossiers",
         destination: "/rubriques/enquetes",
         permanent: true,

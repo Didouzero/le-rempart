@@ -8,7 +8,6 @@ const links = [
   { href: "/s-abonner", label: "Rempart+", plusHref: "/rubriques/enquetes" },
   { href: "/connexion", label: "Connexion", hideForPlus: true },
   { href: "/contact", label: "Nous contacter" },
-  { href: "/nous-soutenir", label: "Nous soutenir" },
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/confidentialite", label: "Politique de confidentialité" },
   { href: "/cgu", label: "CGU" },

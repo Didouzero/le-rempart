@@ -24,6 +24,8 @@ onetag.com, 7cd9d7c7c13ff36, RESELLER
 inmobi.com, c2391dc8a51e420480044992fe6dc4d7, RESELLER, 83e75a7ae333ca9d
 gamoshi.io, 267-b6491, DIRECT, 20e30b2ae1f670f2
 themediagrid.com, YZ2I83, DIRECT, 9fac4a4a87c2a44f
+adform.com, 3448, RESELLER, 9f5210a2f0999e32
+multibrain.tech, 96817, DIRECT
 `;
 
 export function GET() {

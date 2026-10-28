@@ -141,7 +141,7 @@ export default function QuiSommesNousPage() {
         {[
           ["Une erreur ?", "Écrivez-nous en indiquant l'adresse de l'article : les erreurs factuelles avérées sont corrigées dans les meilleurs délais."],
           ["Mis en cause ?", "Toute personne nommée ou désignée dans un article peut exercer son droit de réponse, dans les conditions prévues par la loi."],
-          ["Qui nous finance ?", "La publicité, l'abonnement Rempart+ et les dons de nos lecteurs. Rien d'autre."],
+          ["Qui nous finance ?", "La publicité et l'abonnement Rempart+. Rien d'autre."],
         ].map(([title, text]) => (
           <div key={title} className="bg-ink p-6">
             <h3 className="font-display text-2xl tracking-[0.06em] text-accent">{title}</h3>
@@ -158,10 +158,6 @@ export default function QuiSommesNousPage() {
         ·{" "}
         <Link href="/s-abonner" className="underline decoration-accent">
           Rempart+
-        </Link>{" "}
-        ·{" "}
-        <Link href="/nous-soutenir" className="underline decoration-accent">
-          Nous soutenir
         </Link>{" "}
         ·{" "}
         <Link href="/mentions-legales" className="underline decoration-accent">

@@ -25,7 +25,6 @@ const rubriqueLinks = [
 
 const utilityLinks = [
   { href: "/contact", label: "Contact", icon: null },
-  { href: "/nous-soutenir", label: "Nous soutenir", icon: "heart" as const },
 ] as const;
 
 function UtilityIcon({ icon }: { icon: "heart" | null }) {
@@ -54,7 +53,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
       className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-5 px-4 py-4 lg:flex lg:px-6"
       aria-label={ariaLabel}
     >
-      {/* Accueil — encadré comme Contact / Nous soutenir + live-dot */}
+      {/* Accueil — encadré comme Contact + live-dot */}
       <Link
         href={homeLink.href}
         aria-current={pathname === "/" ? "page" : undefined}

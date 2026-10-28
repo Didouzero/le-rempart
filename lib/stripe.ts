@@ -23,23 +23,3 @@ export function getStripePublishableKey(): string | null {
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
   return key || null;
 }
-
-export const DONATION_AMOUNTS = [1, 2, 5, 10, 20, 50] as const;
-export type DonationAmount = (typeof DONATION_AMOUNTS)[number];
-
-export const DONATION_METHODS = ["apple_pay", "card", "paypal"] as const;
-export type DonationMethod = (typeof DONATION_METHODS)[number];
-
-export function isDonationAmount(value: unknown): value is DonationAmount {
-  return (
-    typeof value === "number" &&
-    (DONATION_AMOUNTS as readonly number[]).includes(value)
-  );
-}
-
-export function isDonationMethod(value: unknown): value is DonationMethod {
-  return (
-    typeof value === "string" &&
-    (DONATION_METHODS as readonly string[]).includes(value)
-  );
-}
