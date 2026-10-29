@@ -66,8 +66,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     };
   }, []);
 
-  function toggle() {
-    const next: Theme = currentTheme() === "dark" ? "light" : "dark";
+  function applyTheme(next: Theme) {
     document.documentElement.setAttribute("data-theme", next);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, next);
@@ -75,6 +74,57 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       // Navigation privée : le choix vaut pour la page en cours.
     }
     window.dispatchEvent(new Event(THEME_EVENT));
+  }
+
+  function toggle(event: React.MouseEvent<HTMLButtonElement>) {
+    const next: Theme = currentTheme() === "dark" ? "light" : "dark";
+    const root = document.documentElement;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const doc = document as Document & {
+      startViewTransition?: (update: () => void) => { ready: Promise<void> };
+    };
+
+    if (reduced) {
+      applyTheme(next);
+      return;
+    }
+
+    // Cercle qui s'ouvre depuis le bouton jusqu'au coin le plus éloigné de l'écran.
+    if (typeof doc.startViewTransition === "function") {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      const radius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y),
+      );
+      const transition = doc.startViewTransition(() => applyTheme(next));
+      transition.ready
+        .then(() => {
+          root.animate(
+            {
+              clipPath: [
+                `circle(0px at ${x}px ${y}px)`,
+                `circle(${radius}px at ${x}px ${y}px)`,
+              ],
+            },
+            {
+              duration: 650,
+              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+              pseudoElement: "::view-transition-new(root)",
+            },
+          );
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // Repli : fondu des couleurs.
+    root.classList.add("theme-fading");
+    applyTheme(next);
+    window.setTimeout(() => root.classList.remove("theme-fading"), 500);
   }
 
   const label =
@@ -89,7 +139,15 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       className={`icon-bare inline-flex items-center justify-center p-2 text-accent transition-colors duration-300 hover:text-white ${className}`}
     >
       {/* Avant hydratation, la lune : le bouton garde sa place sans clignoter. */}
-      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+      {theme === "dark" ? (
+        <span key="sun" className="theme-icon inline-flex">
+          <SunIcon />
+        </span>
+      ) : (
+        <span key="moon" className="theme-icon inline-flex">
+          <MoonIcon />
+        </span>
+      )}
     </button>
   );
 }

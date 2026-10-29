@@ -105,7 +105,7 @@ export function RempartPlusOffer({
             key={perk.title}
             className="rounded-lg border border-ink/10 bg-card/55 p-5 shadow-[var(--shadow-soft)]"
           >
-            <p className="font-display text-xs tracking-[0.18em] text-accent-deep">
+            <p className="font-display text-xs tracking-[0.18em] text-gold">
               0{i + 1} · {perk.kicker}
             </p>
             <h3 className="font-display mt-3 text-2xl tracking-[0.06em]">

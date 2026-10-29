@@ -10,6 +10,8 @@
   --card: #ffffff;
   --rule: #ddd8cf;
   --muted: #5c574f;
+  /* Doré des textes (rubriques, liens) : foncé sur fond clair pour rester lisible. */
+  --gold: #8f5f0c;
   --color-marble: #0a0a0a;
   --color-accent: #ffbd59;
   --color-accent-deep: #e8a63f;
@@ -31,6 +33,7 @@
     --card: #1d1b17;
     --rule: #34302a;
     --muted: #a59e92;
+    --gold: #e8a63f;
     --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.55);
     color-scheme: dark;
   }
@@ -44,6 +47,7 @@
   --card: #1d1b17;
   --rule: #34302a;
   --muted: #a59e92;
+  --gold: #e8a63f;
   --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
@@ -57,6 +61,12 @@
   --card: #ffffff;
   --rule: #ddd8cf;
   --muted: #5c574f;
+  --gold: #8f5f0c;
+}
+
+/* Sur fond noir, le doré reste vif. */
+:is(.bg-ink, .bg-ink\/92, .marble-band, .site-footer) {
+  --gold: #e8a63f;
 }
 
 @theme inline {
@@ -65,6 +75,7 @@
   --color-card: var(--card);
   --color-rule: var(--rule);
   --color-muted: var(--muted);
+  --color-gold: var(--gold);
   --color-marble: #0a0a0a;
   --color-accent: #ffbd59;
   --color-accent-deep: #e8a63f;
@@ -264,7 +275,7 @@ body {
 }
 
 .prose-article a {
-  color: var(--color-accent-deep, #8a3b12);
+  color: var(--gold);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--color-accent);
@@ -394,7 +405,7 @@ a:hover .media-frame::after {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-size: 0.8rem;
-  color: var(--color-accent-deep);
+  color: var(--gold);
 }
 
 .read-link {
@@ -413,7 +424,7 @@ a:hover .media-frame::after {
 }
 
 .read-link:hover {
-  color: var(--color-accent-deep);
+  color: var(--gold);
   gap: 0.65rem;
 }
 
@@ -541,5 +552,82 @@ a:hover .media-frame::after {
 
   .media-frame img {
     transition: none;
+  }
+}
+
+/* Mode nuit : le bas de l'en-tête se fond dans la couleur de la page au lieu
+   de s'arrêter net, et le grain du fond (pensé pour le papier clair) disparaît.
+   --paper est lu sur <html> : l'en-tête redéfinit ce jeton pour son contenu. */
+:root[data-theme="dark"] .site-header {
+  --page: #13120f;
+  background-image:
+    linear-gradient(180deg, transparent 35%, var(--page) 100%),
+    linear-gradient(90deg, transparent, rgba(255, 189, 89, 0.08), transparent),
+    radial-gradient(ellipse at 15% 0%, rgba(255, 189, 89, 0.18), transparent 42%),
+    radial-gradient(ellipse at 85% 100%, rgba(255, 255, 255, 0.04), transparent 40%),
+    linear-gradient(160deg, #141414 0%, #0a0a0a 55%, #111 100%);
+}
+
+:root[data-theme="dark"] .site-shell::before {
+  opacity: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .site-header {
+    --page: #13120f;
+    background-image:
+      linear-gradient(180deg, transparent 35%, var(--page) 100%),
+      linear-gradient(90deg, transparent, rgba(255, 189, 89, 0.08), transparent),
+      radial-gradient(ellipse at 15% 0%, rgba(255, 189, 89, 0.18), transparent 42%),
+      radial-gradient(ellipse at 85% 100%, rgba(255, 255, 255, 0.04), transparent 40%),
+      linear-gradient(160deg, #141414 0%, #0a0a0a 55%, #111 100%);
+  }
+
+  :root:not([data-theme="light"]) .site-shell::before {
+    opacity: 0;
+  }
+}
+
+/* Passage jour / nuit : cercle qui s'ouvre depuis le bouton (View Transitions),
+   fondu des couleurs pour les navigateurs qui ne les gèrent pas. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+:root.theme-fading,
+:root.theme-fading *,
+:root.theme-fading *::before,
+:root.theme-fading *::after {
+  transition:
+    background-color 0.45s ease,
+    color 0.45s ease,
+    border-color 0.45s ease,
+    fill 0.45s ease !important;
+}
+
+@keyframes theme-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-120deg) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+.theme-icon {
+  animation: theme-icon-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-icon {
+    animation: none;
   }
 }

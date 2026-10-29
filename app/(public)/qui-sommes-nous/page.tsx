@@ -54,7 +54,7 @@ export default function QuiSommesNousPage() {
         </p>
         <h1 className="font-display mt-4 max-w-4xl text-4xl leading-[0.95] tracking-[0.02em] uppercase sm:text-5xl lg:text-6xl">
           Raconter jusqu&apos;au bout ce que{" "}
-          <span className="text-accent-deep">les autres taisent.</span>
+          <span className="text-gold">les autres taisent.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-muted">
           Le Rempart est un média d&apos;actualité indépendant, ancré à droite,
@@ -96,7 +96,7 @@ export default function QuiSommesNousPage() {
               <li key={key}>
                 <Link
                   href={`/rubriques/${CATEGORY_META[key].slug}`}
-                  className="font-display inline-block rounded-full border border-ink px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-ink hover:text-accent hover:no-underline"
+                  className="font-display inline-block rounded-full border border-ink px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-ink hover:text-gold hover:no-underline"
                 >
                   {CATEGORY_META[key].label}
                 </Link>

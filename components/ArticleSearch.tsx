@@ -60,7 +60,7 @@ export function ListPageHeader({
           type="button"
           onClick={() => setOpen((v) => !v)}
           className={`icon-bare inline-flex shrink-0 items-center justify-center p-0.5 transition-colors duration-300 ${
-            open ? "text-accent" : "text-ink hover:text-accent"
+            open ? "text-gold" : "text-ink hover:text-gold"
           }`}
           aria-expanded={open}
           aria-controls={`search-panel-${inputId}`}
@@ -114,7 +114,7 @@ export function ListPageHeader({
               <a
                 href={basePath}
                 tabIndex={open ? 0 : -1}
-                className="font-display flex shrink-0 items-center justify-center rounded-lg px-3 py-2.5 text-sm tracking-[0.12em] text-muted no-underline hover:text-accent"
+                className="font-display flex shrink-0 items-center justify-center rounded-lg px-3 py-2.5 text-sm tracking-[0.12em] text-muted no-underline hover:text-gold"
               >
                 Effacer
               </a>

@@ -63,7 +63,7 @@ export function RelatedArticles({
                     </span>
                   </div>
                 )}
-                <h3 className="font-display mt-3 text-lg leading-[1.1] text-ink transition-colors group-hover:text-accent-deep">
+                <h3 className="font-display mt-3 text-lg leading-[1.1] text-ink transition-colors group-hover:text-gold">
                   {shortTitle}
                 </h3>
               </Link>

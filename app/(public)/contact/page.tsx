@@ -62,7 +62,7 @@ export default function ContactPage() {
                 className="group flex items-center justify-between gap-6 py-6 text-ink no-underline hover:no-underline"
               >
                 <span>
-                  <span className="font-display block text-2xl tracking-[0.05em] transition-colors group-hover:text-accent-deep sm:text-3xl">
+                  <span className="font-display block text-2xl tracking-[0.05em] transition-colors group-hover:text-gold sm:text-3xl">
                     {title}
                   </span>
                   <span className="mt-1 block text-muted">{text}</span>

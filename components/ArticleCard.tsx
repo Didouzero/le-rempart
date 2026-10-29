@@ -63,13 +63,13 @@ export function ArticleCard({
         </Link>
         <div className="mt-5 border-l-[3px] border-accent pl-4 sm:pl-5">
           <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em] text-muted">
-            <span className="font-display text-accent">À la une</span>
+            <span className="font-display text-gold">À la une</span>
             {cat && catLabel ? (
               <>
                 <span aria-hidden>•</span>
                 <Link
                   href={categoryPath(cat)}
-                  className="font-display text-accent no-underline hover:underline"
+                  className="font-display text-gold no-underline hover:underline"
                 >
                   {catLabel}
                 </Link>
@@ -79,7 +79,7 @@ export function ArticleCard({
             <PublishedAt value={publishedAt} />
           </div>
           <h2 className="font-display mt-3 text-2xl leading-[1.05] sm:text-3xl md:text-4xl">
-            <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
+            <Link href={href} className="no-underline hover:text-gold hover:no-underline">
               {title}
             </Link>
           </h2>
@@ -110,7 +110,7 @@ export function ArticleCard({
           {cat && catLabel ? (
             <Link
               href={categoryPath(cat)}
-              className="font-display text-accent no-underline hover:underline"
+              className="font-display text-gold no-underline hover:underline"
             >
               {catLabel}
             </Link>
@@ -119,7 +119,7 @@ export function ArticleCard({
           <PublishedAt value={publishedAt} />
         </div>
         <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
-          <Link href={href} className="no-underline hover:text-accent-deep hover:no-underline">
+          <Link href={href} className="no-underline hover:text-gold hover:no-underline">
             {title}
           </Link>
         </h2>

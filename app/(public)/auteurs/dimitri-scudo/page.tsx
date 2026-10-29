@@ -99,7 +99,7 @@ export default async function AuthorPage() {
             {SITE_AUTHOR.jobTitle} du Rempart
           </p>
 
-          <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-[2.95em] first-letter:leading-[0.8] first-letter:text-accent-deep">
+          <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-[2.95em] first-letter:leading-[0.8] first-letter:text-gold">
             Je ne suis pas journaliste, et je ne prétends pas l&apos;être : je
             n&apos;ai pas de carte de presse. J&apos;ai fondé Le Rempart parce
             que je refusais de laisser le récit de l&apos;actualité à un seul
@@ -118,7 +118,7 @@ export default async function AuthorPage() {
                   aria-hidden
                   className="absolute top-1.5 -left-[2.45rem] h-4 w-4 rounded-full border-2 border-accent bg-paper"
                 />
-                <p className="font-display text-xs tracking-[0.2em] text-accent-deep uppercase">
+                <p className="font-display text-xs tracking-[0.2em] text-gold uppercase">
                   {step.when}
                 </p>
                 <h2 className="font-display mt-1 text-2xl tracking-[0.05em]">{step.title}</h2>
@@ -145,7 +145,7 @@ export default async function AuthorPage() {
           <blockquote className="my-10 border-y-2 border-ink py-6">
             <p className="font-display text-2xl leading-tight tracking-[0.03em] sm:text-3xl">
               « Un article du Rempart peut prendre parti.{" "}
-              <span className="text-accent-deep">Il ne doit jamais arranger les faits.</span> »
+              <span className="text-gold">Il ne doit jamais arranger les faits.</span> »
             </p>
           </blockquote>
 

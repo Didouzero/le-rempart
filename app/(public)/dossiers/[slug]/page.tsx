@@ -143,7 +143,7 @@ export default async function DossierPage({ params }: Props) {
           <li>
             <Link
               href="/"
-              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-gold hover:underline"
             >
               Dernières news
             </Link>
@@ -154,7 +154,7 @@ export default async function DossierPage({ params }: Props) {
           <li>
             <Link
               href={PREMIUM_CATEGORY.path}
-              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-gold hover:underline"
             >
               {PREMIUM_CATEGORY.short}
             </Link>
@@ -181,7 +181,7 @@ export default async function DossierPage({ params }: Props) {
           <Link
             href={SITE_AUTHOR.path}
             rel="author"
-            className="text-ink no-underline underline-offset-4 hover:text-accent-deep hover:underline"
+            className="text-ink no-underline underline-offset-4 hover:text-gold hover:underline"
           >
             {SITE_AUTHOR.name}
           </Link>

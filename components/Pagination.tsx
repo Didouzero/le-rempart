@@ -42,7 +42,7 @@ export function Pagination({
       {page > 1 ? (
         <Link
           href={buildHref(basePath, page - 1, q)}
-          className="font-display px-3 py-2 text-sm tracking-[0.12em] text-muted no-underline hover:text-accent"
+          className="font-display px-3 py-2 text-sm tracking-[0.12em] text-muted no-underline hover:text-gold"
         >
           ←
         </Link>
@@ -68,7 +68,7 @@ export function Pagination({
             className={`font-display min-w-10 px-3 py-2 text-center text-sm tracking-[0.12em] no-underline ${
               active
                 ? "text-ink underline decoration-accent decoration-2 underline-offset-4"
-                : "text-muted hover:text-accent"
+                : "text-muted hover:text-gold"
             }`}
           >
             {item}
@@ -78,7 +78,7 @@ export function Pagination({
       {page < totalPages ? (
         <Link
           href={buildHref(basePath, page + 1, q)}
-          className="font-display px-3 py-2 text-sm tracking-[0.12em] text-muted no-underline hover:text-accent"
+          className="font-display px-3 py-2 text-sm tracking-[0.12em] text-muted no-underline hover:text-gold"
         >
           →
         </Link>

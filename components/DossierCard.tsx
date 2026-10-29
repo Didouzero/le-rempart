@@ -65,7 +65,7 @@ export function DossierCard({
 
   const meta = (
     <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em] text-muted">
-      <span className="font-display text-accent">
+      <span className="font-display text-gold">
         {locked ? "Exclusif Rempart+" : "Enquête"}
       </span>
       <span aria-hidden>•</span>
@@ -89,7 +89,7 @@ export function DossierCard({
           <h2 className="font-display mt-3 text-2xl leading-[1.05] sm:text-3xl md:text-4xl">
             <Link
               href={href}
-              className="no-underline hover:text-accent-deep hover:no-underline"
+              className="no-underline hover:text-gold hover:no-underline"
             >
               {dossier.title}
             </Link>

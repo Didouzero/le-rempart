@@ -11,7 +11,7 @@ type HeaderProps = {
 
 export function Header({ compact = false }: HeaderProps) {
   return (
-    <header className="marble-band text-paper">
+    <header className="site-header marble-band text-paper">
       <SiteNav />
 
       <div
