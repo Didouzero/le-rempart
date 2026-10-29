@@ -9,6 +9,7 @@ import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
+import { ShareButtons } from "@/components/ShareButtons";
 import { PublishedAt } from "@/components/PublishedAt";
 import { articleAuthorName, SITE_AUTHOR } from "@/lib/authors";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
@@ -324,6 +325,7 @@ export default async function ArticlePage({ params }: Props) {
               showInArticleAd
             />
           </div>
+          <ShareButtons url={url} title={article.title} />
         </ArticleSideAds>
       </div>
 

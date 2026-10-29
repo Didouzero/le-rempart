@@ -1,18 +1,17 @@
-"use client";
+const LINK_CLASS =
+  "text-white/75 no-underline underline-offset-4 hover:text-accent hover:underline";
 
-type SirdataWindow = Window & {
-  Sddan?: { cmp?: { displayUI?: () => void } };
-};
-
-/** Rouvre le bandeau de consentement : le visiteur peut changer d'avis à tout moment. */
+/**
+ * Rouvre le bandeau de consentement : le visiteur peut changer d'avis à tout moment.
+ * Sirdata repère ce lien précis dans le HTML initial pour masquer son icône flottante
+ * (option « Gérer dans le footer ») ; React refuse les liens javascript:, d'où le HTML brut.
+ */
 export function CookieSettingsButton() {
   return (
-    <button
-      type="button"
-      onClick={() => (window as SirdataWindow).Sddan?.cmp?.displayUI?.()}
-      className="cursor-pointer border-0 bg-transparent p-0 text-white/75 underline-offset-4 hover:text-accent hover:underline"
-    >
-      Gérer les cookies
-    </button>
+    <span
+      dangerouslySetInnerHTML={{
+        __html: `<a href="javascript:window.Sddan.cmp.displayUI();" class="${LINK_CLASS}">Gérer les cookies</a>`,
+      }}
+    />
   );
 }
