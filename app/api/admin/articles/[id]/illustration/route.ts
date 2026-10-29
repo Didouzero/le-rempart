@@ -7,6 +7,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { absoluteUrl } from "@/lib/seo";
 import { utf8TextOrNull } from "@/lib/utf8";
+import { revalidateArticle } from "@/lib/revalidate-article";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -37,8 +38,9 @@ export async function POST(request: Request, { params }: Params) {
       const updated = await prisma.article.update({
         where: { id },
         data: { coverCaption: caption },
-        select: { coverImageUrl: true, coverCaption: true },
+        select: { coverImageUrl: true, coverCaption: true, publicId: true },
       });
+      revalidateArticle(updated.publicId);
       return NextResponse.json({ ...updated, width: null });
     }
 
@@ -53,8 +55,9 @@ export async function POST(request: Request, { params }: Params) {
         coverImageUrl: `${absoluteUrl(`/api/media/${id}/illustration`)}?v=${Date.now()}`,
         coverCaption: caption,
       },
-      select: { coverImageUrl: true, coverCaption: true },
+      select: { coverImageUrl: true, coverCaption: true, publicId: true },
     });
+    revalidateArticle(updated.publicId);
     return NextResponse.json({ ...updated, width });
   } catch (err) {
     console.error("admin illustration", err);

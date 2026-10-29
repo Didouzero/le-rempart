@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { MgidSiteScript, MgidWidget } from "@/components/MgidLoader";
+import { usePlus } from "@/components/PlusProvider";
 import {
   mgidLeftWidgetId,
   mgidRightWidgetId,
@@ -12,7 +13,6 @@ const DESKTOP_XL = "(min-width: 1280px)";
 
 type ArticleSideAdsProps = {
   children: ReactNode;
-  show: boolean;
 };
 
 function Rail({
@@ -36,7 +36,8 @@ function Rail({
  * Pubs MGID à gauche et à droite du texte, desktop (xl / 1280px+) seulement.
  * Hors du DOM sous xl : pas de requête MGID sur mobile.
  */
-export function ArticleSideAds({ children, show }: ArticleSideAdsProps) {
+export function ArticleSideAds({ children }: ArticleSideAdsProps) {
+  const show = !usePlus();
   const left = mgidLeftWidgetId();
   const right = mgidRightWidgetId();
   const adsenseOn = process.env.NEXT_PUBLIC_ADSENSE_ENABLED === "true";

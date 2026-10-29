@@ -11,6 +11,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { writeArticleSimple } from "@/lib/write-simple";
 import { utf8Text, utf8TextOrNull, isPostgresUtf8Error } from "@/lib/utf8";
 import { createHash } from "crypto";
+import { revalidateArticle } from "@/lib/revalidate-article";
 
 async function makeUniqueSlug(title: string) {
   const base = slugify(title);
@@ -321,6 +322,7 @@ export async function saveGeneratedArticle(input: {
       data: { coverImageUrl: hosted },
     });
   }
+  revalidateArticle(article.publicId);
 
   return {
     id: article.id,

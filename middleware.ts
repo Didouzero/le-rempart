@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { authCookie, verifySessionToken } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // L'accueil (page 1) est en cache CDN ; pagination et recherche passent par /accueil.
+  if (pathname === "/") {
+    if (searchParams.has("page") || searchParams.has("q")) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/accueil";
+      return NextResponse.rewrite(target);
+    }
+    return NextResponse.next();
+  }
 
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
     return NextResponse.next();
@@ -36,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/", "/admin/:path*", "/api/admin/:path*"],
 };

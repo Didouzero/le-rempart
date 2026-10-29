@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ShowForPlus } from "@/components/PlusProvider";
 import { RempartPlusCheckout } from "@/components/RempartPlusCheckout";
 import { getStripePublishableKey, isStripeConfigured } from "@/lib/stripe";
 
@@ -22,7 +23,8 @@ const PERKS = [
 ] as const;
 
 type RempartPlusOfferProps = {
-  alreadyPlus: boolean;
+  /** Omis sur les pages en cache : le statut est lu côté navigateur. */
+  alreadyPlus?: boolean;
   status?: "success" | "canceled" | null;
   showHowItWorks?: boolean;
   titleAs?: "h1" | "h2";
@@ -56,9 +58,9 @@ export function RempartPlusOffer({
             Découvrez l&apos;info que les autres n&apos;ont pas.
           </Title>
           <p className="mt-5 max-w-2xl text-base text-white/80 sm:text-lg">
-            Pour le prix d’un café, levez le rideau sur nos enquêtes, nos dossiers
-            privés et nos révélations documentées, et recevez l&apos;actualité
-            détaillée chaque matin. ✍️
+            Pour le prix d’un café, levez le rideau sur nos enquêtes, nos
+            dossiers privés et nos révélations documentées, et recevez
+            l&apos;actualité détaillée chaque matin. ✍️
           </p>
           <div className="mt-8 flex flex-wrap items-end gap-4">
             <p className="font-display text-5xl leading-none tracking-[0.04em] text-accent">
@@ -71,10 +73,26 @@ export function RempartPlusOffer({
         </div>
       </section>
 
-      {alreadyPlus ? (
+      {alreadyPlus === undefined ? (
+        <ShowForPlus>
+          <p className="mt-8 rounded-lg border border-accent/50 bg-accent/15 px-5 py-4 text-ink">
+            Vous êtes déjà connecté en Rempart+.{" "}
+            <Link
+              href="/rubriques/enquetes"
+              className="underline decoration-accent"
+            >
+              Accéder aux enquêtes
+            </Link>
+            .
+          </p>
+        </ShowForPlus>
+      ) : alreadyPlus ? (
         <p className="mt-8 rounded-lg border border-accent/50 bg-accent/15 px-5 py-4 text-ink">
           Vous êtes déjà connecté en Rempart+.{" "}
-          <Link href="/rubriques/enquetes" className="underline decoration-accent">
+          <Link
+            href="/rubriques/enquetes"
+            className="underline decoration-accent"
+          >
             Accéder aux enquêtes
           </Link>
           .
@@ -174,7 +192,10 @@ export function RempartPlusOffer({
                 <p>
                   Si vous changez d&apos;appareil, reconnectez-vous simplement
                   grâce à votre e-mail via le bouton{" "}
-                  <Link href="/connexion" className="underline decoration-accent">
+                  <Link
+                    href="/connexion"
+                    className="underline decoration-accent"
+                  >
                     Se connecter
                   </Link>{" "}
                   en haut à droite.

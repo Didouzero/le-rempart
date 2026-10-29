@@ -6,6 +6,7 @@ import { classifyArticleCategory } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { utf8Text } from "@/lib/utf8";
+import { revalidateArticle } from "@/lib/revalidate-article";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -101,6 +102,7 @@ export async function PATCH(request: Request, { params }: Params) {
             : existing.publishedAt,
       },
     });
+    revalidateArticle(article.publicId);
 
     return NextResponse.json(article);
   } catch (err) {
@@ -112,7 +114,11 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   try {
     const { id } = await params;
-    await prisma.article.delete({ where: { id } });
+    const deleted = await prisma.article.delete({
+      where: { id },
+      select: { publicId: true },
+    });
+    revalidateArticle(deleted.publicId);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Suppression impossible" }, { status: 500 });

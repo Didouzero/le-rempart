@@ -1,4 +1,4 @@
-import { hasActiveRempartPlus } from "@/lib/membership";
+import { HideForPlus } from "@/components/PlusProvider";
 
 type AdSlotProps = {
   slot: string;
@@ -14,30 +14,28 @@ export function adsEnabled(): boolean {
  * Emplacement AdSense (conservé pour un retour éventuel).
  * Masqué si Rempart+ actif, ou si AdSense désactivé.
  */
-export async function AdSlot({ slot, className = "" }: AdSlotProps) {
+export function AdSlot({ slot, className = "" }: AdSlotProps) {
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT?.trim();
   if (!adsEnabled() || !client) {
     return null;
   }
-  if (await hasActiveRempartPlus()) {
-    return null;
-  }
-
   return (
-    <aside
-      className={`my-8 min-h-[90px] w-full ${className}`}
-      aria-label="Publicité"
-      data-ad-client={client}
-      data-ad-slot={slot}
-    >
-      <ins
-        className="adsbygoogle"
-        style={{ display: "block", width: "100%", minHeight: 90 }}
+    <HideForPlus>
+      <aside
+        className={`my-8 min-h-[90px] w-full ${className}`}
+        aria-label="Publicité"
         data-ad-client={client}
         data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
-    </aside>
+      >
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block", width: "100%", minHeight: 90 }}
+          data-ad-client={client}
+          data-ad-slot={slot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      </aside>
+    </HideForPlus>
   );
 }

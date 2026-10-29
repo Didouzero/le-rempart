@@ -2,14 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { CrownCircleIcon, LoginCircleIcon } from "@/components/BrandIcons";
 import { MobileAccountTiles } from "@/components/MobileAccountTiles";
+import { HideForPlus } from "@/components/PlusProvider";
 import { SiteNav } from "@/components/SiteNav";
 
 type HeaderProps = {
   compact?: boolean;
-  isPlus?: boolean;
 };
 
-export function Header({ compact = false, isPlus = false }: HeaderProps) {
+export function Header({ compact = false }: HeaderProps) {
   return (
     <header className="marble-band text-paper">
       <SiteNav />
@@ -22,7 +22,7 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
       {!compact && (
         <div className="relative mx-auto hidden w-full max-w-6xl px-6 pb-8 pt-7 lg:block">
           <div className="absolute right-6 top-6 z-10 flex w-[13.5rem] flex-col items-stretch gap-1.5">
-            {isPlus ? null : (
+            <HideForPlus>
               <Link
                 href="/s-abonner"
                 className="group inline-flex w-full items-center gap-3 rounded-lg border border-accent/50 bg-accent px-4 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
@@ -37,8 +37,6 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
                   </span>
                 </span>
               </Link>
-            )}
-            {isPlus ? null : (
               <Link
                 href="/connexion"
                 className="group inline-flex w-full items-center gap-3 rounded-lg border border-accent/50 bg-ink px-4 py-2.5 text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
@@ -53,7 +51,7 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
                   </span>
                 </span>
               </Link>
-            )}
+            </HideForPlus>
           </div>
 
           <div className="flex flex-col items-center text-center">
@@ -79,7 +77,7 @@ export function Header({ compact = false, isPlus = false }: HeaderProps) {
         </div>
       )}
 
-      <MobileAccountTiles isPlus={isPlus} />
+      <MobileAccountTiles />
     </header>
   );
 }

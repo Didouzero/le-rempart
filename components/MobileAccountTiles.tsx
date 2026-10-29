@@ -5,14 +5,12 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CrownCircleIcon, LoginCircleIcon } from "@/components/BrandIcons";
-
-type MobileAccountTilesProps = {
-  isPlus?: boolean;
-};
+import { usePlus } from "@/components/PlusProvider";
 
 const HIDDEN_PATHS = new Set(["/s-abonner", "/connexion"]);
 
-export function MobileAccountTiles({ isPlus = false }: MobileAccountTilesProps) {
+export function MobileAccountTiles() {
+  const isPlus = usePlus();
   const pathname = usePathname() || "/";
   const [mounted, setMounted] = useState(false);
 

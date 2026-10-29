@@ -6,6 +6,7 @@ import { classifyArticleCategory } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { utf8Text } from "@/lib/utf8";
+import { revalidateArticle } from "@/lib/revalidate-article";
 
 const articleSchema = z.object({
   title: z.string().min(1),
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
         publishedAt: status === "published" ? new Date() : null,
       },
     });
+    revalidateArticle(article.publicId);
 
     return NextResponse.json(article);
   } catch (err) {

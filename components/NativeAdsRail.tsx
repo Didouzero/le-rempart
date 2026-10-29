@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { MgidSiteScript, MgidWidget } from "@/components/MgidLoader";
+import { usePlus } from "@/components/PlusProvider";
 import {
   mgidEnabled,
   mgidUnderArticleWidgetId,
@@ -12,7 +13,10 @@ import {
  * AdSense (AdSlot) reste ailleurs, éteint tant que Google refuse.
  */
 export function NativeAdsRail() {
+  const plus = usePlus();
   const mgidWidget = mgidUnderArticleWidgetId();
+
+  if (plus) return null;
 
   if (mgidEnabled() && mgidWidget) {
     return (

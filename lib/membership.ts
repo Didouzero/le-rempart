@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 import { isAdminLoggedIn } from "@/lib/auth";
+import { PLUS_HINT_COOKIE, plusHintCookieOptions } from "@/lib/plus-hint";
 import { prisma } from "@/lib/prisma";
 
 export const REMPART_PLUS_COOKIE = "rempart_plus";
@@ -43,6 +44,7 @@ export function applyPlusCookie(res: NextResponse, email: string) {
     `${normalized}|${sessionSignature(normalized)}`,
   ).toString("base64url");
   res.cookies.set(REMPART_PLUS_COOKIE, value, plusCookieOptions());
+  res.cookies.set(PLUS_HINT_COOKIE, "1", plusHintCookieOptions(plusCookieOptions().maxAge));
 }
 
 export async function getPlusEmail(): Promise<string | null> {

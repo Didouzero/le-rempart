@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MgidSiteScript, MgidWidget } from "@/components/MgidLoader";
+import { usePlus } from "@/components/PlusProvider";
 import { mgidEnabled, mgidInArticleWidgetId } from "@/lib/mgid";
 
 const DESKTOP_XL = "(min-width: 1280px)";
@@ -13,6 +14,7 @@ const DESKTOP_XL = "(min-width: 1280px)";
  */
 export function MgidInArticle() {
   const widgetId = mgidInArticleWidgetId();
+  const plus = usePlus();
   const [mobile, setMobile] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function MgidInArticle() {
     w._mgq.push(["_mgc.load"]);
   }, [mobile, widgetId]);
 
-  if (!mgidEnabled() || !widgetId || !mobile) return null;
+  if (plus || !mgidEnabled() || !widgetId || !mobile) return null;
 
   return (
     <aside

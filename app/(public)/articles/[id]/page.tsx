@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { cache, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
@@ -28,14 +28,20 @@ import {
   SITE_LOGO_SQUARE,
   SITE_NAME,
 } from "@/lib/seo";
-import { hasActiveRempartPlus } from "@/lib/membership";
 import { hostedIllustrationSize } from "@/lib/illustration-size";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
 
-export const dynamic = "force-dynamic";
+// Servie depuis le cache CDN : régénérée toutes les 5 minutes, ou aussitôt après
+// une publication ou une correction (lib/revalidate-article.ts).
+export const revalidate = 300;
+
+/** Aucune page générée au build : chaque article est mis en cache à sa première visite. */
+export function generateStaticParams() {
+  return [];
+}
 
 type ArticleRow = {
   id: string;
@@ -66,7 +72,13 @@ function Caption({ source }: { source: string }) {
   for (const m of source.matchAll(CAPTION_LINK)) {
     parts.push(source.slice(last, m.index));
     parts.push(
-      <a key={m.index} href={m[2]} target="_blank" rel="noopener noreferrer" className="underline">
+      <a
+        key={m.index}
+        href={m[2]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+      >
         {m[1]}
       </a>,
     );
@@ -76,7 +88,10 @@ function Caption({ source }: { source: string }) {
   return <>{parts}</>;
 }
 
-async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
+/** Mémorisée le temps d'un rendu : métadonnées et page partagent la même requête. */
+const findByPublicId = cache(async function findByPublicId(
+  publicId: number,
+): Promise<ArticleRow | null> {
   return withDbTimeout(
     prisma.article.findFirst({
       where: { publicId, status: "published" },
@@ -95,7 +110,7 @@ async function findByPublicId(publicId: number): Promise<ArticleRow | null> {
       },
     }),
   );
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -103,56 +118,52 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!Number.isInteger(asNumber) || asNumber <= 0) {
     return { title: SITE_NAME };
   }
-  try {
-    const article = await findByPublicId(asNumber);
-    if (!article) return { title: "Article introuvable" };
+  const article = await findByPublicId(asNumber);
+  if (!article) return { title: "Article introuvable" };
 
-    const path = articlePublicPath(article.publicId);
-    const url = articlePublicUrl(article.publicId);
-    const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
-    const section = categoryLabel(article.category);
-    const author = articleAuthorName(article.authorName);
-    const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
+  const path = articlePublicPath(article.publicId);
+  const url = articlePublicUrl(article.publicId);
+  const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
+  const section = categoryLabel(article.category);
+  const author = articleAuthorName(article.authorName);
+  const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
 
-    return {
-      ...buildPageMetadata({
-        title: article.title,
-        description: article.excerpt,
-        path,
-        ogType: "article",
-        image: imageUrl,
-        imageAlt: article.title,
-        imageSize,
-      }),
-      authors: [
-        author === SITE_AUTHOR.name
-          ? { name: author, url: absoluteUrl(SITE_AUTHOR.path) }
-          : { name: author },
-      ],
-      // Le template ajoute déjà « — Le Rempart » ; OG title = titre seul + siteName
-      openGraph: {
-        title: article.title,
-        description: article.excerpt,
-        type: "article",
-        url,
-        siteName: SITE_NAME,
-        locale: "fr_FR",
-        publishedTime: article.publishedAt?.toISOString(),
-        modifiedTime: article.updatedAt?.toISOString(),
-        section,
-        authors: [author],
-        images: [{ url: imageUrl, alt: article.title, ...(imageSize ?? {}) }],
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: article.title,
-        description: article.excerpt,
-        images: [imageUrl],
-      },
-    };
-  } catch {
-    return { title: SITE_NAME };
-  }
+  return {
+    ...buildPageMetadata({
+      title: article.title,
+      description: article.excerpt,
+      path,
+      ogType: "article",
+      image: imageUrl,
+      imageAlt: article.title,
+      imageSize,
+    }),
+    authors: [
+      author === SITE_AUTHOR.name
+        ? { name: author, url: absoluteUrl(SITE_AUTHOR.path) }
+        : { name: author },
+    ],
+    // Le template ajoute déjà « — Le Rempart » ; OG title = titre seul + siteName
+    openGraph: {
+      title: article.title,
+      description: article.excerpt,
+      type: "article",
+      url,
+      siteName: SITE_NAME,
+      locale: "fr_FR",
+      publishedTime: article.publishedAt?.toISOString(),
+      modifiedTime: article.updatedAt?.toISOString(),
+      section,
+      authors: [author],
+      images: [{ url: imageUrl, alt: article.title, ...(imageSize ?? {}) }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.excerpt,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default async function ArticlePage({ params }: Props) {
@@ -160,26 +171,18 @@ export default async function ArticlePage({ params }: Props) {
   const asNumber = Number(id);
 
   if (!Number.isInteger(asNumber) || asNumber <= 0) {
-    try {
-      const bySlug = await withDbTimeout(
-        prisma.article.findFirst({
-          where: { slug: id, status: "published" },
-          select: { publicId: true },
-        }),
-      );
-      if (bySlug) permanentRedirect(articlePublicPath(bySlug.publicId));
-    } catch {
-      notFound();
-    }
+    const bySlug = await withDbTimeout(
+      prisma.article.findFirst({
+        where: { slug: id, status: "published" },
+        select: { publicId: true },
+      }),
+    );
+    if (bySlug) permanentRedirect(articlePublicPath(bySlug.publicId));
     notFound();
   }
 
-  let article: ArticleRow | null = null;
-  try {
-    article = await findByPublicId(asNumber);
-  } catch {
-    notFound();
-  }
+  // Une panne de base lève une erreur : le cache garde la version précédente au lieu d'un 404.
+  const article = await findByPublicId(asNumber);
 
   if (!article) notFound();
 
@@ -197,7 +200,6 @@ export default async function ArticlePage({ params }: Props) {
 
   const url = articlePublicUrl(article.publicId);
   const section = categoryLabel(article.category);
-  const plus = await hasActiveRempartPlus();
   const rubriquePath = categoryPath(article.category);
   const author = articleAuthorName(article.authorName);
   const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
@@ -251,9 +253,7 @@ export default async function ArticlePage({ params }: Props) {
             <li aria-hidden className="text-accent">
               /
             </li>
-            <li className="text-muted">
-              {breadcrumbTitle(article.title)}
-            </li>
+            <li className="text-muted">{breadcrumbTitle(article.title)}</li>
           </ol>
         </nav>
 
@@ -289,9 +289,7 @@ export default async function ArticlePage({ params }: Props) {
             )}
           </p>
           <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-          <p className="mt-5 text-lg italic text-black">
-            {article.excerpt}
-          </p>
+          <p className="mt-5 text-lg italic text-black">{article.excerpt}</p>
         </header>
 
         {article.coverImageUrl ? (
@@ -300,7 +298,11 @@ export default async function ArticlePage({ params }: Props) {
             <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
               <CoverImg
                 url={article.coverImageUrl}
-                alt={article.coverCaption ? captionText(article.coverCaption) : article.title}
+                alt={
+                  article.coverCaption
+                    ? captionText(article.coverCaption)
+                    : article.title
+                }
                 sizes="(min-width: 800px) 48rem, 100vw"
                 priority
                 className="h-full w-full object-cover"
@@ -314,12 +316,12 @@ export default async function ArticlePage({ params }: Props) {
           </figure>
         ) : null}
 
-        <ArticleSideAds show={!plus}>
+        <ArticleSideAds>
           <div className="article-dropcap">
             <ArticleBody
               content={article.content}
               showNewsletterCta
-              showInArticleAd={!plus}
+              showInArticleAd
             />
           </div>
         </ArticleSideAds>
@@ -327,7 +329,7 @@ export default async function ArticlePage({ params }: Props) {
 
       <AdSlot slot="article-bottom" />
 
-      {plus ? null : <NativeAdsRail />}
+      <NativeAdsRail />
 
       <RelatedArticles articles={related} />
     </article>
