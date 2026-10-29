@@ -187,7 +187,7 @@ export default async function DossierPage({ params }: Props) {
           </Link>
         </p>
         <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-        <p className="mt-5 text-lg italic text-black">{dossier.excerpt}</p>
+        <p className="mt-5 text-lg italic text-ink">{dossier.excerpt}</p>
       </header>
 
       {dossier.coverImageUrl ? (
@@ -209,7 +209,7 @@ export default async function DossierPage({ params }: Props) {
           {/* Aperçu : seul ce début est envoyé au navigateur, il s'estompe vers l'appel à s'abonner. */}
           <div className="relative max-h-[30rem] overflow-hidden">
             <ArticleBody content={body} showNewsletterCta={false} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-[var(--color-paper)]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-paper" />
           </div>
           <div className="relative z-10 -mt-6 rounded-lg border border-accent/45 bg-ink px-5 py-8 text-center text-paper shadow-[0_14px_40px_rgba(0,0,0,0.28)] sm:px-10">
             <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">

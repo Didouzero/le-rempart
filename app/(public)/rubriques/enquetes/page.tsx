@@ -138,7 +138,7 @@ export default async function EnquetesPage({
                 </div>
               ) : null}
             </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--color-paper)]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-paper" />
           </div>
           <div className="relative z-10 -mt-8 flex flex-col items-center px-4 pb-4 text-center">
             <p className="font-display max-w-lg text-2xl tracking-[0.08em] text-ink sm:text-3xl">

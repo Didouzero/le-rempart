@@ -103,7 +103,7 @@ export function RempartPlusOffer({
         {PERKS.map((perk, i) => (
           <article
             key={perk.title}
-            className="rounded-lg border border-ink/10 bg-white/55 p-5 shadow-[var(--shadow-soft)]"
+            className="rounded-lg border border-ink/10 bg-card/55 p-5 shadow-[var(--shadow-soft)]"
           >
             <p className="font-display text-xs tracking-[0.18em] text-accent-deep">
               0{i + 1} · {perk.kicker}

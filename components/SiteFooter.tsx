@@ -25,7 +25,7 @@ function FacebookIcon({ className }: { className?: string }) {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-0 bg-ink text-white">
+    <footer className="site-footer mt-0 bg-ink text-white">
       <div
         className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"
         aria-hidden

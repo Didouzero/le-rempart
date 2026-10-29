@@ -120,7 +120,7 @@ export default function QuiSommesNousPage() {
             {METHOD.map(([title, text], i) => (
               <li
                 key={title}
-                className="relative overflow-hidden rounded-lg border-l-4 border-accent bg-white/55 p-5 pl-6"
+                className="relative overflow-hidden rounded-lg border-l-4 border-accent bg-card/55 p-5 pl-6"
               >
                 <span
                   aria-hidden
@@ -137,7 +137,10 @@ export default function QuiSommesNousPage() {
       </section>
 
       {/* Engagements pratiques, en bandeau sombre. */}
-      <section className="mt-14 grid gap-px overflow-hidden rounded-lg bg-white/15 text-paper md:grid-cols-3">
+      <section
+        data-theme="light"
+        className="mt-14 grid gap-px overflow-hidden rounded-lg bg-white/15 text-paper md:grid-cols-3"
+      >
         {[
           ["Une erreur ?", "Écrivez-nous en indiquant l'adresse de l'article : les erreurs factuelles avérées sont corrigées dans les meilleurs délais."],
           ["Mis en cause ?", "Toute personne nommée ou désignée dans un article peut exercer son droit de réponse, dans les conditions prévues par la loi."],

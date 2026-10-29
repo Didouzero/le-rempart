@@ -11,6 +11,7 @@ import {
 } from "@/lib/seo";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { CONSENT_DEFAULT_SCRIPT, sirdataCmpIds } from "@/lib/consent";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { rssAlternateTypes } from "@/lib/rss-links";
 import "./globals.css";
 
@@ -110,8 +111,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','${GTM_ID}');`;
 
   return (
-    <html lang="fr" className={`${openSans.variable} ${sourceSans.variable}`}>
+    <html
+      lang="fr"
+      className={`${openSans.variable} ${sourceSans.variable}`}
+      // data-theme est posé avant l'hydratation par THEME_INIT_SCRIPT.
+      suppressHydrationWarning
+    >
       <head>
+        {/* Thème clair / sombre appliqué avant l'affichage : pas de flash blanc. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Ordre imposé : consentement refusé par défaut, bandeau CMP, puis Tag Manager. */}
         {cmp ? (
           <>

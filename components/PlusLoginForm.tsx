@@ -33,7 +33,7 @@ export function PlusLoginForm() {
 
   if (done) {
     return (
-      <p className="mt-8 rounded-lg border border-ink/15 bg-white/50 px-4 py-4">
+      <p className="mt-8 rounded-lg border border-ink/15 bg-card/50 px-4 py-4">
         Si cet e-mail correspond à un abonnement actif, le lien d’accès vient
         d’arriver. Pensez à regarder les spams.
       </p>

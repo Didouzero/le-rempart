@@ -83,7 +83,7 @@ export function ArticleCard({
               {title}
             </Link>
           </h2>
-          <p className="mt-4 max-w-3xl text-base italic text-black sm:text-lg">{excerpt}</p>
+          <p className="mt-4 max-w-3xl text-base italic text-ink sm:text-lg">{excerpt}</p>
           <Link href={href} className="read-link mt-5">
             Lire l&apos;article →
           </Link>
@@ -123,7 +123,7 @@ export function ArticleCard({
             {title}
           </Link>
         </h2>
-        <p className="mt-3 max-w-2xl text-base italic text-black">{excerpt}</p>
+        <p className="mt-3 max-w-2xl text-base italic text-ink">{excerpt}</p>
         <Link href={href} className="read-link mt-4">
           Lire l&apos;article →
         </Link>

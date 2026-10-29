@@ -17,5 +17,10 @@ export default function AdminRootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen bg-paper">{children}</div>;
+  // L'admin reste en thème clair, quel que soit le réglage du visiteur.
+  return (
+    <div data-theme="light" className="min-h-screen bg-paper text-ink">
+      {children}
+    </div>
+  );
 }

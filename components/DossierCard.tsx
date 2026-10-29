@@ -94,7 +94,7 @@ export function DossierCard({
               {dossier.title}
             </Link>
           </h2>
-          <p className="mt-4 max-w-3xl text-base italic text-black sm:text-lg">
+          <p className="mt-4 max-w-3xl text-base italic text-ink sm:text-lg">
             {dossier.excerpt}
           </p>
           <Link href={href} className="read-link mt-5">
@@ -113,7 +113,7 @@ export function DossierCard({
         <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
           {dossier.title}
         </h2>
-        <p className="mt-3 line-clamp-3 text-base italic text-black">
+        <p className="mt-3 line-clamp-3 text-base italic text-ink">
           {dossier.excerpt}
         </p>
       </Link>

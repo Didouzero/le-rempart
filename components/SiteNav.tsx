@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -129,6 +130,7 @@ function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
             </Link>
           );
         })}
+        <ThemeToggle />
       </div>
     </nav>
   );
@@ -403,7 +405,10 @@ export function SiteNav() {
             >
               <BrandWordmark className="w-[8.5rem]" />
             </Link>
-            <MenuButton open={open} onToggle={toggle} />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <MenuButton open={open} onToggle={toggle} />
+            </div>
           </div>
           <div
             className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"

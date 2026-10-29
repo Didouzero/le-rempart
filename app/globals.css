@@ -1,10 +1,15 @@
 @import "tailwindcss";
 
+/* Couleurs qui changent avec le thème : clair par défaut, sombre selon le réglage
+   de l'appareil ou le bouton lune/soleil (attribut data-theme sur <html>). */
 :root {
-  --color-ink: #0a0a0a;
-  --color-paper: #f4f2ed;
-  --color-rule: #ddd8cf;
-  --color-muted: #5c574f;
+  --ink: #0a0a0a;
+  --paper: #f4f2ed;
+  --paper-hi: #f7f5f0;
+  --paper-lo: #efece5;
+  --card: #ffffff;
+  --rule: #ddd8cf;
+  --muted: #5c574f;
   --color-marble: #0a0a0a;
   --color-accent: #ffbd59;
   --color-accent-deep: #e8a63f;
@@ -14,13 +19,52 @@
   --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
   --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.12);
   --radius: 0.55rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #ece6da;
+    --paper: #13120f;
+    --paper-hi: #171512;
+    --paper-lo: #0f0e0c;
+    --card: #1d1b17;
+    --rule: #34302a;
+    --muted: #a59e92;
+    --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #ece6da;
+  --paper: #13120f;
+  --paper-hi: #171512;
+  --paper-lo: #0f0e0c;
+  --card: #1d1b17;
+  --rule: #34302a;
+  --muted: #a59e92;
+  --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+/* Surfaces déjà sombres ou dorées en mode clair (en-tête, pied de page, boutons
+   noir et or, encarts Rempart+) : elles gardent leurs couleurs dans les deux thèmes.
+   Les utilitaires lisent les jetons sur l'élément même, d'où cette redéfinition. */
+:is(.bg-ink, .bg-ink\/92, .marble-band, .bg-accent, .site-footer, [data-theme="light"]) {
+  --ink: #0a0a0a;
+  --paper: #f4f2ed;
+  --card: #ffffff;
+  --rule: #ddd8cf;
+  --muted: #5c574f;
 }
 
 @theme inline {
-  --color-ink: #0a0a0a;
-  --color-paper: #f4f2ed;
-  --color-rule: #ddd8cf;
-  --color-muted: #5c574f;
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-rule: var(--rule);
+  --color-muted: var(--muted);
   --color-marble: #0a0a0a;
   --color-accent: #ffbd59;
   --color-accent-deep: #e8a63f;
@@ -55,9 +99,9 @@ body {
   background:
     radial-gradient(ellipse 80% 50% at 100% -10%, rgba(255, 189, 89, 0.09), transparent 50%),
     radial-gradient(ellipse 60% 40% at 0% 100%, rgba(255, 189, 89, 0.05), transparent 45%),
-    linear-gradient(180deg, #f7f5f0 0%, var(--color-paper) 40%, #efece5 100%);
+    linear-gradient(180deg, var(--paper-hi) 0%, var(--paper) 40%, var(--paper-lo) 100%);
   background-attachment: fixed;
-  color: var(--color-ink);
+  color: var(--ink);
   font-family: var(--font-body);
   font-size: 1.0625rem;
   line-height: 1.65;
@@ -159,7 +203,7 @@ body {
   max-width: 100%;
 }
 
-/* Lettrine noire sur le premier paragraphe de chaque article, haute de 2 lignes.
+/* Lettrine (couleur du texte) sur le premier paragraphe de chaque article, haute de 2 lignes.
    Fallback: Impact cap height (~0.79em) spans line 1 cap top to line 2 baseline. */
 .article-dropcap > .prose-article:first-child > p:first-of-type::first-letter {
   float: left;
@@ -167,7 +211,7 @@ body {
   font-family: var(--font-display);
   font-size: 2.95em;
   line-height: 0.8;
-  color: var(--color-ink);
+  color: var(--ink);
 }
 
 @supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
@@ -228,7 +272,7 @@ body {
 }
 
 .prose-article a:hover {
-  color: var(--color-ink);
+  color: var(--ink);
 }
 
 .prose-article .video-embed {
@@ -266,20 +310,20 @@ body {
 
 .prose-article strong {
   font-weight: 700;
-  color: var(--color-ink);
+  color: var(--ink);
   box-shadow: inset 0 -0.35em 0 var(--color-accent-soft);
 }
 
 .prose-article em {
   font-style: italic;
-  color: var(--color-ink);
+  color: var(--ink);
 }
 
 .prose-article blockquote {
   margin: 1.25rem 0;
   padding: 0.15rem 0 0.15rem 1rem;
   border-left: 3px solid var(--color-accent);
-  color: var(--color-ink);
+  color: var(--ink);
   font-style: italic;
 }
 
@@ -361,7 +405,7 @@ a:hover .media-frame::after {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-size: 0.85rem;
-  color: var(--color-ink);
+  color: var(--ink);
   text-decoration: none !important;
   border-bottom: 2px solid var(--color-accent);
   padding-bottom: 0.1rem;
@@ -375,9 +419,9 @@ a:hover .media-frame::after {
 
 .admin-input {
   width: 100%;
-  border: 1px solid var(--color-rule);
-  background: #fff;
-  color: var(--color-ink);
+  border: 1px solid var(--rule);
+  background: var(--card);
+  color: var(--ink);
   border-radius: var(--radius);
   padding: 0.75rem 0.875rem;
   font: inherit;
@@ -393,9 +437,9 @@ a:hover .media-frame::after {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid var(--color-ink);
-  background: var(--color-ink);
-  color: var(--color-paper);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
   padding: 0.7rem 1.1rem;
   font: inherit;
   font-weight: 700;
@@ -416,7 +460,7 @@ a:hover .media-frame::after {
 
 .admin-btn-secondary {
   background: transparent;
-  color: var(--color-ink);
+  color: var(--ink);
 }
 
 .admin-btn-secondary:hover {

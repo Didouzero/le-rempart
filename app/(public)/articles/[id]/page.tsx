@@ -290,7 +290,7 @@ export default async function ArticlePage({ params }: Props) {
             )}
           </p>
           <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-          <p className="mt-5 text-lg italic text-black">{article.excerpt}</p>
+          <p className="mt-5 text-lg italic text-ink">{article.excerpt}</p>
         </header>
 
         {article.coverImageUrl ? (
