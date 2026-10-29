@@ -139,7 +139,7 @@ export default function QuiSommesNousPage() {
       {/* Engagements pratiques, en bandeau sombre. */}
       <section
         data-theme="light"
-        className="mt-14 grid gap-px overflow-hidden rounded-lg bg-white/15 text-paper md:grid-cols-3"
+        className="night-grid mt-14 grid gap-px overflow-hidden rounded-lg border border-transparent bg-white/15 text-paper md:grid-cols-3"
       >
         {[
           ["Une erreur ?", "Écrivez-nous en indiquant l'adresse de l'article : les erreurs factuelles avérées sont corrigées dans les meilleurs délais."],
