@@ -5,6 +5,7 @@
  */
 
 import sharp from "sharp";
+import { claudeChatTurn, isClaudeConfigured } from "@/lib/claude-fallback";
 import { recordTokenUsage } from "@/lib/eval/token-meter";
 import { fetchSourceText, scrubBoilerplate } from "@/lib/fetch-source";
 import { outletFromUrl } from "@/lib/flash-info";
@@ -137,6 +138,8 @@ type ChatMessage = {
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
+  /** Réponse Claude d'origine, gardée telle quelle pour le tour suivant. */
+  claudeContent?: unknown;
 };
 
 type SearchHit = {
@@ -165,6 +168,8 @@ export async function researchAndWrite(input: {
   linkable?: Array<{ publicId: number; title: string }>;
 } & Hooks): Promise<BriefResult> {
   const deadline = Date.now() + TOTAL_BUDGET_MS;
+  // Passe à Claude pour toute la suite dès que Kimi refuse le sujet.
+  const engine: Engine = { claude: false };
   const sources = new Map<string, BriefSource>();
   const notes = new Map<string, string>();
 
@@ -201,6 +206,7 @@ export async function researchAndWrite(input: {
     messages: [{ role: "user", content: userContent }],
     maxRounds: 6,
     mode: "deep",
+    engine,
     sources,
     notes,
     onSearch: input.onSearch,
@@ -240,6 +246,7 @@ export async function researchAndWrite(input: {
     ],
     maxRounds: 4,
     mode: "low",
+    engine,
     sources,
     notes,
     onSearch: input.onSearch,
@@ -268,11 +275,17 @@ export async function researchAndWrite(input: {
 
 // --- Boucle agent -------------------------------------------------------------
 
+type Engine = { claude: boolean };
+
+const KIMI_REFUSAL = /Kimi a bloqué ce sujet/;
+const CLAUDE_TIMEOUT_MS = 240_000;
+
 async function runAgent(input: {
   system: string;
   messages: ChatMessage[];
   maxRounds: number;
   mode: Mode;
+  engine: Engine;
   onProgress?: Hooks["onProgress"];
   deadline: number;
   sources: Map<string, BriefSource>;
@@ -291,15 +304,34 @@ async function runAgent(input: {
     let msg: ChatMessage;
     const fallback = FALLBACK[input.mode];
     try {
-      msg = await chat(messages, !isLast, input.mode, {
-        timeoutMs: budget(input.deadline, input.mode, MODE_TIMEOUT_MS[fallback]),
-      });
+      msg = input.engine.claude
+        ? await claudeChatTurn({
+            messages,
+            tools: TOOLS,
+            allowTools: !isLast,
+            timeoutMs: claudeBudget(input.deadline),
+          })
+        : await chat(messages, !isLast, input.mode, {
+            timeoutMs: budget(input.deadline, input.mode, MODE_TIMEOUT_MS[fallback]),
+          });
     } catch (err) {
-      if (!isTimeout(err)) throw err;
-      await input.onProgress?.("⏳ Kimi est lent, nouvel essai en mode rapide…");
-      msg = await chat(messages, !isLast, fallback, {
-        timeoutMs: budget(input.deadline, fallback, 0),
-      });
+      if (!input.engine.claude && err instanceof Error && KIMI_REFUSAL.test(err.message)) {
+        if (!isClaudeConfigured()) throw err;
+        input.engine.claude = true;
+        await input.onProgress?.("🛡️ Kimi refuse ce sujet : la rédaction passe à Claude…");
+        msg = await claudeChatTurn({
+          messages,
+          tools: TOOLS,
+          allowTools: !isLast,
+          timeoutMs: claudeBudget(input.deadline),
+        });
+      } else {
+        if (input.engine.claude || !isTimeout(err)) throw err;
+        await input.onProgress?.("⏳ Kimi est lent, nouvel essai en mode rapide…");
+        msg = await chat(messages, !isLast, fallback, {
+          timeoutMs: budget(input.deadline, fallback, 0),
+        });
+      }
     }
     messages.push(msg);
 
@@ -339,7 +371,11 @@ async function runAgent(input: {
     if (!raw) break;
     return raw;
   }
-  throw new Error("Kimi n’a pas abouti à un texte final");
+  throw new Error(
+    input.engine.claude
+      ? "Claude n’a pas abouti à un texte final"
+      : "Kimi n’a pas abouti à un texte final",
+  );
 }
 
 function dateNote(): string {
@@ -372,6 +408,15 @@ function budget(deadline: number, mode: Mode, reserve: number): number {
     throw new Error("Kimi trop lent aujourd’hui : rédaction abandonnée. Renvoie le sujet un peu plus tard.");
   }
   return Math.min(MODE_TIMEOUT_MS[mode], left);
+}
+
+/** Temps accordé à un tour Claude, dans le budget global de la rédaction. */
+function claudeBudget(deadline: number): number {
+  const left = deadline - Date.now();
+  if (left < 30_000) {
+    throw new Error("Plus assez de temps pour rédiger avec Claude. Renvoie le sujet.");
+  }
+  return Math.min(CLAUDE_TIMEOUT_MS, left);
 }
 
 function isTimeout(err: unknown): boolean {

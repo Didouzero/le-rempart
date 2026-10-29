@@ -16,6 +16,7 @@
     "eval:ab:full": "npx tsx scripts/eval-ab.ts --limit 75 --dossier"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@prisma/client": "^6.12.0",
     "@resvg/resvg-js": "^2.6.2",
     "@stripe/react-stripe-js": "^6.8.0",

@@ -3,6 +3,7 @@
  * Le SDK OpenAI peut ne pas propager correctement `thinking` / `reasoning_effort`.
  */
 
+import { claudeText, isClaudeConfigured } from "@/lib/claude-fallback";
 import { recordTokenUsage } from "@/lib/eval/token-meter";
 
 export type MoonshotMessage =
@@ -170,6 +171,15 @@ export async function moonshotChatDetailed(input: {
         } catch (err3) {
           if (!isKimiContentFilter(err3)) throw err3;
         }
+      }
+      if (isClaudeConfigured()) {
+        console.warn("[kimi] content_filter — secours Claude");
+        const content = await claudeText({
+          messages: input.messages,
+          maxTokens: input.maxTokens,
+          timeoutMs: input.timeoutMs,
+        });
+        return { content };
       }
       throw new Error(
         "Kimi a bloqué ce sujet (filtre de contenu). Réessaie avec une autre source, ou reformule le titre.",
