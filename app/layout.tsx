@@ -120,11 +120,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             {/* eslint-disable-next-line @next/next/no-sync-scripts */}
             <script
               src={`https://cache.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/stub`}
+              referrerPolicy="unsafe-url"
             />
             {/* Injecté après le stub : React remonterait un <script async> en tête du <head>. */}
             <script
               dangerouslySetInnerHTML={{
-                __html: `(function(d){var s=d.createElement('script');s.async=true;s.src='https://choices.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/cmp';d.head.appendChild(s);})(document);`,
+                __html: `(function(d){var s=d.createElement('script');s.async=true;s.referrerPolicy='unsafe-url';s.src='https://choices.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/cmp';d.head.appendChild(s);})(document);`,
               }}
             />
           </>

@@ -112,6 +112,11 @@ export default function ConfidentialitePage() {
         conservés pour une durée limitée, puis le bandeau vous est de nouveau
         présenté.
       </p>
+      <p>
+        Le Rempart participe et est conforme à l&apos;ensemble des
+        Spécifications et Politiques du Transparency &amp; Consent Framework
+        de l&apos;IAB Europe. Il utilise la Consent Management Platform n°92.
+      </p>
 
       <h2>6. Destinataires et sous-traitants</h2>
       <p>Les données peuvent être traitées par :</p>

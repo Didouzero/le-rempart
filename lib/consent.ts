@@ -1,11 +1,11 @@
 /**
  * CMP Sirdata (ABconsent), certifiée IAB TCF : recueille le consentement aux cookies
  * et le transmet à Google (Consent Mode v2) et à MGID (vendor IAB 358).
- * Identifiants lus dans « Retrieve Code » du compte ABconsent ; sans eux, pas de bandeau.
+ * Identifiants publics, lus dans « Récupérer le code » du compte ABconsent (configuration Le Rempart).
  */
 export function sirdataCmpIds(): { partner: string; config: string } | null {
-  const partner = process.env.NEXT_PUBLIC_SIRDATA_PARTNER_ID?.trim();
-  const config = process.env.NEXT_PUBLIC_SIRDATA_CONFIG_ID?.trim();
+  const partner = process.env.NEXT_PUBLIC_SIRDATA_PARTNER_ID?.trim() || "55127";
+  const config = process.env.NEXT_PUBLIC_SIRDATA_CONFIG_ID?.trim() || "KwJTJ";
   if (!partner || !config) return null;
   if (!/^[A-Za-z0-9]+$/.test(partner) || !/^[A-Za-z0-9]+$/.test(config)) return null;
   return { partner, config };
