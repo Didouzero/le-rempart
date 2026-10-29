@@ -85,11 +85,32 @@ export default function ConfidentialitePage() {
 
       <h2>5. Cookies et publicité</h2>
       <p>
-        Le Site peut utiliser des cookies ou technologies similaires,
-        notamment si Google AdSense ou des outils d&apos;audience sont actifs.
-        Ces services peuvent collecter des données selon leurs propres
-        politiques (ex. Google). Vous pouvez paramétrer votre navigateur pour
-        limiter les cookies.
+        Le Site dépose des cookies strictement nécessaires à son
+        fonctionnement, sans consentement préalable : session des abonnés
+        Rempart+, session d&apos;administration et mémorisation de vos choix
+        en matière de cookies.
+      </p>
+      <p>
+        Les autres traceurs ne sont déposés qu&apos;avec votre accord, recueilli
+        par un bandeau de consentement (plateforme ABconsent de Sirdata,
+        enregistrée auprès de l&apos;IAB Europe) :
+      </p>
+      <ul>
+        <li>
+          mesure d&apos;audience : Google Analytics et Google Tag Manager
+          (Google Ireland Ltd) ;
+        </li>
+        <li>
+          publicité et contenus sponsorisés : MGID et ses partenaires, dont la
+          liste figure dans le bandeau.
+        </li>
+      </ul>
+      <p>
+        Refuser est aussi simple qu&apos;accepter, et sans conséquence sur
+        l&apos;accès aux articles. Vous pouvez modifier vos choix à tout moment
+        via le lien « Gérer les cookies » en bas de chaque page. Vos choix sont
+        conservés pour une durée limitée, puis le bandeau vous est de nouveau
+        présenté.
       </p>
 
       <h2>6. Destinataires et sous-traitants</h2>

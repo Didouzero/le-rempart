@@ -10,6 +10,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import { SITE_AUTHOR } from "@/lib/authors";
+import { CONSENT_DEFAULT_SCRIPT, sirdataCmpIds } from "@/lib/consent";
 import { rssAlternateTypes } from "@/lib/rss-links";
 import "./globals.css";
 
@@ -101,8 +102,36 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cmp = sirdataCmpIds();
+  const gtmScript = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${GTM_ID}');`;
+
   return (
     <html lang="fr" className={`${openSans.variable} ${sourceSans.variable}`}>
+      <head>
+        {/* Ordre imposé : consentement refusé par défaut, bandeau CMP, puis Tag Manager. */}
+        {cmp ? (
+          <>
+            <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_SCRIPT }} />
+            {/* Stub synchrone exigé par Sirdata : expose __tcfapi avant tout autre script. */}
+            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+            <script
+              src={`https://cache.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/stub`}
+            />
+            {/* Injecté après le stub : React remonterait un <script async> en tête du <head>. */}
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `(function(d){var s=d.createElement('script');s.async=true;s.src='https://choices.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/cmp';d.head.appendChild(s);})(document);`,
+              }}
+            />
+          </>
+        ) : null}
+        {/* Google Tag Manager */}
+        <script dangerouslySetInnerHTML={{ __html: gtmScript }} />
+      </head>
       <body className="antialiased">
         {/* Google Tag Manager (noscript) — juste après <body> */}
         <noscript>
@@ -114,12 +143,6 @@ export default function RootLayout({
             title="Google Tag Manager"
           />
         </noscript>
-        {/* Google Tag Manager */}
-        <Script id="gtm" strategy="beforeInteractive">{`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','${GTM_ID}');`}</Script>
         {/* Google Analytics 4 — une seule balise gtag par page */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}

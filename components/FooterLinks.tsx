@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 import { usePlus } from "@/components/PlusProvider";
 
 const links = [
@@ -14,7 +15,7 @@ const links = [
   { href: "/suppression-donnees", label: "Suppression des données" },
 ] as const;
 
-export function FooterLinks() {
+export function FooterLinks({ cookieSettings = false }: { cookieSettings?: boolean }) {
   const isPlus = usePlus();
   return (
     <nav
@@ -32,6 +33,7 @@ export function FooterLinks() {
             {link.label}
           </Link>
         ))}
+      {cookieSettings ? <CookieSettingsButton /> : null}
     </nav>
   );
 }
