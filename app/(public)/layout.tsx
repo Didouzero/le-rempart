@@ -1,5 +1,6 @@
 import { AdSlot, adsEnabled } from "@/components/AdSlot";
 import { BackToTop } from "@/components/BackToTop";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { PlusProvider } from "@/components/PlusProvider";
@@ -60,6 +61,7 @@ export default function PublicLayout({
         </div>
         <SiteFooter />
         <BackToTop />
+        <ConsentBanner />
       </div>
     </PlusProvider>
   );

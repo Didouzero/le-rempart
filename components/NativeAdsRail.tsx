@@ -2,11 +2,9 @@
 
 import Script from "next/script";
 import { MgidSiteScript, MgidWidget } from "@/components/MgidLoader";
+import { useConsentGranted } from "@/components/ConsentBanner";
 import { usePlus } from "@/components/PlusProvider";
-import {
-  mgidEnabled,
-  mgidUnderArticleWidgetId,
-} from "@/lib/mgid";
+import { mgidEnabled, mgidUnderArticleWidgetId } from "@/lib/mgid";
 
 /**
  * Native ads — MGID en priorité, Taboola en repli.
@@ -14,6 +12,7 @@ import {
  */
 export function NativeAdsRail() {
   const plus = usePlus();
+  const consented = useConsentGranted();
   const mgidWidget = mgidUnderArticleWidgetId();
 
   if (plus) return null;
@@ -46,7 +45,7 @@ export function NativeAdsRail() {
     process.env.NEXT_PUBLIC_TABOOLA_PLACEMENT?.trim() ||
     "Below Article Thumbnails";
 
-  if (!enabled || !publisher) {
+  if (!enabled || !publisher || !consented) {
     return null;
   }
 

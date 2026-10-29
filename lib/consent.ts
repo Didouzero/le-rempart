@@ -1,26 +1,61 @@
 /**
- * CMP Sirdata (ABconsent), certifiée IAB TCF : recueille le consentement aux cookies
- * et le transmet à Google (Consent Mode v2) et à MGID (vendor IAB 358).
- * Identifiants publics, lus dans « Récupérer le code » du compte ABconsent (configuration Le Rempart).
+ * Consentement aux cookies, géré par le site (bandeau maison) :
+ * mesure d'audience (Google Analytics via Consent Mode v2) et publicité MGID.
+ * Le choix est gardé 6 mois sur l'appareil, puis le bandeau revient.
  */
-export function sirdataCmpIds(): { partner: string; config: string } | null {
-  const partner = process.env.NEXT_PUBLIC_SIRDATA_PARTNER_ID?.trim() || "55127";
-  const config = process.env.NEXT_PUBLIC_SIRDATA_CONFIG_ID?.trim() || "KwJTJ";
-  if (!partner || !config) return null;
-  if (!/^[A-Za-z0-9]+$/.test(partner) || !/^[A-Za-z0-9]+$/.test(config)) return null;
-  return { partner, config };
+export const CONSENT_STORAGE_KEY = "rempart-consent";
+export const CONSENT_MAX_AGE_MS = 182 * 24 * 60 * 60 * 1000;
+/** Émis quand le visiteur fait un choix. */
+export const CONSENT_EVENT = "rempart-consent-change";
+/** Émis par le lien « Gérer les cookies » pour rouvrir le bandeau. */
+export const CONSENT_OPEN_EVENT = "rempart-consent-open";
+
+export type ConsentChoice = "granted" | "denied";
+
+export function readConsent(): ConsentChoice | null {
+  try {
+    const raw = localStorage.getItem(CONSENT_STORAGE_KEY);
+    if (!raw) return null;
+    const { v, t } = JSON.parse(raw) as { v?: string; t?: number };
+    if ((v !== "granted" && v !== "denied") || !t) return null;
+    if (Date.now() - t > CONSENT_MAX_AGE_MS) return null;
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+export function saveConsent(choice: ConsentChoice) {
+  try {
+    localStorage.setItem(
+      CONSENT_STORAGE_KEY,
+      JSON.stringify({ v: choice, t: Date.now() }),
+    );
+  } catch {
+    // Navigation privée : le choix vaut pour la page en cours.
+  }
+  const w = window as Window & { gtag?: (...args: unknown[]) => void };
+  w.gtag?.("consent", "update", {
+    analytics_storage: choice,
+  });
+  window.dispatchEvent(new Event(CONSENT_EVENT));
 }
 
 /**
- * Consent Mode v2 : tout est refusé tant que le visiteur n'a pas répondu au bandeau.
- * Doit s'exécuter avant la CMP, Tag Manager et GA4.
+ * Consent Mode v2, exécuté dans le <head> avant Tag Manager et GA4 :
+ * tout est refusé, sauf la mesure d'audience si le visiteur l'a acceptée
+ * il y a moins de 6 mois. Aucune publicité Google n'est utilisée.
  */
 export const CONSENT_DEFAULT_SCRIPT = `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
+var granted = false;
+try {
+  var c = JSON.parse(localStorage.getItem('${CONSENT_STORAGE_KEY}') || 'null');
+  granted = !!c && c.v === 'granted' && Date.now() - c.t < ${CONSENT_MAX_AGE_MS};
+} catch (e) {}
 gtag('consent', 'default', {
   ad_storage: 'denied',
   ad_user_data: 'denied',
   ad_personalization: 'denied',
-  analytics_storage: 'denied',
-  wait_for_update: 500
+  analytics_storage: granted ? 'granted' : 'denied'
 });`;

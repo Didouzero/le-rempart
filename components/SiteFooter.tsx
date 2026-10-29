@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { FooterLinks } from "@/components/FooterLinks";
 import { HideForPlus } from "@/components/PlusProvider";
-import { sirdataCmpIds } from "@/lib/consent";
 import { CrownCircleIcon } from "@/components/BrandIcons";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 
@@ -86,7 +85,7 @@ export function SiteFooter() {
             </HideForPlus>
           </div>
         </div>
-        <FooterLinks cookieSettings={Boolean(sirdataCmpIds())} />
+        <FooterLinks />
         <p className="max-w-3xl text-xs leading-relaxed text-white/50">
           © {new Date().getFullYear()} Le Rempart — le-rempart.org. Site
           d&apos;information. Les contenus n&apos;engagent que leurs auteurs.

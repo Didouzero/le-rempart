@@ -83,39 +83,35 @@ export default function ConfidentialitePage() {
         <li>obligation légale le cas échéant.</li>
       </ul>
 
-      <h2>5. Cookies et publicité</h2>
+      <h2 id="cookies">5. Cookies et publicité</h2>
       <p>
         Le Site dépose des cookies strictement nécessaires à son
         fonctionnement, sans consentement préalable : session des abonnés
-        Rempart+, session d&apos;administration et mémorisation de vos choix
-        en matière de cookies.
+        Rempart+, session d&apos;administration, mémorisation de vos choix
+        (cookies, thème clair ou sombre).
       </p>
       <p>
-        Les autres traceurs ne sont déposés qu&apos;avec votre accord, recueilli
-        par un bandeau de consentement (plateforme ABconsent de Sirdata,
-        enregistrée auprès de l&apos;IAB Europe) :
+        Les autres traceurs ne sont utilisés qu&apos;avec votre accord, donné
+        par le bandeau affiché à votre première visite :
       </p>
       <ul>
         <li>
           mesure d&apos;audience : Google Analytics et Google Tag Manager
-          (Google Ireland Ltd) ;
+          (Google Ireland Ltd). Tant que vous n&apos;avez pas accepté, aucun
+          cookie Google n&apos;est déposé ; seuls des signaux anonymes, sans
+          cookie, sont transmis pour estimer la fréquentation ;
         </li>
         <li>
-          publicité et contenus sponsorisés : MGID et ses partenaires, dont la
-          liste figure dans le bandeau.
+          publicité et contenus sponsorisés : MGID. Ses publicités et ses
+          cookies ne sont chargés qu&apos;après votre accord.
         </li>
       </ul>
       <p>
         Refuser est aussi simple qu&apos;accepter, et sans conséquence sur
-        l&apos;accès aux articles. Vous pouvez modifier vos choix à tout moment
-        via le lien « Gérer les cookies » en bas de chaque page. Vos choix sont
-        conservés pour une durée limitée, puis le bandeau vous est de nouveau
-        présenté.
-      </p>
-      <p>
-        Le Rempart participe et est conforme à l&apos;ensemble des
-        Spécifications et Politiques du Transparency &amp; Consent Framework
-        de l&apos;IAB Europe. Il utilise la Consent Management Platform n°92.
+        l&apos;accès aux articles. Vous pouvez changer d&apos;avis à tout
+        moment via le lien « Gérer les cookies » en bas de chaque page. Votre
+        choix est conservé 6 mois sur votre appareil, puis le bandeau vous est
+        de nouveau présenté.
       </p>
 
       <h2>6. Destinataires et sous-traitants</h2>

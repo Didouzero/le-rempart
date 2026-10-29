@@ -15,7 +15,7 @@ const links = [
   { href: "/suppression-donnees", label: "Suppression des données" },
 ] as const;
 
-export function FooterLinks({ cookieSettings = false }: { cookieSettings?: boolean }) {
+export function FooterLinks() {
   const isPlus = usePlus();
   return (
     <nav
@@ -33,7 +33,7 @@ export function FooterLinks({ cookieSettings = false }: { cookieSettings?: boole
             {link.label}
           </Link>
         ))}
-      {cookieSettings ? <CookieSettingsButton /> : null}
+      <CookieSettingsButton />
     </nav>
   );
 }

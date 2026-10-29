@@ -10,7 +10,7 @@ import {
   SITE_URL,
 } from "@/lib/seo";
 import { SITE_AUTHOR } from "@/lib/authors";
-import { CONSENT_DEFAULT_SCRIPT, sirdataCmpIds } from "@/lib/consent";
+import { CONSENT_DEFAULT_SCRIPT } from "@/lib/consent";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { rssAlternateTypes } from "@/lib/rss-links";
 import "./globals.css";
@@ -103,7 +103,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cmp = sirdataCmpIds();
   const gtmScript = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -120,24 +119,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <head>
         {/* Thème clair / sombre appliqué avant l'affichage : pas de flash blanc. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* Ordre imposé : consentement refusé par défaut, bandeau CMP, puis Tag Manager. */}
-        {cmp ? (
-          <>
-            <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_SCRIPT }} />
-            {/* Stub synchrone exigé par Sirdata : expose __tcfapi avant tout autre script. */}
-            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-            <script
-              src={`https://cache.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/stub`}
-              referrerPolicy="unsafe-url"
-            />
-            {/* Injecté après le stub : React remonterait un <script async> en tête du <head>. */}
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `(function(d){var s=d.createElement('script');s.async=true;s.referrerPolicy='unsafe-url';s.src='https://choices.consentframework.com/js/pa/${cmp.partner}/c/${cmp.config}/cmp';d.head.appendChild(s);})(document);`,
-              }}
-            />
-          </>
-        ) : null}
+        {/* Consentement refusé par défaut, avant Tag Manager et GA4 (Consent Mode v2). */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_SCRIPT }} />
         {/* Google Tag Manager */}
         <script dangerouslySetInnerHTML={{ __html: gtmScript }} />
       </head>

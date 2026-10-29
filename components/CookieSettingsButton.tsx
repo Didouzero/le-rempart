@@ -1,17 +1,16 @@
-const LINK_CLASS =
-  "text-white/75 no-underline underline-offset-4 hover:text-accent hover:underline";
+"use client";
 
-/**
- * Rouvre le bandeau de consentement : le visiteur peut changer d'avis à tout moment.
- * Sirdata repère ce lien précis dans le HTML initial pour masquer son icône flottante
- * (option « Gérer dans le footer ») ; React refuse les liens javascript:, d'où le HTML brut.
- */
+import { CONSENT_OPEN_EVENT } from "@/lib/consent";
+
+/** Rouvre le bandeau de consentement : le visiteur peut changer d'avis à tout moment. */
 export function CookieSettingsButton() {
   return (
-    <span
-      dangerouslySetInnerHTML={{
-        __html: `<a href="javascript:window.Sddan.cmp.displayUI();" class="${LINK_CLASS}">Gérer les cookies</a>`,
-      }}
-    />
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event(CONSENT_OPEN_EVENT))}
+      className="cursor-pointer border-0 bg-transparent p-0 text-white/75 underline-offset-4 hover:text-accent hover:underline"
+    >
+      Gérer les cookies
+    </button>
   );
 }
