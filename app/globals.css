@@ -597,6 +597,29 @@ a:hover .media-frame::after {
   }
 }
 
+/* Mode nuit : les encarts noirs posés dans le contenu (newsletter, « Rejoindre
+   le Rempart+ », contact) se fondraient dans la page ; on les relève d'un ton,
+   avec un liseré doré. */
+:root[data-theme="dark"] .night-panel {
+  background-color: #1c1914;
+  background-image: radial-gradient(ellipse at 0% 0%, rgba(255, 189, 89, 0.1), transparent 55%);
+  border-color: rgba(255, 189, 89, 0.35);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 189, 89, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .night-panel {
+    background-color: #1c1914;
+    background-image: radial-gradient(ellipse at 0% 0%, rgba(255, 189, 89, 0.1), transparent 55%);
+    border-color: rgba(255, 189, 89, 0.35);
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 189, 89, 0.12);
+  }
+}
+
 /* Passage jour / nuit : cercle qui s'ouvre depuis le bouton (View Transitions),
    fondu des couleurs pour les navigateurs qui ne les gèrent pas. */
 ::view-transition-old(root),

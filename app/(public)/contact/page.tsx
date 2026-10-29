@@ -22,7 +22,7 @@ export default function ContactPage() {
   return (
     <div className="animate-fade-up grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
       {/* À gauche : l'adresse, en grand, sur fond sombre. */}
-      <section className="flex flex-col rounded-lg bg-ink p-8 text-paper sm:p-10">
+      <section className="night-panel flex flex-col rounded-lg border border-transparent bg-ink p-8 text-paper sm:p-10">
         <div>
           <p className="font-display text-sm tracking-[0.24em] text-accent uppercase">Contact</p>
           <h1 className="font-display mt-4 text-5xl leading-[1.05] uppercase sm:text-6xl">

@@ -148,7 +148,7 @@ export function RempartPlusOffer({
           </p>
         </div>
 
-        <div className="rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
+        <div className="night-panel rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
           <p className="font-display text-[1.05rem] tracking-[0.18em] text-accent">
             Rejoindre le Rempart+
           </p>

@@ -124,7 +124,7 @@ export function NewsletterSignup({
 
   return (
     <aside
-      className={`newsletter-signup my-6 max-w-[42rem] border border-ink/15 bg-ink px-4 py-4 text-paper ${
+      className={`newsletter-signup night-panel my-6 max-w-[42rem] border border-ink/15 bg-ink px-4 py-4 text-paper ${
         compact ? "my-5 py-3.5" : ""
       }`}
       aria-label="Newsletter Le Rempart"
