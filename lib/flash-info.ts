@@ -320,7 +320,7 @@ FAITS :
 - Priorité : NOTES + résultats WEB qui vont DANS LE SENS de l'accroche.
 - L'article de référence est SECONDAIRE : utile pour dates/noms/chiffres neutres, JAMAIS pour inverser la thèse.
 - INTERDIT d'inventer noms, réactions, citations, chiffres absents de la matière.
-- N'attribue un fait à un média que s'il est dans la matière.
+- N'attribue un fait à un média que s'il est dans la matière ET que ce média en est l'origine (exclusivité, interview qu'il a menée, propos tenus sur son antenne). Les faits publics (Parlement, déclarations publiques, chiffres officiels, faits connus) s'écrivent sans « rapporte X » ni « selon Y ».
 
 LANGAGE — VARIÉ, PAS DE TICS :
 - INTERDIT absolu : « on notera », « on observe », « on remarque », « la méthode est classique », « force est de constater », « il convient de noter ».
