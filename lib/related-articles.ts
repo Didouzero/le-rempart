@@ -59,6 +59,10 @@ const STOPWORDS = new Set([
   "cette",
   "cet",
   "ces",
+  "avoir",
+  "face",
+  "info",
+  "radio",
 ]);
 
 export type RelatedArticle = {
@@ -202,6 +206,7 @@ export async function findLinkableArticles(input: {
 }): Promise<LinkableArticle[]> {
   const tokens = themeTokens(input.text);
   if (tokens.size === 0) return [];
+  const names = properNouns(input.text);
   const rows = await withDbTimeout(
     prisma.article.findMany({
       where: {
@@ -216,7 +221,13 @@ export async function findLinkableArticles(input: {
     }),
   );
   return rows
-    .map((row) => ({ row, score: overlapScore(tokens, row.title, row.excerpt) }))
+    .map((row) => {
+      // Même personne ou même institution : le signal le plus fiable d'un lien utile.
+      const shared = [...properNouns(`${row.title}. ${row.excerpt}`)].filter((n) =>
+        names.has(n),
+      ).length;
+      return { row, score: overlapScore(tokens, row.title, row.excerpt) + 2 * shared };
+    })
     .filter((x) => x.score >= 2)
     .sort((a, b) => b.score - a.score)
     .slice(0, input.take ?? 8)
@@ -228,6 +239,8 @@ const COMMON_CAPS = new Set([
   "president", "ministre", "premier", "assemblee", "nationale", "republique",
   // Présents dans trop de sujets pour signaler un lien réel.
   "macron", "emmanuel", "rassemblement", "insoumise",
+  // Mots courants en majuscule dans un nom d'émission ou de média (« Face à l'info », « Radio Nova »).
+  "face", "radio", "info", "journal", "police", "justice",
 ]);
 
 /** Noms propres (mots à majuscule hors début de phrase), repliés sans accents. */
@@ -258,6 +271,7 @@ export function pickReadAlso(
   const mine = themeTokens(subject.title, subject.excerpt);
   const myNames = properNouns(`${subject.title}. ${subject.excerpt}`);
   return candidates
+    .filter((b) => b.title !== b.title.toUpperCase())
     .map((b) => {
       let score = 0;
       for (const t of themeTokens(b.title, b.excerpt)) if (mine.has(t)) score += 1;

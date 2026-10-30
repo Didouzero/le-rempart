@@ -40,6 +40,10 @@ export const FLASH_PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙�
 const FLASH_MIN_WORDS = 60;
 const FLASH_MAX_WORDS = 200;
 const ARTICLE_MIN_WORDS = 300;
+/** Au-delà, Google tronque le titre et le chapô (repris en meta description). */
+const TITLE_MAX_CHARS = 100;
+const EXCERPT_MAX_CHARS = 240;
+const ARTICLE_MIN_HEADINGS = 2;
 
 export type BriefSource = { url: string; title: string; date?: string };
 
@@ -58,6 +62,8 @@ const EDITORIAL_LINE = `LIGNE ÉDITORIALE
 - Ton grave et sérieux du début à la fin. Aucun humour, aucun sarcasme, aucun cynisme, aucune ironie facile, aucun jeu de mots, aucune formule de comptoir.
 - Les consignes de l'éditeur fixent le sujet et l'angle. Les faits, eux, viennent uniquement des consignes, de la créative et de tes recherches : ne jamais inventer de fait, de chiffre, de citation, de nom ou de date. Si une information n'est pas confirmée par tes recherches, attribue-la ("selon …", "d'après les premiers éléments"). Si tes recherches contredisent un détail des consignes (une peine, un chiffre, une date), c'est la version des sources qui fait foi.
 - Pas d'accusation nominative non étayée, pas d'insulte ni d'appel à la haine ou à la violence.
+- Reste dans le périmètre du sujet. Ne rattache pas une affaire à un autre fait divers ou à un groupe de population sans lien factuel direct, établi par tes sources. La nationalité, l'origine ou le statut d'une personne se mentionne quand il fait partie du fait rapporté.
+- Pas de généralisation (« dans certains quartiers », « dans certaines bouches ») ni d'affirmation absolue invérifiable (« jamais », « toujours », « aucun ») sans source précise.
 
 CITER UN MÉDIA
 - Un média n'est nommé que lorsqu'il est réellement à l'origine de l'information : exclusivité ou révélation, document qu'il a obtenu, enquête ou chiffres qu'il a produits, interview qu'il a lui-même menée, propos tenus sur son antenne ou dans ses colonnes (« au micro de RMC », « interrogés par CNEWS », « révèle Le Parisien »). Dans ce cas, reprends entre guillemets un ou deux fragments exacts de son article.
@@ -101,17 +107,23 @@ TA MÉTHODE
 ${EDITORIAL_LINE}
 
 FORMAT DE L'ARTICLE
-- Le corps est en Markdown : 2 à 4 intertitres "## " courts et informatifs, des paragraphes construits, très peu de **gras**, aucune liste à puces.
+- Le corps est en Markdown : 2 à 4 intertitres "## ", des paragraphes construits, très peu de **gras**, aucune liste à puces.
 - Paragraphes courts pour la lecture sur mobile : 60 mots au plus chacun (deux à quatre phrases). Coupe un développement long en deux paragraphes plutôt que de l'allonger.
 - Longueur : de 400 à 900 mots selon la matière. Un sujet pauvre donne un article plus court, jamais du remplissage.
-- Ouverture : le fait principal (qui, quoi, où, quand). Puis le déroulé, le contexte, les réactions nommées, la mise en perspective. Pas de paragraphe final de pur commentaire.
+- Ouverture : le premier paragraphe se suffit à lui-même. Il répond à qui, quoi, où et quand, avec le nom complet, la fonction et la date exacte (« jeudi 29 octobre »), de sorte qu'un moteur de recherche ou un assistant puisse le reprendre tel quel. Il ne recopie pas le chapô.
+- Suite : le déroulé, le contexte, les réactions nommées, la mise en perspective.
+- Fin : termine sur un fait (prochaine échéance, réaction, décision attendue, chiffre), jamais sur un commentaire ou une morale.
+- Intertitres : on doit comprendre l'article en ne lisant qu'eux. Chacun nomme le fait, la personne ou l'institution traités. Un ou deux peuvent reprendre la question que se pose le lecteur (« Que reproche Christine Kelly à l'Arcom ? »). Pas de formule ni d'effet de style (« Une leçon d'histoire », « Des railleries qui disent autre chose »).
+- Chaque section se comprend isolément : reprends le nom plutôt qu'un pronom au début de section, et donne les dates et les chiffres en entier, avec leur auteur.
+- Apporte ce que les autres n'ont pas : fait daté, chiffre, antécédent, citation exacte. Pas de paraphrase de dépêche.
+- Emploie naturellement les mots que le lecteur taperait dans un moteur de recherche, sans répétition artificielle.
 - Citations verbatim courtes, entre guillemets français et en italique : *« phrase exacte »*, toujours attribuées à la personne qui les a prononcées. N'attribue à un média que ce qu'il a réellement écrit, et seulement quand il est à l'origine de l'information (voir « CITER UN MÉDIA »).
-- Titre : clair et précis, sur le même sujet que l'accroche de la créative, avec les chiffres exacts des sources. Pas de majuscules partout, pas de point final.
-- Chapô (excerpt) : une ou deux phrases strictement factuelles.
+- Titre : ${TITLE_MAX_CHARS} caractères au plus, idéalement moins de 90. Le nom de la personne, de l'institution ou du lieu principal dans les premiers mots, puis le fait, sur le même sujet que l'accroche de la créative, avec les chiffres exacts des sources. Il annonce exactement ce que contient l'article : pas d'énigme, pas de promesse que le texte ne tient pas. Pas de majuscules partout, pas de point final.
+- Chapô (excerpt) : une ou deux phrases strictement factuelles, ${EXCERPT_MAX_CHARS} caractères au plus, idéalement 130 à 200. L'essentiel tient dans les 150 premiers caractères, car c'est ce que montrent les résultats de recherche.
 
 LIENS DANS LE CORPS (Markdown)
 - Liens vers la presse : uniquement quand le texte renvoie explicitement à un article précis d'un média (« a-t-il déclaré sur BFMTV », « révèle Le Parisien », « selon un document consulté par Le Figaro »). Le lien porte alors sur le nom du média, discrètement : a-t-il déclaré sur [BFMTV](https://…). Utilise UNIQUEMENT les adresses de la liste « Sources déjà lues » ou celles renvoyées par tes recherches, recopiées à l'identique. Aucun lien quand le texte ne cite pas de média. Jamais de lien vers un réseau social (Instagram, Facebook, X, TikTok, YouTube, Telegram).
-- Liens internes : si la liste « Articles du Rempart sur des sujets proches » est fournie, place un à trois liens vers ceux qui éclairent vraiment le sujet (antécédents, affaire liée), sur un texte d'ancre descriptif et naturel, par exemple : la [condamnation du député en 2025](/articles/123). Recopie l'adresse /articles/… telle quelle. N'en mets aucun si rien n'est pertinent.
+- Liens internes : si la liste « Articles du Rempart sur des sujets proches » est fournie, place dans le texte un à trois liens vers ceux qui éclairent vraiment le sujet (antécédents, affaire liée, même personne). C'est attendu dès qu'un article de la liste porte sur la même personne ou la même affaire. L'ancre fait 3 à 8 mots, s'intègre à une phrase et décrit l'article lié, par exemple : la [condamnation du député en 2025](/articles/123). Jamais le titre complet, jamais « cliquez ici ». Recopie l'adresse /articles/… telle quelle. N'en mets aucun si rien n'est pertinent, et ne dévie pas du sujet pour en placer un.
 - Jamais d'adresse inventée, jamais de lien nu, jamais de section ou de liste de sources.
 - Réponds UNIQUEMENT avec un JSON valide : {"title":"...","excerpt":"...","content":"..."}`;
 
@@ -606,7 +618,7 @@ function splitFlash(raw: string): { body: string; outlets: string[] } {
 }
 
 function flashIssues(body: string): string[] {
-  const issues: string[] = [];
+  const issues = wrongWeekdays(body);
   const words = countWords(body);
   if (words < FLASH_MIN_WORDS || words > FLASH_MAX_WORDS) {
     issues.push(
@@ -679,15 +691,51 @@ function parseArticle(raw: string): {
   };
 }
 
-function articleIssues(a: { title: string; excerpt: string; content: string }) {
+const WEEKDAYS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+const MONTHS = [
+  "janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+  "août", "septembre", "octobre", "novembre", "décembre",
+];
+const WEEKDAY_DATE = new RegExp(
+  `\\b(${WEEKDAYS.join("|")})\\s+(\\d{1,2})(?:er)?\\s+(${MONTHS.join("|")})(?:\\s+(\\d{4}))?`,
+  "gi",
+);
+
+/** Jours de la semaine faux (« mercredi 29 octobre 2026 ») : l'année manquante vaut l'année en cours. */
+export function wrongWeekdays(text: string, now = new Date()): string[] {
   const issues: string[] = [];
+  for (const m of text.matchAll(WEEKDAY_DATE)) {
+    const year = Number(m[4]) || now.getFullYear();
+    const month = MONTHS.indexOf(m[3]!.toLowerCase());
+    const real = WEEKDAYS[new Date(Date.UTC(year, month, Number(m[2]))).getUTCDay()]!;
+    if (real !== m[1]!.toLowerCase()) {
+      issues.push(`« ${m[0]} » est faux, cette date tombe un ${real}`);
+    }
+  }
+  return [...new Set(issues)];
+}
+
+export function articleIssues(a: { title: string; excerpt: string; content: string }) {
+  const issues = wrongWeekdays(`${a.title}\n${a.excerpt}\n${a.content}`);
   if (a.title.length < 15) issues.push("le titre manque ou est trop court");
+  if (a.title.length > TITLE_MAX_CHARS) {
+    issues.push(`le titre fait ${a.title.length} caractères, ${TITLE_MAX_CHARS} au plus`);
+  }
+  if (a.title === a.title.toUpperCase()) issues.push("le titre est tout en majuscules");
   if (a.excerpt.length < 20) issues.push("le chapô (excerpt) manque");
+  if (a.excerpt.length > EXCERPT_MAX_CHARS) {
+    issues.push(`le chapô fait ${a.excerpt.length} caractères, ${EXCERPT_MAX_CHARS} au plus`);
+  }
   const words = countWords(a.content);
   if (words < ARTICLE_MIN_WORDS) {
     issues.push(`le corps fait ${words} mots, il en faut au moins ${ARTICLE_MIN_WORDS}`);
   }
-  if (!/^##\s/m.test(a.content)) issues.push("le corps n'a aucun intertitre « ## »");
+  const headings = a.content.match(/^##\s/gm)?.length ?? 0;
+  if (headings < ARTICLE_MIN_HEADINGS) {
+    issues.push(
+      `le corps a ${headings} intertitre(s) « ## », il en faut au moins ${ARTICLE_MIN_HEADINGS}`,
+    );
+  }
   return issues;
 }
 
