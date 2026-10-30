@@ -318,6 +318,11 @@ export async function publishBriefPipeline(input: {
       .filter(Boolean)
       .join("\n\n"),
   );
+  if (research.warnings.length) {
+    await notify(
+      ["⚠️ À vérifier après publication :", ...research.warnings.map((w) => `• ${w}`)].join("\n"),
+    );
+  }
 
   // Encadré « À lire aussi » : mêmes règles que pour les anciens articles.
   const readAlso = await findReadAlso({

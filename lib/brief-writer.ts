@@ -11,6 +11,12 @@ import { fetchSourceText, scrubBoilerplate } from "@/lib/fetch-source";
 import { outletFromUrl } from "@/lib/flash-info";
 import { fixFrenchPunctuation } from "@/lib/french-copy";
 import {
+  AUDIT_SYSTEM,
+  parseAudit,
+  unverifiedQuotes,
+  type AuditProblem,
+} from "@/lib/fact-check";
+import {
   enforceLinks,
   outsideLinkTargets,
   stripSourcesSection,
@@ -35,6 +41,10 @@ const MODE_TIMEOUT_MS: Record<Mode, number> = {
 const FALLBACK: Record<Mode, Mode> = { deep: "low", low: "fast", fast: "fast" };
 /** Recherche + rédaction ; le reste des 800 s Vercel sert à l'article en base et à Facebook. */
 const TOTAL_BUDGET_MS = 600_000;
+/** Temps qu'il doit rester pour lancer la relecture, correction comprise. */
+const AUDIT_MIN_LEFT_MS = 120_000;
+const AUDIT_RECHECK_MIN_LEFT_MS = 60_000;
+const AUDIT_MAX_PROBLEMS = 8;
 
 export const FLASH_PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
 const FLASH_MIN_WORDS = 60;
@@ -53,11 +63,13 @@ export type BriefResult = {
   sources: BriefSource[];
   /** Matière brute lue (pour article.sourceText). */
   matter: string;
+  /** Points à revoir par l'éditeur, faute d'avoir pu être corrigés. */
+  warnings: string[];
 };
 
 const EDITORIAL_LINE = `LIGNE ÉDITORIALE
 - Sensibilité de droite assumée : attachement à l'ordre et à l'autorité de l'État, fermeté sur l'immigration et la délinquance, souveraineté nationale, identité et héritage français, valeur du travail, défense du contribuable, soutien aux forces de l'ordre et au monde agricole, scepticisme envers la gauche, l'assistanat et les renoncements de l'exécutif.
-- Cette orientation doit se lire sans jamais s'afficher. Elle passe par le choix des faits mis en avant, leur ordre, un chiffre placé au bon endroit, une citation bien choisie, un mot juste plutôt qu'un mot fort. Le lecteur doit tirer lui-même la conclusion que le texte a préparée.
+- Cette orientation est assumée. Elle passe d'abord par le choix des faits mis en avant, leur ordre, un chiffre placé au bon endroit, une citation bien choisie, un mot juste plutôt qu'un mot fort. Elle peut aussi se dire franchement, dans les phrases de regard décrites plus bas, jamais à la place des faits.
 - La dénonciation est permise, mais elle est sobre, argumentée et habile : un constat précis vaut mieux qu'une indignation.
 - Ton grave et sérieux du début à la fin. Aucun humour, aucun sarcasme, aucun cynisme, aucune ironie facile, aucun jeu de mots, aucune formule de comptoir.
 - Les consignes de l'éditeur fixent le sujet et l'angle. Les faits, eux, viennent uniquement des consignes, de la créative et de tes recherches : ne jamais inventer de fait, de chiffre, de citation, de nom ou de date. Si une information n'est pas confirmée par tes recherches, attribue-la ("selon …", "d'après les premiers éléments"). Si tes recherches contredisent un détail des consignes (une peine, un chiffre, une date), c'est la version des sources qui fait foi.
@@ -74,12 +86,23 @@ STYLE
 - Un vrai français écrit, élégant et précis : phrases construites et variées, de longueurs différentes, subordonnées maîtrisées, vocabulaire juste et soutenu sans préciosité, enchaînements logiques naturels.
 - L'information principale d'abord (qui, quoi, où, quand), puis le contexte, puis la mise en perspective.
 - Le texte ne doit jamais sentir la rédaction automatique. Proscris en particulier :
-  · les tics d'IA et de réseau social : "Une chose est sûre", "Force est de constater", "Le message est clair", "Rappel des faits", "Résultat :", "Pendant ce temps", "Pendant que…", "Jusqu'à quand ?", "Plus que jamais", "Ni plus ni moins", "Et ce n'est pas tout", "coup de théâtre", "la colère gronde", "en trompe-l'œil", "véritable", "il est important de noter", "dans un contexte de", "on notera", "on croit rêver", "les Français apprécieront" ;
+  · les tics d'IA et de réseau social : "Une chose est sûre", "Force est de constater", "Le message est clair", "Rappel des faits", "Résultat :", "Pendant ce temps", "Pendant que…", "Jusqu'à quand ?", "Plus que jamais", "Ni plus ni moins", "Et ce n'est pas tout", "coup de théâtre", "la colère gronde", "en trompe-l'œil", "véritable", "il est important de noter", "dans un contexte de", "on notera", "on croit rêver", "les Français apprécieront", "Reste que", "Reste à savoir", "Par ces mots", "moins X que Y", "bien plus qu'un…", "loin d'être clos" ;
+  · la paraphrase d'une citation : une déclaration se suffit, ne l'explique pas dans la phrase suivante ;
   · les énumérations systématiques par trois, les phrases nominales en rafale, les points d'exclamation, les majuscules d'emphase, les guillemets ironiques ;
   · les formules creuses, emphatiques ou racoleuses.
 - Typographie française : espace avant « : », « ; », « ! », « ? ». Guillemets français « … ».
 - AUCUN tiret de ponctuation : ni « - », ni « – », ni « — ». Pour une incise ou une pause, utilise une virgule, deux-points, des parenthèses ou un point. Seuls les traits d'union à l'intérieur des mots sont permis (Saint-Denis, peut-être).
 - Aucun emoji, aucun hashtag.`;
+
+const VOICE = `LA VOIX DU REMPART
+Tout le site est écrit d'une seule plume, celle de Dimitri Scudo. On doit la reconnaître sans lire la signature. Sa règle : « Un article du Rempart peut prendre parti. Il ne doit jamais arranger les faits. »
+- Le concret d'abord. Un chiffre se traduit en ce qu'il coûte et à qui. Une décision se raconte par ceux qui la subissent : la victime avant le mis en cause, le contribuable, le policier, l'agriculteur, le commerçant. Pas d'abstraction là où un visage, une somme ou un lieu existe.
+- Le rythme de la plume : une phrase longue et construite qui expose, puis une phrase brève et sèche qui fixe le fait. Ce contraste revient à chaque section, sans devenir un procédé.
+- La mémoire : quand tes sources le permettent, rappelle ce qui avait été promis, voté ou déclaré auparavant, avec sa date. L'écart entre le discours et le réel est le terrain favori du Rempart.
+- Le détail qui dit tout : choisis dans les sources le fait précis que les autres ont laissé de côté et place-le où il pèse.
+- Le regard : chaque texte porte une ou deux phrases qui disent franchement ce que les faits signifient, comme « Chaque euro public sort de la poche de quelqu'un » ou « La sécurité est la première des libertés ». Ces deux exemples montrent le registre : ne les réutilise pas. Une phrase de regard est courte, affirmative, sans question rhétorique, et s'appuie sur le fait donné juste avant. Jamais dans le premier paragraphe, jamais comme dernière phrase, jamais seule dans un paragraphe. Elle n'apporte aucun fait nouveau, ne prête aucune intention à personne et ne décrit pas une situation générale. Elle ne glisse jamais vers l'ironie (« visiblement », « curieusement », « comme par hasard »). Le flash et l'article n'utilisent pas la même.
+- Les mots de la maison : simples, français, exacts. Dis « contribuable » plutôt que « citoyen fiscal », « clandestin » seulement si la situation est établie, jamais de jargon administratif ni d'anglicisme sans nécessité.
+- Une voix forte reste une voix tenue : pas d'insulte, pas de mépris envers une population, pas d'emphase. La force vient de la précision.`;
 
 const FLASH_SYSTEM = `Tu es le rédacteur en chef de la page Facebook du "Rempart", un média d'actualité française à la ligne éditoriale ancrée à droite. Tu écris comme un journaliste chevronné de la presse quotidienne nationale, pas comme une intelligence artificielle ni comme un animateur de réseau social.
 
@@ -89,6 +112,8 @@ TA MÉTHODE
 3. Rédige le Flash info.
 
 ${EDITORIAL_LINE}
+
+${VOICE}
 
 FORMAT DU FLASH
 - Le texte commence EXACTEMENT par : ${FLASH_PREFIX} puis enchaîne directement sur l'information principale, sur la même ligne.
@@ -105,6 +130,8 @@ TA MÉTHODE
 2. Rédige l'article.
 
 ${EDITORIAL_LINE}
+
+${VOICE}
 
 FORMAT DE L'ARTICLE
 - Le corps est en Markdown : 2 à 4 intertitres "## ", des paragraphes construits, très peu de **gras**, aucune liste à puces.
@@ -207,6 +234,9 @@ export async function researchAndWrite(input: {
     .filter(Boolean)
     .join("\n\n");
 
+  // Tout ce que l'agent a réellement lu : une citation doit s'y trouver.
+  const lu = () => [briefBlock, ...notes.values()].join("\n");
+
   const userContent: unknown = input.creative
     ? [
         {
@@ -229,7 +259,10 @@ export async function researchAndWrite(input: {
     onSearch: input.onSearch,
     onProgress: input.onProgress,
     deadline,
-    check: (raw) => flashIssues(splitFlash(raw).body),
+    check: (raw) => {
+      const { body } = splitFlash(raw);
+      return [...flashIssues(body), ...quoteIssues(body, lu())];
+    },
   });
   const flash = finishFlash(flashRaw, provided[0]?.url);
 
@@ -240,27 +273,35 @@ export async function researchAndWrite(input: {
     internal: new Set(linkable.map((a) => a.publicId)),
   });
 
+  const articleCheck = (raw: string): string[] => {
+    try {
+      const parsed = parseArticle(raw);
+      return [
+        ...articleIssues(parsed),
+        ...quoteIssues(`${parsed.excerpt}\n${parsed.content}`, lu()),
+      ];
+    } catch (err) {
+      return [err instanceof Error ? err.message : "JSON invalide"];
+    }
+  };
+  const articleRequest = [
+    briefBlock,
+    `Flash info publié sur Facebook :\n"""${flash}"""`,
+    `Sources déjà lues :\n${digest(sources, notes)}`,
+    linkable.length
+      ? `Articles du Rempart sur des sujets proches :\n${linkable
+          .map((a) => `- ${a.title} : /articles/${a.publicId}`)
+          .join("\n")}`
+      : "",
+    "Rédige l'article complet du site.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
   await input.onProgress?.("✍️ Rédaction de l'article du site…");
-  const articleRaw = await runAgent({
+  let articleRaw = await runAgent({
     system: ARTICLE_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: [
-          briefBlock,
-          `Flash info publié sur Facebook :\n"""${flash}"""`,
-          `Sources déjà lues :\n${digest(sources, notes)}`,
-          linkable.length
-            ? `Articles du Rempart sur des sujets proches :\n${linkable
-                .map((a) => `- ${a.title} : /articles/${a.publicId}`)
-                .join("\n")}`
-            : "",
-          "Rédige l'article complet du site.",
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
-      },
-    ],
+    messages: [{ role: "user", content: articleRequest }],
     maxRounds: 4,
     mode: "low",
     engine,
@@ -269,25 +310,119 @@ export async function researchAndWrite(input: {
     onSearch: input.onSearch,
     onProgress: input.onProgress,
     deadline,
-    check: (raw) => {
-      try {
-        return articleIssues(parseArticle(raw));
-      } catch (err) {
-        return [err instanceof Error ? err.message : "JSON invalide"];
-      }
-    },
+    check: articleCheck,
   });
+
+  const warnings: string[] = [];
+  if (deadline - Date.now() < AUDIT_MIN_LEFT_MS) {
+    warnings.push("Relecture des faits sautée, faute de temps.");
+  } else {
+    try {
+      await input.onProgress?.("🧐 Relecture des faits…");
+      const matter = [briefBlock, digest(sources, notes, 2000, 40_000)].join("\n\n");
+      const problems = await auditClaims({
+        article: parseArticle(articleRaw),
+        matter,
+        engine,
+        deadline,
+      });
+      if (problems.length) {
+        await input.onProgress?.(
+          `✂️ ${problems.length} passage(s) non étayé(s), correction :\n${problems
+            .map((p) => `• ${p.passage}`)
+            .join("\n")}`,
+        );
+        articleRaw = await runAgent({
+          system: ARTICLE_SYSTEM,
+          messages: [
+            { role: "user", content: articleRequest },
+            { role: "assistant", content: articleRaw },
+            {
+              role: "user",
+              content: `La relecture a relevé des passages que les sources n'étayent pas :\n${problems
+                .map((p) => `- « ${p.passage} » : ${p.raison}`)
+                .join("\n")}\n\nRetire chacun de ces passages ou ramène-le à ce que disent les sources, sans ajouter aucun fait. Ne change rien d'autre et garde la voix du texte. Réponds avec le JSON complet.`,
+            },
+          ],
+          maxRounds: 2,
+          mode: "low",
+          engine,
+          sources,
+          notes,
+          onProgress: input.onProgress,
+          deadline,
+          check: articleCheck,
+        });
+        // Seconde lecture : ce qui reste est signalé, sans nouvelle réécriture.
+        if (deadline - Date.now() >= AUDIT_RECHECK_MIN_LEFT_MS) {
+          const left = await auditClaims({
+            article: parseArticle(articleRaw),
+            matter,
+            engine,
+            deadline,
+          });
+          warnings.push(...left.map((p) => `Passage à vérifier : « ${p.passage} » (${p.raison})`));
+        } else {
+          warnings.push("Seconde relecture sautée, faute de temps.");
+        }
+      }
+    } catch (err) {
+      console.error("relecture des faits", err);
+      warnings.push("Relecture des faits interrompue : article non revérifié.");
+    }
+  }
+
   const article = finishArticle(parseArticle(articleRaw), linkPolicy());
+  for (const quote of unverifiedQuotes(
+    `${flash}\n${article.excerpt}\n${article.content}`,
+    lu(),
+  )) {
+    warnings.push(`Citation introuvable dans les sources : « ${quote} »`);
+  }
 
   return {
     flash,
     article,
+    warnings,
     sources: [...sources.values()],
     matter: [
       `Consignes de l'éditeur : ${input.brief}`,
       digest(sources, notes),
     ].join("\n\n"),
   };
+}
+
+/** Relecture indépendante de la rédaction : ne sait que comparer l'article aux sources. */
+export async function auditClaims(input: {
+  article: { title: string; excerpt: string; content: string };
+  matter: string;
+  engine?: { claude: boolean };
+  deadline?: number;
+}): Promise<AuditProblem[]> {
+  const raw = await runAgent({
+    system: AUDIT_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: `SOURCES :\n${input.matter}\n\nARTICLE À VÉRIFIER :\n${input.article.title}\n\n${input.article.excerpt}\n\n${input.article.content}`,
+      },
+    ],
+    maxRounds: 1,
+    mode: "low",
+    engine: input.engine || { claude: false },
+    sources: new Map(),
+    notes: new Map(),
+    deadline: input.deadline ?? Date.now() + 240_000,
+    check: () => [],
+  });
+  return parseAudit(raw).slice(0, AUDIT_MAX_PROBLEMS);
+}
+
+function quoteIssues(text: string, matter: string): string[] {
+  return unverifiedQuotes(text, matter).map(
+    (q) =>
+      `la citation « ${q} » ne figure pas dans ce que tu as lu : retire-la ou reprends une phrase exacte des sources`,
+  );
 }
 
 // --- Boucle agent -------------------------------------------------------------
@@ -565,19 +700,21 @@ async function readProvidedLinks(
 function digest(
   sources: Map<string, BriefSource>,
   notes: Map<string, string>,
+  noteChars = 1500,
+  maxChars = 24_000,
 ): string {
   return [...sources.values()]
     .slice(0, 15)
     .map((s, i) =>
       [
         `${i + 1}. ${s.title}${s.date ? ` (${s.date})` : ""}\n   ${s.url}`,
-        notes.get(s.url) ? `   ${notes.get(s.url)!.slice(0, 1500)}` : "",
+        notes.get(s.url) ? `   ${notes.get(s.url)!.slice(0, noteChars)}` : "",
       ]
         .filter(Boolean)
         .join("\n"),
     )
     .join("\n\n")
-    .slice(0, 24_000);
+    .slice(0, maxChars);
 }
 
 async function imageDataUrl(image: { buffer: Buffer; mime: string }) {
