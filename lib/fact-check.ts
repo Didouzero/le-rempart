@@ -54,10 +54,13 @@ SIGNALE
 - Tout fait, nom, date, lieu, chiffre, durée ou fonction absent des sources ou déformé.
 - Toute précision plus forte que les sources : un détail ajouté pour faire vrai (« une plaisanterie de quelques secondes »), un mot qui change la nature des faits (« parodie » pour une chronique), une cause ou une intention prêtée sans source.
 - Toute affirmation absolue non sourcée (« jamais », « toujours », « aucun »), et toute absence présentée comme un fait (« n'a pas réagi ») sans source qui l'établisse.
-- Toute citation qui ne figure pas dans les sources.
+- Toute citation qui ne figure pas dans les sources, ou présentée comme certaine alors que les sources en donnent des versions différentes.
+- Toute absence affirmée alors que les sources disent seulement n'avoir rien trouvé (« n'a pas réagi » pour « aucune réaction trouvée »).
+- Toute personne mise en cause dont la défense, connue des sources, manque au chapô.
+- Toute phrase qui préjuge d'une décision de justice.
 
 NE SIGNALE PAS
-- Les opinions et les jugements : ils sont permis. Mais si une phrase de jugement contient un fait, une intention prêtée ou une description générale absente des sources (« le paysage radiophonique compte très peu de présentatrices noires »), signale-la.
+- Les opinions, les jugements, l'ironie, la litote et les images : ils sont permis. Mais si une phrase de jugement contient un fait, une intention prêtée ou une description générale absente des sources (« le paysage radiophonique compte très peu de présentatrices noires »), signale-la.
 - Les faits de notoriété publique incontestables (une institution, une fonction bien connue).
 - Le style, la ligne éditoriale, la longueur.
 

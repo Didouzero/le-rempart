@@ -1,5 +1,6 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
+import { looksLikeReadyArticle, parseReadyArticle } from "@/lib/ready-article";
 import {
   ARTICLE_CATEGORIES,
   CATEGORY_META,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/publish-draft";
 import {
   publishBriefPipeline,
+  publishReadyArticlePipeline,
   telegramNotifier,
 } from "@/lib/publish-pipeline";
 import {
@@ -907,6 +909,44 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     if (draft) {
+      const readyDoc =
+        message.document && isTelegramPromptDocument(message.document)
+          ? message.document
+          : null;
+      const readyText = readyDoc
+        ? await telegramDownloadUtf8Text({
+            fileId: readyDoc.file_id,
+            fileSize: readyDoc.file_size,
+          })
+        : text;
+      if (looksLikeReadyArticle(readyText)) {
+        const ready = parseReadyArticle(readyText);
+        await telegramSendMessage(chatId, "Texte prêt reçu. Je publie sans passer par Kimi.");
+        await deletePublishDraft(chatId);
+        try {
+          await publishReadyArticlePipeline({
+            ready,
+            headline: draft.headline,
+            coverImageUrl: draft.coverImageUrl || undefined,
+            coverCaption: draft.coverCaption || undefined,
+            category: draft.category || undefined,
+            coverImage:
+              draft.coverImageData && draft.coverImageData.length > 0
+                ? {
+                    buffer: draft.coverImageData,
+                    mime: draft.coverImageMime || "image/jpeg",
+                  }
+                : undefined,
+            image: { buffer: draft.imageData, mime: draft.imageMime },
+            notify: telegramNotifier(chatId),
+          });
+        } catch (err) {
+          await restorePublishDraft(draft);
+          throw err;
+        }
+        return;
+      }
+
       const brief = text.startsWith("/") ? "" : text;
       if (brief.length < 10) {
         await telegramSendMessage(chatId, SUBJECT_QUESTION);

@@ -8,14 +8,23 @@ import {
   publishFacebookStory,
   FacebookGraphError,
 } from "@/lib/facebook";
-import { researchAndWrite } from "@/lib/brief-writer";
+import {
+  articleIssues,
+  finishArticle,
+  finishFlash,
+  researchAndWrite,
+  wrongWeekdays,
+} from "@/lib/brief-writer";
 import {
   publishArticleFromCreative,
   saveGeneratedArticle,
 } from "@/lib/publish-from-creative";
 import type { ArticleCategory } from "@/lib/categories";
 import { purgeOldCreatives } from "@/lib/creatives-retention";
-import { insertReadAlso, linkedArticleIds } from "@/lib/article-links";
+import { citedUrls, insertReadAlso, linkedArticleIds } from "@/lib/article-links";
+import { prisma } from "@/lib/prisma";
+import type { ReadyArticle } from "@/lib/ready-article";
+import { chooseReadAlso } from "@/lib/read-also";
 import { findLinkableArticles, findReadAlso } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
 
@@ -324,15 +333,18 @@ export async function publishBriefPipeline(input: {
     );
   }
 
-  // Encadré « À lire aussi » : mêmes règles que pour les anciens articles.
+  // Encadré « À lire aussi » : présélection par noms propres, choix final par Opus.
   const readAlso = await findReadAlso({
     title: research.article.title,
     excerpt: research.article.excerpt,
     excludePublicIds: linkedArticleIds(research.article.content),
-  }).catch((err) => {
-    console.error("à lire aussi ignoré", err);
-    return [];
-  });
+    take: 8,
+  })
+    .then((candidates) => chooseReadAlso(research.article, candidates))
+    .catch((err) => {
+      console.error("à lire aussi ignoré", err);
+      return [];
+    });
 
   const article = await saveGeneratedArticle({
     generated: {
@@ -367,6 +379,72 @@ export async function publishBriefPipeline(input: {
     articleUrl: article.url,
     creative: article.creative,
     flash: research.flash,
+    notify,
+  });
+  return { article, facebook };
+}
+
+/**
+ * Article déjà rédigé par l'éditeur : mêmes vérifications de forme, même enregistrement
+ * et même envoi Facebook que le flux habituel, sans recherche ni rédaction par Kimi.
+ */
+export async function publishReadyArticlePipeline(input: {
+  ready: ReadyArticle;
+  headline: string;
+  image: { buffer: Buffer; mime: string };
+  coverImageUrl?: string;
+  coverImage?: { buffer: Buffer; mime: string };
+  coverCaption?: string;
+  category?: ArticleCategory;
+  notify?: PipelineNotify;
+}): Promise<CreativePipelineResult> {
+  const notify = input.notify || (async () => {});
+  const { ready } = input;
+  const finished = finishArticle(ready, {
+    external: new Set(citedUrls(ready.content)),
+    internal: new Set(linkedArticleIds(ready.content)),
+  });
+  const flash = finishFlash(ready.flash);
+  const issues = [...articleIssues(finished), ...wrongWeekdays(flash)];
+  if (issues.length) {
+    throw new Error(`Texte prêt à corriger : ${issues.join(" ; ")}`);
+  }
+  await purgeOldCreatives().catch((err) => console.error("purge créatives", err));
+
+  const readAlso = ready.readAlsoIds.length
+    ? await prisma.article.findMany({
+        where: { publicId: { in: ready.readAlsoIds }, status: "published" },
+        select: { publicId: true, title: true },
+      })
+    : [];
+
+  const article = await saveGeneratedArticle({
+    generated: { ...finished, content: insertReadAlso(finished.content, readAlso) },
+    sourceText: `Article rédigé en séance par l'éditeur.\n\n${ready.content}`,
+    coverImageUrl: input.coverImageUrl,
+    coverImage: input.coverImage,
+    coverCaption: input.coverCaption,
+    category: input.category,
+    image: input.image,
+    notify,
+  });
+  await notify(["Article publié.", "", article.title, article.url].join("\n"));
+
+  if (!isFacebookConfigured()) {
+    await notify("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
+    return { article, facebook: { error: "non configuré" } };
+  }
+  if (!article.creative) {
+    await notify("Facebook : pas de créative à envoyer (image manquante).");
+    return { article, facebook: { error: "pas de créative" } };
+  }
+  const facebook = await publishFacebookForArticle({
+    articleId: article.id,
+    title: article.title,
+    excerpt: article.excerpt,
+    articleUrl: article.url,
+    creative: article.creative,
+    flash,
     notify,
   });
   return { article, facebook };

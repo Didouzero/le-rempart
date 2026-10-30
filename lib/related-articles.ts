@@ -304,6 +304,7 @@ type ReadAlsoCandidate = { publicId: number; title: string; excerpt: string };
 export function pickReadAlso(
   subject: { title: string; excerpt: string },
   candidates: ReadAlsoCandidate[],
+  take = 2,
 ): ReadAlsoCandidate[] {
   const mine = themeTokens(subject.title, subject.excerpt);
   const myNames = properNouns(`${subject.title}. ${subject.excerpt}`);
@@ -318,7 +319,7 @@ export function pickReadAlso(
     })
     .filter((x) => x.shared >= 1 && x.score >= 4)
     .sort((x, y) => y.score - x.score)
-    .slice(0, 2)
+    .slice(0, take)
     .map((x) => x.b);
 }
 
@@ -328,6 +329,8 @@ export async function findReadAlso(input: {
   excerpt: string;
   /** Articles déjà liés dans le texte : inutile de les répéter. */
   excludePublicIds?: number[];
+  /** Nombre de candidats gardés. */
+  take?: number;
 }): Promise<ReadAlsoCandidate[]> {
   const rows = await withDbTimeout(
     prisma.article.findMany({
@@ -342,5 +345,5 @@ export async function findReadAlso(input: {
       select: { publicId: true, title: true, excerpt: true },
     }),
   );
-  return pickReadAlso(input, rows);
+  return pickReadAlso(input, rows, input.take);
 }

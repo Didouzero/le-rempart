@@ -188,6 +188,7 @@ export async function claudeText(input: {
   messages: OpenAiStyleMessage[];
   maxTokens?: number;
   timeoutMs?: number;
+  effort?: "low" | "medium";
 }): Promise<string> {
   const { system, messages } = toClaude(input.messages);
   const response = await anthropic().beta.messages.create(
@@ -197,7 +198,7 @@ export async function claudeText(input: {
       max_tokens: Math.max((input.maxTokens ?? 1200) * 3, 4000),
       system,
       messages,
-      output_config: { effort: "low" },
+      output_config: { effort: input.effort ?? "low" },
       betas: [FALLBACK_BETA],
       fallbacks: "default",
     },
@@ -209,6 +210,6 @@ export async function claudeText(input: {
     .map((b) => b.text)
     .join("")
     .trim();
-  if (!text) throw new Error("Réponse Claude vide");
+  if (!text) throw new Error(`Réponse Claude vide (${response.stop_reason})`);
   return text;
 }
