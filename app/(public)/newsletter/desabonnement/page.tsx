@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { NewsletterUnsubscribeForm } from "@/components/NewsletterUnsubscribeForm";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -23,6 +24,14 @@ export default function NewsletterUnsubscribePage() {
         Entrez l&apos;e-mail utilisé pour la newsletter gratuite. Vous ne
         recevrez plus le brief du matin. Pour toute autre demande :{" "}
         <a href="mailto:contact@le-rempart.org">contact@le-rempart.org</a>.
+      </p>
+      <p className="mt-3 text-muted">
+        Cette page n&apos;arrête pas un abonnement payant : pour cela, rendez-vous
+        sur{" "}
+        <Link href="/resilier" className="underline decoration-accent">
+          Résilier Rempart+
+        </Link>
+        .
       </p>
       <NewsletterUnsubscribeForm />
     </article>

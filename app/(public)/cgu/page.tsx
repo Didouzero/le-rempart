@@ -17,7 +17,8 @@ export default function CguPage() {
         Conditions générales d&apos;utilisation
       </h1>
       <p className="mt-4 text-sm text-muted">
-        En accédant au site Le Rempart, vous acceptez les présentes conditions.
+        Les présentes conditions s&apos;appliquent à toute personne qui utilise
+        le site Le Rempart.
       </p>
 
       <h2>1. Objet</h2>
@@ -29,26 +30,31 @@ export default function CguPage() {
 
       <h2>2. Accès au Site</h2>
       <p>
-        Le Site est accessible gratuitement (hors coûts de connexion).
+        Le Site est accessible gratuitement (hors coûts de connexion), à
+        l&apos;exception des contenus réservés aux abonnés Rempart+, régis par
+        nos <Link href="/cgv">conditions générales de vente</Link>.
         L&apos;éditeur peut suspendre ou modifier le Site sans préavis pour
         maintenance, sécurité ou évolution éditoriale.
       </p>
 
       <h2>3. Contenus d&apos;information</h2>
       <p>
-        Les articles, titres et illustrations ont un objet informatif et/ou
+        Les articles, titres et illustrations ont un objet informatif ou
         d&apos;opinion. Ils ne constituent pas une invitation à la haine, à la
-        violence ou à des actes illégaux. Toute ressemblance avec des situations
-        réelles dans des contenus satiriques ou commentés relève du débat
-        d&apos;intérêt général, dans le respect du droit applicable.
-      </p>
-      <p>
-        L&apos;utilisateur s&apos;engage à ne pas reproduire massivement les
-        contenus, ni à les utiliser de manière trompeuse, commerciale non
-        autorisée, ou portant atteinte aux droits de tiers.
+        violence ou à des actes illégaux. Les contenus satiriques sont présentés
+        comme tels.
       </p>
 
-      <h2>4. Comportements interdits</h2>
+      <h2>4. Propriété intellectuelle</h2>
+      <p>
+        Les contenus du Site sont protégés par le droit d&apos;auteur, sauf
+        mention contraire. Vous pouvez les citer brièvement en indiquant la
+        source et en ajoutant un lien vers l&apos;article. Toute autre
+        reproduction, y compris massive ou automatisée, nécessite notre accord
+        écrit. Les contenus réservés aux abonnés ne peuvent pas être rediffusés.
+      </p>
+
+      <h2>5. Comportements interdits</h2>
       <p>Il est notamment interdit de :</p>
       <ul>
         <li>
@@ -60,22 +66,15 @@ export default function CguPage() {
           canaux de contact ;
         </li>
         <li>
-          contourner les mesures de sécurité ou d&apos;accès à l&apos;espace
-          d&apos;administration.
+          contourner les mesures de sécurité ou les restrictions d&apos;accès du
+          Site, notamment celles des contenus réservés aux abonnés.
         </li>
       </ul>
 
-      <h2>5. Espace d&apos;administration</h2>
-      <p>
-        L&apos;accès à l&apos;administration est réservé aux personnes
-        autorisées. Toute tentative d&apos;accès non autorisé est interdite et
-        peut faire l&apos;objet de poursuites.
-      </p>
-
       <h2>6. Données personnelles</h2>
       <p>
-        Voir la{" "}
-        <Link href="/confidentialite">Politique de confidentialité</Link>.
+        Le traitement de vos données est décrit dans la{" "}
+        <Link href="/confidentialite">politique de confidentialité</Link>.
       </p>
 
       <h2>7. Responsabilité</h2>
@@ -91,14 +90,20 @@ export default function CguPage() {
         celle publiée sur cette page.
       </p>
 
-      <h2>9. Contact</h2>
+      <h2>9. Droit applicable</h2>
+      <p>
+        Les présentes CGU sont soumises au droit français. En cas de litige, et
+        à défaut d&apos;accord amiable, les tribunaux français sont compétents.
+      </p>
+
+      <h2>10. Contact</h2>
       <p>
         <a href="mailto:contact@le-rempart.org">contact@le-rempart.org</a> — voir
         aussi les <Link href="/mentions-legales">mentions légales</Link>.
       </p>
 
       <p className="mt-10 text-sm text-muted">
-        Dernière mise à jour : 25 juillet 2026
+        Dernière mise à jour : 30 octobre 2026
       </p>
     </article>
   );

@@ -67,8 +67,13 @@ export function newsletterShell(opts: {
   footerNote?: string;
   /** Masque le titre du shell (ex. brief avec en-tête graphique). */
   hideTitle?: boolean;
+  /** Ajoute le lien de résiliation des abonnés Rempart+. */
+  plusCancelLink?: boolean;
 }): string {
   const site = absoluteUrl("/") || SITE_URL;
+  const plusCancel = opts.plusCancelLink
+    ? ` · <a href="${absoluteUrl("/resilier")}" style="color:#5c574f;">Résilier Rempart+</a>`
+    : "";
   const heading = opts.hideTitle
     ? ""
     : `<p style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#5c574f;">${SITE_NAME}</p>
@@ -84,7 +89,7 @@ export function newsletterShell(opts: {
     <p style="margin-top:32px;font-size:12px;color:#5c574f;">
       ${opts.footerNote || `Vous recevez ce brief car vous êtes abonné à ${SITE_NAME}.`}
       <br/><a href="${site}" style="color:#0a0a0a;">${site.replace(/^https?:\/\//, "")}</a>
-      · <a href="${absoluteUrl("/newsletter/desabonnement")}" style="color:#5c574f;">Se désabonner</a>
+      · <a href="${absoluteUrl("/newsletter/desabonnement")}" style="color:#5c574f;">Se désabonner</a>${plusCancel}
     </p>
   </div>
 </body>

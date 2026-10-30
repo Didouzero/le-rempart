@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hasActiveRempartPlus } from "@/lib/membership";
+import { hasActiveRempartPlus, plusCookieOptions } from "@/lib/membership";
 import { PLUS_HINT_COOKIE, plusHintCookieOptions } from "@/lib/plus-hint";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,11 @@ export async function GET() {
     { plus },
     { headers: { "Cache-Control": "private, no-store" } },
   );
-  // Session expirée : le témoin ne sert plus, on évite l'appel aux prochaines visites.
-  if (!plus) res.cookies.set(PLUS_HINT_COOKIE, "", plusHintCookieOptions(0));
+  // Session sans témoin (antérieure à celui-ci) : on le pose. Session expirée : on l'enlève.
+  res.cookies.set(
+    PLUS_HINT_COOKIE,
+    plus ? "1" : "",
+    plusHintCookieOptions(plus ? plusCookieOptions().maxAge : 0),
+  );
   return res;
 }

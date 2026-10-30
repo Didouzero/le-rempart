@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, subscriptionPeriodEnd } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -26,10 +26,7 @@ async function upsertFromSubscription(
           ? "canceled"
           : "incomplete";
 
-  const periodEndUnix =
-    // stripe types vary by API version
-    (sub as Stripe.Subscription & { current_period_end?: number })
-      .current_period_end ?? null;
+  const currentPeriodEnd = subscriptionPeriodEnd(sub);
 
   await prisma.membership.upsert({
     where: { email },
@@ -39,18 +36,14 @@ async function upsertFromSubscription(
       stripeCustomerId:
         typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
       stripeSubscriptionId: sub.id,
-      currentPeriodEnd: periodEndUnix
-        ? new Date(periodEndUnix * 1000)
-        : null,
+      currentPeriodEnd,
     },
     update: {
       status,
       stripeCustomerId:
         typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
       stripeSubscriptionId: sub.id,
-      currentPeriodEnd: periodEndUnix
-        ? new Date(periodEndUnix * 1000)
-        : null,
+      currentPeriodEnd,
     },
   });
 }

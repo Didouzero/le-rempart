@@ -70,7 +70,9 @@ export default function SuppressionDonneesPage() {
       <p>
         Le lien « Se désabonner » de la newsletter arrête les envois, mais
         n&apos;efface pas votre adresse de notre base. Pour l&apos;effacer,
-        suivez la procédure ci-dessous.
+        suivez la procédure ci-dessous. Pour arrêter un abonnement payant,
+        rendez-vous d&apos;abord sur{" "}
+        <Link href="/resilier">Résilier Rempart+</Link>.
       </p>
 
       <h2>4. Comment demander une suppression</h2>

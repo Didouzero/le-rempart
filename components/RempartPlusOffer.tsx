@@ -67,7 +67,7 @@ export function RempartPlusOffer({
               4,90&nbsp;€
             </p>
             <p className="pb-1 text-sm text-white/70">
-              / mois · sans engagement · résiliable en 2 clics
+              / mois · sans engagement · résiliable en ligne à tout moment
             </p>
           </div>
         </div>
@@ -209,9 +209,13 @@ export function RempartPlusOffer({
               Que se passe-t-il si je veux résilier ?
             </h3>
             <p className="mt-5 text-ink">
-              En bas de chacun des mails que nous vous envoyons, vous avez une
-              option de résiliation. Il suffit de cliquer dessus, et de
-              confirmer. Vous serez alors désabonné du service Le Rempart+.
+              Rendez-vous sur la page{" "}
+              <Link href="/resilier" className="underline decoration-accent">
+                Résilier Rempart+
+              </Link>
+              , aussi accessible en bas de chaque page du site et de nos mails.
+              Aucun nouveau prélèvement n&apos;est effectué, et votre accès
+              reste ouvert jusqu&apos;à la fin de la période déjà payée.
             </p>
           </section>
         </>

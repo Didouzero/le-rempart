@@ -270,6 +270,7 @@ export function renderBriefHtml(opts: {
   return newsletterShell({
     title: `${kicker} — ${dateLabel}`,
     hideTitle: true,
+    plusCancelLink: premium,
     bodyHtml: `${header}${cta}<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">${itemsHtml}</table>`,
     footerNote: premium
       ? `Vous recevez la version étayée car vous êtes abonné Rempart+.`

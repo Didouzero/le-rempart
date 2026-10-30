@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 export const REMPART_PLUS_COOKIE = "rempart_plus";
 export const REMPART_PLUS_PRICE_CENTS = 490;
 const TOKEN_TTL_MS = 30 * 60 * 1000;
+const CANCEL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 export function rempartPlusPriceLabel(): string {
   return "4,90 € / mois";
@@ -111,6 +112,36 @@ export function verifyPlusLoginToken(token: string): string | null {
       .digest("hex");
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+    return email;
+  } catch {
+    return null;
+  }
+}
+
+/** Signature propre à la résiliation : un lien de connexion ne doit pas permettre de résilier. */
+function cancelTokenSignature(email: string, exp: number): string {
+  return createHmac("sha256", signingSecret())
+    .update(`plus-cancel|${email}|${exp}`)
+    .digest("hex");
+}
+
+export function signPlusCancelToken(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  const exp = Date.now() + CANCEL_TOKEN_TTL_MS;
+  const sig = cancelTokenSignature(normalized, exp);
+  return Buffer.from(`${normalized}|${exp}|${sig}`).toString("base64url");
+}
+
+export function verifyPlusCancelToken(token: string): string | null {
+  try {
+    const raw = Buffer.from(token, "base64url").toString("utf8");
+    const [email, expRaw, sig] = raw.split("|");
+    if (!email || !expRaw || !sig) return null;
+    const exp = Number(expRaw);
+    if (!Number.isFinite(exp) || exp < Date.now()) return null;
+    const a = Buffer.from(sig);
+    const b = Buffer.from(cancelTokenSignature(email, exp));
     if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
     return email;
   } catch {

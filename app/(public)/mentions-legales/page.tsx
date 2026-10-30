@@ -63,9 +63,7 @@ export default function MentionsLegalesPage() {
         </li>
       </ul>
       <p>
-        La base de données peut être hébergée via un prestataire cloud (notamment
-        Neon / PostgreSQL) aux États-Unis ou dans l&apos;Espace économique
-        européen, selon la configuration en vigueur.
+        La base de données est hébergée par Neon (PostgreSQL), aux États-Unis.
       </p>
 
       <h2>3. Nature du Site</h2>
@@ -74,7 +72,9 @@ export default function MentionsLegalesPage() {
         contenus d&apos;information à caractère politique, social ou
         institutionnel. Les opinions exprimées dans les articles n&apos;engagent
         que leurs auteurs et ne constituent pas des conseils juridiques,
-        financiers ou professionnels.
+        financiers ou professionnels. La recherche et la rédaction s&apos;appuient
+        sur l&apos;intelligence artificielle, sous la responsabilité de la
+        rédaction.
       </p>
 
       <h2>4. Propriété intellectuelle</h2>
@@ -90,8 +90,8 @@ export default function MentionsLegalesPage() {
         le cas échéant.
       </p>
       <p>
-        Les créatives publicitaires / visuels envoyés par la rédaction pour
-        diffusion restent la propriété de leurs auteurs.
+        Les visuels créés pour la rédaction restent la propriété de leurs
+        auteurs.
       </p>
 
       <h2>5. Responsabilité</h2>
@@ -111,9 +111,10 @@ export default function MentionsLegalesPage() {
       <p>
         Conformément à la législation applicable à la communication au public en
         ligne, toute personne nommée ou désignée dans un contenu publié sur le
-        Site peut exercer un droit de réponse. Adressez votre demande à{" "}
+        Site peut exercer un droit de réponse, dans les trois mois suivant la
+        mise en ligne du contenu. Adressez votre demande à{" "}
         <a href="mailto:contact@le-rempart.org">contact@le-rempart.org</a> en
-        précisant l&apos;URL de l&apos;article et le contenu demandé.
+        précisant l&apos;URL de l&apos;article et le texte de votre réponse.
       </p>
 
       <h2>7. Signalement de contenus</h2>
@@ -136,7 +137,7 @@ export default function MentionsLegalesPage() {
       </p>
 
       <p className="mt-10 text-sm text-muted">
-        Dernière mise à jour : 27 octobre 2026
+        Dernière mise à jour : 30 octobre 2026
       </p>
     </article>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 type NewsletterSignupProps = {
@@ -100,6 +101,16 @@ export function NewsletterSignup({
     </p>
   ) : null;
 
+  const notice = (
+    <p className="mt-2 text-xs leading-snug text-white/60">
+      Votre e-mail sert uniquement à vous envoyer la newsletter. Désabonnement à
+      tout moment.{" "}
+      <Link href="/confidentialite" className="underline">
+        Confidentialité
+      </Link>
+    </p>
+  );
+
   if (variant === "footer") {
     return (
       <aside className="bg-ink text-paper" aria-label="Newsletter Le Rempart">
@@ -116,6 +127,7 @@ export function NewsletterSignup({
           <div className="w-full min-w-0 sm:w-[min(100%,28rem)] sm:shrink-0">
             {form}
             {statusLine}
+            {notice}
           </div>
         </div>
       </aside>
@@ -138,6 +150,7 @@ export function NewsletterSignup({
       </p>
       <div className="mt-3">{form}</div>
       {statusLine}
+      {notice}
     </aside>
   );
 }

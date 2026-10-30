@@ -12,6 +12,8 @@ const links = [
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/confidentialite", label: "Politique de confidentialité" },
   { href: "/cgu", label: "CGU" },
+  { href: "/cgv", label: "CGV" },
+  { href: "/resilier", label: "Résilier Rempart+" },
   { href: "/suppression-donnees", label: "Suppression des données" },
 ] as const;
 

@@ -38,8 +38,8 @@ export default function ConfidentialitePage() {
           pages consultées), via l&apos;hébergeur ou des outils de mesure ;
         </li>
         <li>
-          des données liées à la publicité (cookies / identifiants) si des
-          services comme Google AdSense sont activés ;
+          des données liées à la publicité (cookies / identifiants), si vous
+          l&apos;acceptez ;
         </li>
         <li>
           des données fournies volontairement (message e-mail de contact, droit
@@ -133,10 +133,15 @@ export default function ConfidentialitePage() {
       <p>Les données peuvent être traitées par :</p>
       <ul>
         <li>l&apos;hébergeur du Site (Vercel) ;</li>
-        <li>le prestataire de base de données le cas échéant ;</li>
+        <li>le prestataire de base de données (Neon) ;</li>
         <li>
           des prestataires techniques : envoi d&apos;e-mails (Resend), paiement
-          (Stripe), mesure d&apos;audience et publicité ;
+          (Stripe), mesure d&apos;audience (Google) et publicité (MGID) ;
+        </li>
+        <li>
+          pour la rédaction interne uniquement : Telegram et des services
+          d&apos;intelligence artificielle (Moonshot AI, Anthropic), qui ne
+          reçoivent pas les données de nos lecteurs ;
         </li>
         <li>
           Meta Platforms, uniquement dans le cadre de la publication sur notre
@@ -153,8 +158,23 @@ export default function ConfidentialitePage() {
       <p>
         Les données sont conservées le temps nécessaire aux finalités ci-dessus,
         puis supprimées ou anonymisées, sous réserve d&apos;obligations légales
-        de conservation.
+        de conservation. En particulier :
       </p>
+      <ul>
+        <li>
+          newsletter : votre adresse est conservée tant que vous êtes inscrit.
+          Après un désabonnement, elle est gardée pour ne plus vous écrire,
+          jusqu&apos;à ce que vous demandiez son effacement ;
+        </li>
+        <li>
+          Rempart+ : vos données sont conservées pendant l&apos;abonnement,
+          puis jusqu&apos;à ce que vous demandiez leur effacement, sous réserve
+          des obligations comptables ;
+        </li>
+        <li>mesure d&apos;audience (Google Analytics) : 14 mois ;</li>
+        <li>session Rempart+ : cookie valable 45 jours ;</li>
+        <li>choix relatif aux cookies : 6 mois.</li>
+      </ul>
 
       <h2>8. Vos droits (RGPD)</h2>
       <p>
@@ -191,8 +211,9 @@ export default function ConfidentialitePage() {
       <p>
         Cette politique peut être mise à jour. La date de mise à jour figure
         ci-dessous. Les{" "}
-        <Link href="/mentions-legales">mentions légales</Link> et les{" "}
-        <Link href="/cgu">conditions d&apos;utilisation</Link> complètent ce
+        <Link href="/mentions-legales">mentions légales</Link>, les{" "}
+        <Link href="/cgu">conditions d&apos;utilisation</Link> et les{" "}
+        <Link href="/cgv">conditions générales de vente</Link> complètent ce
         document.
       </p>
 

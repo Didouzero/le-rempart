@@ -51,11 +51,13 @@ export async function GET(req: NextRequest) {
 
     const enquetes = absoluteUrl("/rubriques/enquetes");
     const login = absoluteUrl("/connexion");
+    const cancel = absoluteUrl("/resilier");
+    const cgv = absoluteUrl("/cgv");
     await sendEmail({
       to: email,
       subject: "Bienvenue dans Rempart+",
-      text: `Votre accès Rempart+ est ouvert.\nEnquêtes : ${enquetes}\nPour vous reconnecter plus tard : ${login}\n`,
-      html: `<p>Bienvenue. Votre accès Rempart+ est ouvert.</p><p><a href="${enquetes}">Ouvrir les enquêtes</a></p><p>Plus tard, sur un autre appareil : <a href="${login}">${login}</a></p>`,
+      text: `Votre accès Rempart+ est ouvert.\nEnquêtes : ${enquetes}\nPour vous reconnecter plus tard : ${login}\nPour résilier à tout moment : ${cancel}\nConditions générales de vente : ${cgv}\n`,
+      html: `<p>Bienvenue. Votre accès Rempart+ est ouvert.</p><p><a href="${enquetes}">Ouvrir les enquêtes</a></p><p>Plus tard, sur un autre appareil : <a href="${login}">${login}</a></p><p>Pour résilier à tout moment : <a href="${cancel}">${cancel}</a><br/>Conditions générales de vente : <a href="${cgv}">${cgv}</a></p>`,
     }).catch(() => ({ ok: false }));
 
     const res = NextResponse.redirect(

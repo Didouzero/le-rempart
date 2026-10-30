@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 type Props = {
@@ -81,6 +82,14 @@ export function RempartPlusCheckout({ configured, status }: Props) {
         >
           {busy ? "Redirection…" : "Je m'abonne — 4,90 € / mois"}
         </button>
+        <p className="text-xs text-white/70">
+          Abonnement mensuel renouvelé automatiquement. En vous abonnant, vous
+          acceptez nos{" "}
+          <Link href="/cgv" className="underline">
+            conditions générales de vente
+          </Link>
+          .
+        </p>
         {error ? (
           <p className="text-sm text-red-300" role="alert">
             {error}

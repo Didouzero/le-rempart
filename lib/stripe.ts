@@ -13,6 +13,16 @@ export function getStripe(): Stripe {
   return stripe;
 }
 
+/** Fin de période : portée par l'abonnement ou, sur les API récentes, par ses lignes. */
+export function subscriptionPeriodEnd(sub: Stripe.Subscription): Date | null {
+  const unix =
+    sub.items?.data[0]?.current_period_end ??
+    (sub as Stripe.Subscription & { current_period_end?: number })
+      .current_period_end ??
+    null;
+  return unix ? new Date(unix * 1000) : null;
+}
+
 export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
