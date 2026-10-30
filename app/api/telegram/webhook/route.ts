@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { after, NextRequest, NextResponse } from "next/server";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { looksLikeReadyArticle, parseReadyArticle } from "@/lib/ready-article";
@@ -1009,7 +1010,20 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   }
 }
 
+/** Sans secret configuré, le bot reste ouvert : l'activer ne doit pas le couper avant Telegram. */
+function telegramSecretOk(request: NextRequest): boolean {
+  const expected = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  if (!expected) return true;
+  const a = Buffer.from(request.headers.get("x-telegram-bot-api-secret-token") || "");
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function POST(request: NextRequest) {
+  if (!telegramSecretOk(request)) {
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
+
   let update: TelegramUpdate;
   try {
     update = (await request.json()) as TelegramUpdate;
