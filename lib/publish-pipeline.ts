@@ -8,22 +8,16 @@ import {
   publishFacebookStory,
   FacebookGraphError,
 } from "@/lib/facebook";
-import {
-  articleIssues,
-  finishArticle,
-  finishFlash,
-  researchAndWrite,
-  wrongWeekdays,
-} from "@/lib/brief-writer";
+import { researchAndWrite } from "@/lib/brief-writer";
 import {
   publishArticleFromCreative,
   saveGeneratedArticle,
 } from "@/lib/publish-from-creative";
 import type { ArticleCategory } from "@/lib/categories";
 import { purgeOldCreatives } from "@/lib/creatives-retention";
-import { citedUrls, insertReadAlso, linkedArticleIds } from "@/lib/article-links";
+import { insertReadAlso, linkedArticleIds } from "@/lib/article-links";
 import { prisma } from "@/lib/prisma";
-import type { ReadyArticle } from "@/lib/ready-article";
+import { finishReadyArticle, type ReadyArticle } from "@/lib/ready-article";
 import { chooseReadAlso } from "@/lib/read-also";
 import { findLinkableArticles, findReadAlso } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
@@ -400,12 +394,7 @@ export async function publishReadyArticlePipeline(input: {
 }): Promise<CreativePipelineResult> {
   const notify = input.notify || (async () => {});
   const { ready } = input;
-  const finished = finishArticle(ready, {
-    external: new Set(citedUrls(ready.content)),
-    internal: new Set(linkedArticleIds(ready.content)),
-  });
-  const flash = finishFlash(ready.flash);
-  const issues = [...articleIssues(finished), ...wrongWeekdays(flash)];
+  const { finished, flash, issues } = finishReadyArticle(ready);
   if (issues.length) {
     throw new Error(`Texte prêt à corriger : ${issues.join(" ; ")}`);
   }

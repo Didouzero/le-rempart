@@ -1,3 +1,4 @@
+import { loadClaudeJob } from "@/lib/claude-job";
 import { prisma } from "@/lib/prisma";
 import { prepareSiteIllustration } from "@/lib/illustration";
 import { isArticleCategory, type ArticleCategory } from "@/lib/categories";
@@ -165,6 +166,8 @@ export async function getActivePublishDraft(
   });
   if (!row) return null;
   if (isDraftExpired(row.createdAt)) {
+    // Un article confié à Claude garde son brouillon jusqu'au « ok » ou à /cancel.
+    if (await loadClaudeJob(chatId)) return toRecord(row);
     await prisma.publishDraft.delete({ where: { id: row.id } }).catch(() => {});
     return null;
   }
@@ -200,6 +203,7 @@ export async function restorePublishDraft(
           ? Buffer.from(draft.coverImageData)
           : null,
         coverCaption: draft.coverCaption,
+        category: draft.category,
       },
     })
     .catch((err) => console.error("restorePublishDraft", err));

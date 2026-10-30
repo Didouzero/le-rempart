@@ -10,6 +10,14 @@
  * …
  */
 
+import { citedUrls, linkedArticleIds } from "@/lib/article-links";
+import {
+  articleIssues,
+  finishArticle,
+  finishFlash,
+  wrongWeekdays,
+} from "@/lib/brief-writer";
+
 export type ReadyArticle = {
   title: string;
   excerpt: string;
@@ -38,5 +46,19 @@ export function parseReadyArticle(text: string): ReadyArticle {
     readAlsoIds: (m[3] || "").match(/\d+/g)?.map(Number).slice(0, 2) ?? [],
     flash: m[4]!.trim(),
     content: m[5]!.trim(),
+  };
+}
+
+/** Mise en forme finale et contrôles, communs à la publication et au canal Claude. */
+export function finishReadyArticle(ready: ReadyArticle) {
+  const finished = finishArticle(ready, {
+    external: new Set(citedUrls(ready.content)),
+    internal: new Set(linkedArticleIds(ready.content)),
+  });
+  const flash = finishFlash(ready.flash);
+  return {
+    finished,
+    flash,
+    issues: [...articleIssues(finished), ...wrongWeekdays(flash)],
   };
 }

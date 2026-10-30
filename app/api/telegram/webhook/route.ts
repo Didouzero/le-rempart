@@ -1,5 +1,21 @@
 import { timingSafeEqual } from "crypto";
 import { after, NextRequest, NextResponse } from "next/server";
+import {
+  abandonClaudeJob,
+  claimClaudeJob,
+  claudeJobAction,
+  complementMessage,
+  isMacOnline,
+  loadClaudeJob,
+  newArticleMessage,
+  newClaudeJob,
+  replaceClaudeJob,
+  retouchMessage,
+  saveClaudeJob,
+  sendToClaude,
+  startClaudeJob,
+  type StoredClaudeJob,
+} from "@/lib/claude-job";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { looksLikeReadyArticle, parseReadyArticle } from "@/lib/ready-article";
 import {
@@ -23,6 +39,7 @@ import {
   draftHasCover,
   extractHttpUrl,
   getActivePublishDraft,
+  type PublishDraftRecord,
   restorePublishDraft,
   setPublishDraftCategory,
   setPublishDraftCoverFile,
@@ -106,7 +123,7 @@ async function saveCoverAndAskSubject(
 const SUBJECT_QUESTION = [
   "🧭 Sur quel sujet doit porter ce flash ?",
   "",
-  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Je fais les recherches, je rédige le flash et l’article, et je publie.",
+  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Claude cherche et rédige sur le Mac, et rien n’est publié sans ton « ok ».",
   "",
   "/cancel pour annuler.",
 ].join("\n");
@@ -120,8 +137,11 @@ function commandsHelpText(): string {
     "2) Envoie l’illustration du site en fichier (JPG, PNG, WebP), 1 200 px de large minimum",
     "3) Choisis la rubrique avec les boutons",
     "4) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
-    "→ recherches + flash + article site + Facebook",
-    "/cancel — annuler la créative en attente",
+    "5) Claude cherche et rédige sur le Mac, puis t’envoie le texte ici",
+    "6) Réponds « ok » pour publier (site + Facebook), ou dis ce qu’il faut changer",
+    "Mac indisponible : le bot te propose Kimi, réponds « kimi » pour confirmer",
+    "Texte déjà prêt : envoie le fichier .txt à la place du sujet",
+    "/cancel — annuler la créative ou l’article en cours",
     "",
     "── Veille auto ──",
     "/veille_on — active l’agent (1 créneau/jour ~8h Paris, limite Hobby Vercel)",
@@ -161,6 +181,183 @@ function commandsHelpText(): string {
     "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
     "Rien n’est publié en auto sans ton OK.",
   ].join("\n");
+}
+
+/** Ce que les deux chaînes de publication reprennent du brouillon. */
+function draftMedia(chatId: number, draft: PublishDraftRecord) {
+  return {
+    headline: draft.headline,
+    coverImageUrl: draft.coverImageUrl || undefined,
+    coverCaption: draft.coverCaption || undefined,
+    category: draft.category || undefined,
+    coverImage:
+      draft.coverImageData && draft.coverImageData.length > 0
+        ? {
+            buffer: draft.coverImageData,
+            mime: draft.coverImageMime || "image/jpeg",
+          }
+        : undefined,
+    image: { buffer: draft.imageData, mime: draft.imageMime },
+    notify: telegramNotifier(chatId),
+  };
+}
+
+async function publishWithKimi(
+  chatId: number,
+  draft: PublishDraftRecord,
+  brief: string,
+): Promise<void> {
+  await telegramSendMessage(
+    chatId,
+    "Sujet reçu. Kimi cherche, rédige et publie (2 à 5 min).",
+  );
+  // Supprimé d'abord : un second message pendant la rédaction ne relance pas une publication.
+  await deletePublishDraft(chatId);
+  try {
+    await publishBriefPipeline({ ...draftMedia(chatId, draft), brief });
+  } catch (err) {
+    // Échec avant publication : on remet le brouillon pour pouvoir renvoyer le sujet.
+    await restorePublishDraft(draft);
+    throw err;
+  }
+}
+
+/** Mac disponible : le sujet part dans la file. Sinon le bot le garde et propose Kimi. */
+async function routeSubject(
+  chatId: number,
+  draft: PublishDraftRecord,
+  subject: string,
+): Promise<void> {
+  const fields = {
+    chatId,
+    headline: draft.headline,
+    subject,
+    category: draft.category,
+  };
+  if (await isMacOnline(chatId)) {
+    const job = newClaudeJob({ ...fields, state: "writing" });
+    const label = draft.category ? CATEGORY_META[draft.category].label : "non choisie";
+    await startClaudeJob(job, newArticleMessage(job, label));
+    await telegramSendMessage(
+      chatId,
+      "Sujet reçu. Claude cherche et rédige sur le Mac, le texte arrivera ici pour validation. Rien n’est publié sans ton « ok ».\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
+    );
+    return;
+  }
+  await saveClaudeJob(newClaudeJob({ ...fields, state: "kimi-offer" }));
+  await telegramSendMessage(
+    chatId,
+    "Le Mac n’est pas disponible : Claude ne peut pas rédiger pour l’instant.\n\nRéponds « kimi » pour que Kimi rédige et publie sans relecture, ou renvoie le sujet quand le Mac est rallumé. /cancel pour abandonner.",
+  );
+}
+
+const CLAUDE_JOB_STATUS = {
+  "kimi-offer":
+    "Sujet en attente, le Mac n’était pas disponible. Réponds « kimi » pour que Kimi rédige, renvoie le sujet pour réessayer Claude, ou /cancel.",
+  writing:
+    "Claude rédige. Le texte arrivera ici. « kimi » pour lui confier le sujet, /cancel pour abandonner.",
+  ready:
+    "Un texte attend ta réponse : « ok » pour publier, ou dis ce qu’il faut changer. /cancel pour abandonner.",
+};
+
+/** Traite le message si un article est en cours. Rien ne se publie ici sans le « ok ». */
+async function handleClaudeJob(
+  chatId: number,
+  text: string,
+  stored: StoredClaudeJob,
+): Promise<void> {
+  const { job } = stored;
+  const online = await isMacOnline(chatId);
+  const action = claudeJobAction(job.state, text, online);
+  const draft = await getActivePublishDraft(chatId);
+
+  if (!draft) {
+    await abandonClaudeJob(stored);
+    await telegramSendMessage(
+      chatId,
+      "Le brouillon de cet article n’existe plus. Renvoie la créative pour recommencer.",
+    );
+    return;
+  }
+
+  if (action === "publish") {
+    const ready = parseReadyArticle(job.text || "");
+    if (!(await claimClaudeJob(stored))) {
+      await telegramSendMessage(
+        chatId,
+        "Le texte vient de changer : relis la dernière version avant de répondre « ok ».",
+      );
+      return;
+    }
+    await telegramSendMessage(chatId, "Validé. Je publie ce texte sur le site et Facebook.");
+    await deletePublishDraft(chatId);
+    try {
+      await publishReadyArticlePipeline({ ...draftMedia(chatId, draft), ready });
+    } catch (err) {
+      await restorePublishDraft(draft);
+      await saveClaudeJob(job);
+      throw err;
+    }
+    return;
+  }
+
+  if (action === "kimi") {
+    await abandonClaudeJob(stored);
+    await publishWithKimi(chatId, draft, job.subject);
+    return;
+  }
+
+  if (action === "new-subject") {
+    if (text.trim().length < 10) {
+      await telegramSendMessage(chatId, CLAUDE_JOB_STATUS["kimi-offer"]);
+      return;
+    }
+    await routeSubject(chatId, draft, text.trim());
+    return;
+  }
+
+  if (action === "retouch") {
+    if (!(await replaceClaudeJob(stored, { ...job, state: "writing" }))) {
+      await telegramSendMessage(chatId, "Le texte vient de changer : relis-le, puis renvoie ta demande.");
+      return;
+    }
+    await sendToClaude(retouchMessage(job, text.trim()));
+    await telegramSendMessage(
+      chatId,
+      "Retouche transmise à Claude. La nouvelle version arrivera ici, rien n’est publié entre-temps.",
+    );
+    return;
+  }
+
+  if (action === "complement") {
+    await sendToClaude(complementMessage(job, text.trim()));
+    await telegramSendMessage(chatId, "Précision transmise à Claude.");
+    return;
+  }
+
+  if (action === "mac-down") {
+    // Retouche jamais faite : la dernière version reste la seule à valider.
+    if (job.state === "writing" && job.text) {
+      await saveClaudeJob({ ...job, state: "ready" });
+      await telegramSendMessage(
+        chatId,
+        "Le Mac n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, « kimi » fait tout réécrire et publier sans relecture, /cancel abandonne.",
+      );
+      return;
+    }
+    await telegramSendMessage(
+      chatId,
+      "Le Mac n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est rallumé, ou réponds « kimi » pour que Kimi rédige et publie sans relecture. /cancel pour abandonner.",
+    );
+    return;
+  }
+
+  await telegramSendMessage(
+    chatId,
+    action === "not-ready"
+      ? "Claude n’a pas encore envoyé de texte à valider : rien n’est publié."
+      : CLAUDE_JOB_STATUS[job.state],
+  );
 }
 
 type ClaimResult = "claimed" | "duplicate" | "db_down";
@@ -256,9 +453,13 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "2) Envoie l’illustration de l’article en fichier (JPG, PNG, WebP)",
           "3) Choisis la rubrique avec les boutons",
           "4) Décris le sujet : événement, angle, noms, liens si tu en as",
-          "5) Je cherche, je rédige et je publie l’article site + Facebook",
+          "5) Claude cherche et rédige sur le Mac, puis t’envoie le texte ici",
+          "6) Réponds « ok » pour publier sur le site et Facebook, ou dis ce qu’il faut changer",
           "",
-          "/cancel pour abandonner une créative en attente.",
+          "Si le Mac n’est pas disponible, je te propose Kimi : réponds « kimi » pour confirmer.",
+          "Texte déjà prêt : envoie le fichier .txt à la place du sujet.",
+          "",
+          "/cancel pour abandonner une créative ou un article en cours.",
         ].join("\n"),
       );
       return;
@@ -302,6 +503,8 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           return;
         }
       }
+      const claudeJob = await loadClaudeJob(chatId);
+      if (claudeJob) await abandonClaudeJob(claudeJob);
       const deleted = await deletePublishDraft(chatId);
       await telegramSendMessage(
         chatId,
@@ -768,6 +971,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       if (handledTt) return;
     }
 
+    // Un fichier .txt ou un texte prêt continue de passer directement par le flux habituel.
+    const claudeJob = await loadClaudeJob(chatId);
+    const readyDrop =
+      !fileId &&
+      (looksLikeReadyArticle(text) ||
+        (message.document && isTelegramPromptDocument(message.document)));
+    if (claudeJob && !readyDrop) {
+      await handleClaudeJob(chatId, text, claudeJob);
+      return;
+    }
+
     // ── Étape 1 : créative. 2e image = illustration site (si titre déjà là). ──
     if (fileId) {
       const pendingCover = await getActivePublishDraft(chatId);
@@ -923,24 +1137,10 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       if (looksLikeReadyArticle(readyText)) {
         const ready = parseReadyArticle(readyText);
         await telegramSendMessage(chatId, "Texte prêt reçu. Je publie sans passer par Kimi.");
+        if (claudeJob) await abandonClaudeJob(claudeJob);
         await deletePublishDraft(chatId);
         try {
-          await publishReadyArticlePipeline({
-            ready,
-            headline: draft.headline,
-            coverImageUrl: draft.coverImageUrl || undefined,
-            coverCaption: draft.coverCaption || undefined,
-            category: draft.category || undefined,
-            coverImage:
-              draft.coverImageData && draft.coverImageData.length > 0
-                ? {
-                    buffer: draft.coverImageData,
-                    mime: draft.coverImageMime || "image/jpeg",
-                  }
-                : undefined,
-            image: { buffer: draft.imageData, mime: draft.imageMime },
-            notify: telegramNotifier(chatId),
-          });
+          await publishReadyArticlePipeline({ ...draftMedia(chatId, draft), ready });
         } catch (err) {
           await restorePublishDraft(draft);
           throw err;
@@ -953,34 +1153,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await telegramSendMessage(chatId, SUBJECT_QUESTION);
         return;
       }
-      await telegramSendMessage(
-        chatId,
-        "Sujet reçu. Je cherche, je rédige et je publie (2 à 5 min).",
-      );
-      // Supprimé d'abord : un second message pendant la rédaction ne relance pas une publication.
-      await deletePublishDraft(chatId);
-      try {
-        await publishBriefPipeline({
-          headline: draft.headline,
-          brief,
-          coverImageUrl: draft.coverImageUrl || undefined,
-          coverCaption: draft.coverCaption || undefined,
-          category: draft.category || undefined,
-          coverImage:
-            draft.coverImageData && draft.coverImageData.length > 0
-              ? {
-                  buffer: draft.coverImageData,
-                  mime: draft.coverImageMime || "image/jpeg",
-                }
-              : undefined,
-          image: { buffer: draft.imageData, mime: draft.imageMime },
-          notify: telegramNotifier(chatId),
-        });
-      } catch (err) {
-        // Échec avant publication : on remet le brouillon pour pouvoir renvoyer le sujet.
-        await restorePublishDraft(draft);
-        throw err;
-      }
+      await routeSubject(chatId, draft, brief);
       return;
     }
 
