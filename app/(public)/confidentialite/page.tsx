@@ -46,6 +46,15 @@ export default function ConfidentialitePage() {
           de réponse) ;
         </li>
         <li>
+          pour la newsletter : adresse e-mail et dates d&apos;inscription, de
+          confirmation et de désabonnement ;
+        </li>
+        <li>
+          pour un abonnement Rempart+ : adresse e-mail, statut de
+          l&apos;abonnement et références chez Stripe. Le paiement est traité
+          par Stripe : nous ne conservons pas vos numéros de carte ;
+        </li>
+        <li>
           pour la rédaction interne uniquement : contenus et images transmis via
           nos outils de publication (par exemple Telegram), afin de publier des
           articles sur le Site et éventuellement sur notre Page Facebook.
@@ -62,6 +71,8 @@ export default function ConfidentialitePage() {
       <ul>
         <li>mettre en ligne et faire fonctionner le Site ;</li>
         <li>publier des contenus d&apos;information ;</li>
+        <li>envoyer la newsletter aux personnes inscrites ;</li>
+        <li>gérer les abonnements Rempart+ et l&apos;accès des abonnés ;</li>
         <li>
           assurer la sécurité, mesurer l&apos;audience et, le cas échéant,
           afficher de la publicité ;
@@ -79,7 +90,11 @@ export default function ConfidentialitePage() {
       <p>Selon les traitements :</p>
       <ul>
         <li>intérêt légitime (fonctionnement du Site, sécurité, information) ;</li>
-        <li>consentement (cookies non essentiels / publicité personnalisée) ;</li>
+        <li>
+          consentement (newsletter, cookies non essentiels, publicité
+          personnalisée) ;
+        </li>
+        <li>exécution du contrat (abonnement Rempart+) ;</li>
         <li>obligation légale le cas échéant.</li>
       </ul>
 
@@ -120,7 +135,8 @@ export default function ConfidentialitePage() {
         <li>l&apos;hébergeur du Site (Vercel) ;</li>
         <li>le prestataire de base de données le cas échéant ;</li>
         <li>
-          des prestataires techniques (e-mail, analytics, publicité) ;
+          des prestataires techniques : envoi d&apos;e-mails (Resend), paiement
+          (Stripe), mesure d&apos;audience et publicité ;
         </li>
         <li>
           Meta Platforms, uniquement dans le cadre de la publication sur notre
@@ -146,7 +162,9 @@ export default function ConfidentialitePage() {
         droits d&apos;accès, de rectification, d&apos;effacement,
         d&apos;opposition, de limitation et, le cas échéant, de portabilité.
         Pour les exercer :{" "}
-        <a href="mailto:contact@le-rempart.org">contact@le-rempart.org</a>.
+        <a href="mailto:contact@le-rempart.org">contact@le-rempart.org</a>. La
+        marche à suivre pour l&apos;effacement figure sur la page{" "}
+        <Link href="/suppression-donnees">suppression des données</Link>.
       </p>
       <p>
         Vous pouvez également introduire une réclamation auprès de la CNIL (
@@ -179,7 +197,7 @@ export default function ConfidentialitePage() {
       </p>
 
       <p className="mt-10 text-sm text-muted">
-        Dernière mise à jour : 25 juillet 2026
+        Dernière mise à jour : 30 octobre 2026
       </p>
     </article>
   );

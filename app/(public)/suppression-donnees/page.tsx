@@ -5,7 +5,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Suppression des données",
   description:
-    "Demande de suppression des données liées à l'application Meta / Facebook de Le Rempart.",
+    "Comment demander la suppression de vos données : newsletter, abonnement Rempart+ et application Meta / Facebook de Le Rempart.",
   path: "/suppression-donnees",
 });
 
@@ -17,8 +17,10 @@ export default function SuppressionDonneesPage() {
         Suppression des données
       </h1>
       <p className="mt-4 text-sm text-muted">
-        Page d&apos;instructions requise par Meta pour les applications
-        utilisant la plateforme Facebook / Instagram.
+        Cette page explique comment demander la suppression de vos données,
+        qu&apos;elles soient liées au Site ou à notre application Meta. Elle
+        tient aussi lieu de page d&apos;instructions requise par Meta pour les
+        applications utilisant sa plateforme.
       </p>
 
       <h2>1. Nature de l&apos;application</h2>
@@ -30,7 +32,7 @@ export default function SuppressionDonneesPage() {
         site grand public.
       </p>
 
-      <h2>2. Quelles données peuvent exister ?</h2>
+      <h2>2. Quelles données l&apos;application peut-elle concerner ?</h2>
       <p>Dans ce cadre, les données concernées sont essentiellement :</p>
       <ul>
         <li>
@@ -52,22 +54,41 @@ export default function SuppressionDonneesPage() {
         Facebook d&apos;internautes ni leurs messages privés.
       </p>
 
-      <h2>3. Comment demander une suppression</h2>
+      <h2>3. Quelles données le Site conserve-t-il ?</h2>
+      <p>En dehors de l&apos;application Meta, le Site enregistre :</p>
+      <ul>
+        <li>
+          pour la newsletter : votre adresse e-mail et les dates
+          d&apos;inscription, de confirmation et de désabonnement ;
+        </li>
+        <li>
+          pour un abonnement Rempart+ : votre adresse e-mail, le statut de
+          l&apos;abonnement et ses références chez Stripe, notre prestataire de
+          paiement. Nous ne conservons pas vos numéros de carte.
+        </li>
+      </ul>
       <p>
-        Pour demander la suppression de données personnelles susceptibles
-        d&apos;être liées à l&apos;application ou au Site, envoyez un e-mail à
-        :
+        Le lien « Se désabonner » de la newsletter arrête les envois, mais
+        n&apos;efface pas votre adresse de notre base. Pour l&apos;effacer,
+        suivez la procédure ci-dessous.
+      </p>
+
+      <h2>4. Comment demander une suppression</h2>
+      <p>
+        Pour demander la suppression de données personnelles liées au Site ou
+        à l&apos;application, envoyez un e-mail à :
       </p>
       <p>
-        <a href="mailto:contact@le-rempart.org?subject=Demande%20de%20suppression%20de%20donnees%20Meta">
+        <a href="mailto:contact@le-rempart.org?subject=Suppression%20de%20donn%C3%A9es%20Le%20Rempart">
           contact@le-rempart.org
         </a>
       </p>
       <p>Indiquez :</p>
       <ul>
-        <li>l&apos;objet : « Suppression de données Meta / Le Rempart » ;</li>
+        <li>l&apos;objet : « Suppression de données Le Rempart » ;</li>
         <li>
-          votre nom ou identifiant Facebook concerné, si applicable ;
+          l&apos;adresse e-mail concernée, ou votre nom ou identifiant Facebook
+          si la demande porte sur l&apos;application Meta ;
         </li>
         <li>
           une description précise de la demande (données concernées, URL
@@ -75,12 +96,12 @@ export default function SuppressionDonneesPage() {
         </li>
       </ul>
       <p>
-        Nous accusons réception sous un délai raisonnable et procédons à la
-        suppression ou à l&apos;anonymisation des données personnelles
-        concernées, sauf obligation légale de conservation.
+        Nous répondons sous un mois au plus et procédons à la suppression ou à
+        l&apos;anonymisation des données personnelles concernées, sauf
+        obligation légale de conservation.
       </p>
 
-      <h2>4. Contenu public sur la Page</h2>
+      <h2>5. Contenu public sur la Page</h2>
       <p>
         Les publications déjà visibles sur la Page Facebook Le Rempart font
         partie de la communication éditoriale de la Page. Leur retrait éventuel
@@ -88,7 +109,7 @@ export default function SuppressionDonneesPage() {
         adresse e-mail.
       </p>
 
-      <h2>5. Documents associés</h2>
+      <h2>6. Documents associés</h2>
       <p>
         Voir aussi la{" "}
         <Link href="/confidentialite">politique de confidentialité</Link> et
@@ -96,7 +117,7 @@ export default function SuppressionDonneesPage() {
       </p>
 
       <p className="mt-10 text-sm text-muted">
-        Dernière mise à jour : 25 juillet 2026
+        Dernière mise à jour : 30 octobre 2026
       </p>
     </article>
   );
