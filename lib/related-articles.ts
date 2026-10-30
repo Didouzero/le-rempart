@@ -63,6 +63,25 @@ const STOPWORDS = new Set([
   "face",
   "info",
   "radio",
+  // Dates : présentes partout, elles ne disent rien du sujet.
+  "lundi",
+  "mardi",
+  "mercredi",
+  "jeudi",
+  "vendredi",
+  "samedi",
+  "dimanche",
+  "janvier",
+  "fevrier",
+  "mars",
+  "avril",
+  "juin",
+  "juillet",
+  "aout",
+  "septembre",
+  "octobre",
+  "novembre",
+  "decembre",
 ]);
 
 export type RelatedArticle = {
@@ -89,7 +108,7 @@ export function themeTokens(
 ): Set<string> {
   const blob = fold(parts.filter(Boolean).join(" "));
   const tokens = blob.match(/[a-z0-9]{4,}/g) || [];
-  return new Set(tokens.filter((t) => !STOPWORDS.has(t)));
+  return new Set(tokens.filter((t) => !STOPWORDS.has(t) && !/^\d+$/.test(t)));
 }
 
 function overlapScore(
@@ -243,17 +262,35 @@ const COMMON_CAPS = new Set([
   "face", "radio", "info", "journal", "police", "justice",
 ]);
 
-/** Noms propres (mots à majuscule hors début de phrase), repliés sans accents. */
+/**
+ * Noms propres (suites de mots à majuscule hors début de phrase), repliés sans accents.
+ * Seul le dernier mot compte : « Philippe Juvin » et « Édouard Philippe » restent distincts.
+ */
 export function properNouns(text: string): Set<string> {
   const out = new Set<string>();
-  for (const sentence of text.split(/[.!?:;«»"()]\s*/)) {
+  const close = (name: string[]) => {
+    const last = name.at(-1);
+    if (!last) return;
+    const folded = fold(last);
+    // « Le Pen » : le dernier mot d'un nom composé peut être très court.
+    const longEnough = last.length >= 4 || (name.length > 1 && last.length === 3);
+    if (longEnough && !COMMON_CAPS.has(folded)) out.add(folded);
+  };
+  for (const sentence of text.split(/[.!?:;,«»"()]\s*/)) {
     const words = sentence.trim().split(/\s+/).slice(1);
+    let name: string[] = [];
     for (const w of words) {
       const clean = w.replace(/[^\p{L}'-]/gu, "");
-      if (clean.length < 4 || !/^\p{Lu}/u.test(clean) || clean === clean.toUpperCase()) continue;
-      const folded = fold(clean);
-      if (!COMMON_CAPS.has(folded)) out.add(folded);
+      const isName =
+        clean.length >= 2 && /^\p{Lu}/u.test(clean) && clean !== clean.toUpperCase();
+      if (isName) {
+        name.push(clean);
+      } else {
+        close(name);
+        name = [];
+      }
     }
+    close(name);
   }
   return out;
 }
