@@ -9,9 +9,14 @@
  */
 const QUOTE_MIN_WORDS = 5;
 
+/** Comptes rendus officiels : le « n° 40 » y ressort souvent en « n o 40 ». */
+export function fixOcrNumero(text: string): string {
+  return text.replace(/\bn\s+o\s+(?=\d)/gi, "n° ");
+}
+
 /** Réduit un texte à ses mots : casse, accents et ponctuation ne comptent pas. */
 function wordsOf(text: string): string {
-  return text
+  return fixOcrNumero(text)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")

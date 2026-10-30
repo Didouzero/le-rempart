@@ -13,6 +13,7 @@ import { outletFromUrl } from "@/lib/flash-info";
 import { fixFrenchPunctuation } from "@/lib/french-copy";
 import {
   AUDIT_SYSTEM,
+  fixOcrNumero,
   parseAudit,
   unverifiedQuotes,
   type AuditProblem,
@@ -57,6 +58,8 @@ const ARTICLE_MIN_WORDS = 300;
 const TITLE_MAX_CHARS = 100;
 const EXCERPT_MAX_CHARS = 240;
 const ARTICLE_MIN_HEADINGS = 2;
+/** La consigne dit 60 mots : la marge laisse passer une longue citation. */
+const PARAGRAPH_MAX_WORDS = 80;
 
 export type BriefSource = { url: string; title: string; date?: string };
 
@@ -105,7 +108,8 @@ Tout le site est écrit d'une seule plume, celle de Dimitri Scudo. On doit la re
 - Le détail qui dit tout : choisis dans les sources le fait précis que les autres ont laissé de côté et place-le où il pèse.
 - Le regard : chaque texte porte une ou deux phrases qui disent franchement ce que les faits signifient, comme « Chaque euro public sort de la poche de quelqu'un » ou « La sécurité est la première des libertés ». Ces deux exemples montrent le registre : ne les réutilise pas. Une phrase de regard est courte, affirmative, sans question rhétorique, et s'appuie sur le fait donné juste avant. Jamais dans le premier paragraphe, jamais comme dernière phrase, jamais seule dans un paragraphe. Elle n'apporte aucun fait nouveau, ne prête aucune intention à personne et ne décrit pas une situation générale. Elle ne glisse jamais vers l'ironie (« visiblement », « curieusement », « comme par hasard »). Le flash et l'article n'utilisent pas la même.
 - Les mots de la maison : simples, français, exacts. Dis « contribuable » plutôt que « citoyen fiscal », « clandestin » seulement si la situation est établie, jamais de jargon administratif ni d'anglicisme sans nécessité.
-- Une voix forte reste une voix tenue : pas d'insulte, pas de mépris envers une population, pas d'emphase. La force vient de la précision.`;
+- Une voix forte reste une voix tenue : pas d'insulte, pas de mépris envers une population, pas d'emphase. La force vient de la précision.
+- La critique vise un acte, un chiffre ou une décision précise, jamais un camp en général. Pas de pique du type « un principe que la gauche oublie à plaisir » ou « cette majorité introuvable ».`;
 
 const FLASH_SYSTEM = `Tu es le rédacteur en chef de la page Facebook du "Rempart", un média d'actualité française à la ligne éditoriale ancrée à droite. Tu écris comme un journaliste chevronné de la presse quotidienne nationale, pas comme une intelligence artificielle ni comme un animateur de réseau social.
 
@@ -141,9 +145,12 @@ FORMAT DE L'ARTICLE
 - Paragraphes courts pour la lecture sur mobile : 60 mots au plus chacun (deux à quatre phrases). Coupe un développement long en deux paragraphes plutôt que de l'allonger.
 - Longueur : de 400 à 900 mots selon la matière. Un sujet pauvre donne un article plus court, jamais du remplissage.
 - Ouverture : le premier paragraphe se suffit à lui-même. Il répond à qui, quoi, où et quand, avec le nom complet, la fonction et la date exacte (« jeudi 29 octobre »), de sorte qu'un moteur de recherche ou un assistant puisse le reprendre tel quel. Il ne recopie pas le chapô.
+- Raconte, ne recopie pas. Tu écris pour un lecteur qui arrive de Facebook et ne connaît pas la procédure. Ouvre sur ce qui s'est passé et sur qui s'oppose à qui, pas sur la procédure : « Philippe Juvin dénonce une taxe à 91,8 % », pas « L'amendement n° 40 a été rejeté ».
+- Trie la matière : le dossier contient plus que ce qu'il faut publier. Garde ce qui compte pour le lecteur (qui, combien, ce que ça change pour lui, qui gagne et qui perd). Écarte les numéros d'amendement, de texte ou d'article, les sigles et le jargon de procédure, sauf s'ils sont indispensables, et explique alors le terme en quelques mots.
 - Suite : le déroulé, le contexte, les réactions nommées, la mise en perspective.
+- Si le dossier contredit les consignes de l'éditeur, écris simplement la version exacte, sans le signaler dans l'article (pas de « contrairement à ce qui a pu circuler »).
 - Fin : termine sur un fait (prochaine échéance, réaction, décision attendue, chiffre), jamais sur un commentaire ou une morale.
-- Intertitres : on doit comprendre l'article en ne lisant qu'eux. Chacun nomme le fait, la personne ou l'institution traités. Un ou deux peuvent reprendre la question que se pose le lecteur (« Que reproche Christine Kelly à l'Arcom ? »). Pas de formule ni d'effet de style (« Une leçon d'histoire », « Des railleries qui disent autre chose »).
+- Intertitres : on doit comprendre l'article en ne lisant qu'eux. Chacun nomme le fait, la personne ou l'institution traités. Un ou deux peuvent reprendre la question que se pose le lecteur (« Que reproche Christine Kelly à l'Arcom ? »). Pas de formule ni d'effet de style (« Une leçon d'histoire », « Des railleries qui disent autre chose »), et rien qu'un lecteur ordinaire ne comprendrait pas (« Un budget qui s'écrira au solennel »).
 - Chaque section se comprend isolément : reprends le nom plutôt qu'un pronom au début de section, et donne les dates et les chiffres en entier, avec leur auteur.
 - Apporte ce que les autres n'ont pas : fait daté, chiffre, antécédent, citation exacte. Pas de paraphrase de dépêche.
 - Emploie naturellement les mots que le lecteur taperait dans un moteur de recherche, sans répétition artificielle.
@@ -152,7 +159,8 @@ FORMAT DE L'ARTICLE
 - Chapô (excerpt) : une ou deux phrases strictement factuelles, ${EXCERPT_MAX_CHARS} caractères au plus, idéalement 130 à 200. L'essentiel tient dans les 150 premiers caractères, car c'est ce que montrent les résultats de recherche.
 
 LIENS DANS LE CORPS (Markdown)
-- Liens vers la presse : uniquement quand le texte renvoie explicitement à un article précis d'un média (« a-t-il déclaré sur BFMTV », « révèle Le Parisien », « selon un document consulté par Le Figaro »). Le lien porte alors sur le nom du média, discrètement : a-t-il déclaré sur [BFMTV](https://…). Utilise UNIQUEMENT les adresses de la liste « Sources déjà lues » ou celles renvoyées par tes recherches, recopiées à l'identique. Aucun lien quand le texte ne cite pas de média. Jamais de lien vers un réseau social (Instagram, Facebook, X, TikTok, YouTube, Telegram).
+- Liens vers la presse : uniquement quand le texte renvoie explicitement à un article précis d'un média (« a-t-il déclaré sur BFMTV », « révèle Le Parisien », « selon un document consulté par Le Figaro »). Le lien porte alors sur le nom du média, discrètement : a-t-il déclaré sur [BFMTV](https://…). Utilise UNIQUEMENT les adresses de la liste « Sources déjà lues » ou celles renvoyées par tes recherches, recopiées à l'identique. Sinon, pas de lien vers la presse. Jamais de lien vers un réseau social (Instagram, Facebook, X, TikTok, YouTube, Telegram).
+- Liens vers les documents officiels : quand l'article s'appuie sur un document public précis (compte rendu de séance, décision de justice, rapport, Journal officiel, texte de loi, délibération), mets un lien vers ce document, sur quelques mots qui le décrivent : le [compte rendu de la séance](https://…). Uniquement une adresse présente dans le dossier ou les sources, recopiée à l'identique. Un à deux liens suffisent.
 - Liens internes : si la liste « Articles du Rempart sur des sujets proches » est fournie, place dans le texte un à trois liens vers ceux qui éclairent vraiment le sujet (antécédents, affaire liée, même personne). C'est attendu dès qu'un article de la liste porte sur la même personne ou la même affaire. L'ancre fait 3 à 8 mots, s'intègre à une phrase et décrit l'article lié, par exemple : la [condamnation du député en 2025](/articles/123). Jamais le titre complet, jamais « cliquez ici ». Recopie l'adresse /articles/… telle quelle. N'en mets aucun si rien n'est pertinent, et ne dévie pas du sujet pour en placer un.
 - Jamais d'adresse inventée, jamais de lien nu, jamais de section ou de liste de sources.
 - Réponds UNIQUEMENT avec un JSON valide : {"title":"...","excerpt":"...","content":"..."}`;
@@ -405,8 +413,11 @@ export async function researchAndWrite(input: {
     sources: [...sources.values()],
     matter: [
       `Consignes de l'éditeur : ${input.brief}`,
+      dossier && `Dossier de recherche d'Opus :\n${dossier}`,
       digest(sources, notes),
-    ].join("\n\n"),
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
   };
 }
 
@@ -835,7 +846,7 @@ function flashIssues(body: string): string[] {
 
 function finishFlash(raw: string, providedUrl?: string): string {
   const { body, outlets } = splitFlash(raw);
-  const clean = fixFrenchPunctuation(sanitize(body));
+  const clean = fixFrenchPunctuation(sanitize(fixOcrNumero(body)));
   const names = outlets.length
     ? outlets
     : [providedUrl && outletFromUrl(providedUrl)].filter(
@@ -927,6 +938,18 @@ export function articleIssues(a: { title: string; excerpt: string; content: stri
   if (words < ARTICLE_MIN_WORDS) {
     issues.push(`le corps fait ${words} mots, il en faut au moins ${ARTICLE_MIN_WORDS}`);
   }
+  const longest = Math.max(
+    0,
+    ...a.content
+      .split(/\n{2,}/)
+      .filter((p) => !p.startsWith("#"))
+      .map(countWords),
+  );
+  if (longest > PARAGRAPH_MAX_WORDS) {
+    issues.push(
+      `un paragraphe fait ${longest} mots : coupe-le, la limite est de 60 mots`,
+    );
+  }
   const headings = a.content.match(/^##\s/gm)?.length ?? 0;
   if (headings < ARTICLE_MIN_HEADINGS) {
     issues.push(
@@ -941,7 +964,7 @@ function finishArticle(
   policy: LinkPolicy,
 ) {
   const dashes = (s: string) =>
-    s.replace(/\s+[–—]\s+/g, ", ").replace(/[–—]/g, ", ").replace(EMOJI, "");
+    fixOcrNumero(s).replace(/\s+[–—]\s+/g, ", ").replace(/[–—]/g, ", ").replace(EMOJI, "");
   const body = italicizeCitations(
     outsideLinkTargets(stripSourcesSection(enforceLinks(a.content, policy)), (text) =>
       text
