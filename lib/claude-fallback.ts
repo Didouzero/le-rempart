@@ -7,14 +7,14 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const CLAUDE_FALLBACK_MODEL = "claude-opus-5-5";
 
-const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+export const FALLBACK_BETA = "server-side-fallback-2026-07-01";
 
 export function isClaudeConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 }
 
 let client: Anthropic | null = null;
-function anthropic(): Anthropic {
+export function anthropic(): Anthropic {
   return (client ??= new Anthropic());
 }
 

@@ -6,6 +6,7 @@
 
 import sharp from "sharp";
 import { claudeChatTurn, isClaudeConfigured } from "@/lib/claude-fallback";
+import { researchSubject } from "@/lib/claude-research";
 import { recordTokenUsage } from "@/lib/eval/token-meter";
 import { fetchSourceText, scrubBoilerplate } from "@/lib/fetch-source";
 import { outletFromUrl } from "@/lib/flash-info";
@@ -40,7 +41,9 @@ const MODE_TIMEOUT_MS: Record<Mode, number> = {
 /** En cas de timeout, on relance une fois dans le mode suivant. */
 const FALLBACK: Record<Mode, Mode> = { deep: "low", low: "fast", fast: "fast" };
 /** Recherche + rédaction ; le reste des 800 s Vercel sert à l'article en base et à Facebook. */
-const TOTAL_BUDGET_MS = 600_000;
+const TOTAL_BUDGET_MS = 700_000;
+/** Au-delà, on repasse à la recherche par Kimi pour que la publication reste possible. */
+const OPUS_RESEARCH_TIMEOUT_MS = 300_000;
 /** Temps qu'il doit rester pour lancer la relecture, correction comprise. */
 const AUDIT_MIN_LEFT_MS = 120_000;
 const AUDIT_RECHECK_MIN_LEFT_MS = 60_000;
@@ -237,15 +240,26 @@ export async function researchAndWrite(input: {
   // Tout ce que l'agent a réellement lu : une citation doit s'y trouver.
   const lu = () => [briefBlock, ...notes.values()].join("\n");
 
-  const userContent: unknown = input.creative
-    ? [
-        {
-          type: "image_url",
-          image_url: { url: await imageDataUrl(input.creative) },
-        },
-        { type: "text", text: briefBlock },
-      ]
+  const warnings: string[] = [];
+  const creativeUrl = input.creative ? await imageDataUrl(input.creative) : "";
+  const dossier = await opusDossier({
+    brief: briefBlock,
+    creativeUrl,
+    sources,
+    notes,
+    warnings,
+    onProgress: input.onProgress,
+  });
+  const writerBlock = dossier
+    ? `${briefBlock}\n\nDOSSIER DE RECHERCHE établi par le chercheur du Rempart. C'est ta seule matière factuelle : n'ajoute aucun fait et ne cite que les phrases de sa rubrique CITATIONS EXACTES, mot pour mot.\n"""${dossier}"""`
     : briefBlock;
+
+  const userContent: unknown = creativeUrl
+    ? [
+        { type: "image_url", image_url: { url: creativeUrl } },
+        { type: "text", text: writerBlock },
+      ]
+    : writerBlock;
 
   await input.onProgress?.("🔎 Recherches et rédaction du flash…");
   const flashRaw = await runAgent({
@@ -253,6 +267,7 @@ export async function researchAndWrite(input: {
     messages: [{ role: "user", content: userContent }],
     maxRounds: 6,
     mode: "deep",
+    noTools: Boolean(dossier),
     engine,
     sources,
     notes,
@@ -285,7 +300,7 @@ export async function researchAndWrite(input: {
     }
   };
   const articleRequest = [
-    briefBlock,
+    writerBlock,
     `Flash info publié sur Facebook :\n"""${flash}"""`,
     `Sources déjà lues :\n${digest(sources, notes)}`,
     linkable.length
@@ -304,6 +319,7 @@ export async function researchAndWrite(input: {
     messages: [{ role: "user", content: articleRequest }],
     maxRounds: 4,
     mode: "low",
+    noTools: Boolean(dossier),
     engine,
     sources,
     notes,
@@ -313,17 +329,18 @@ export async function researchAndWrite(input: {
     check: articleCheck,
   });
 
-  const warnings: string[] = [];
+  // Relecteur différent du rédacteur quand Opus répond ; sinon, même moteur qu'avant.
+  const auditEngine = dossier ? { claude: true } : engine;
   if (deadline - Date.now() < AUDIT_MIN_LEFT_MS) {
     warnings.push("Relecture des faits sautée, faute de temps.");
   } else {
     try {
       await input.onProgress?.("🧐 Relecture des faits…");
-      const matter = [briefBlock, digest(sources, notes, 2000, 40_000)].join("\n\n");
+      const matter = [writerBlock, digest(sources, notes, 2000, 40_000)].join("\n\n");
       const problems = await auditClaims({
         article: parseArticle(articleRaw),
         matter,
-        engine,
+        engine: auditEngine,
         deadline,
       });
       if (problems.length) {
@@ -346,6 +363,7 @@ export async function researchAndWrite(input: {
           ],
           maxRounds: 2,
           mode: "low",
+          noTools: Boolean(dossier),
           engine,
           sources,
           notes,
@@ -358,7 +376,7 @@ export async function researchAndWrite(input: {
           const left = await auditClaims({
             article: parseArticle(articleRaw),
             matter,
-            engine,
+            engine: auditEngine,
             deadline,
           });
           warnings.push(...left.map((p) => `Passage à vérifier : « ${p.passage} » (${p.raison})`));
@@ -390,6 +408,45 @@ export async function researchAndWrite(input: {
       digest(sources, notes),
     ].join("\n\n"),
   };
+}
+
+/** Dossier d'Opus, ou chaîne vide : Kimi fait alors ses recherches comme avant. */
+async function opusDossier(input: {
+  brief: string;
+  creativeUrl: string;
+  sources: Map<string, BriefSource>;
+  notes: Map<string, string>;
+  warnings: string[];
+  onProgress?: Hooks["onProgress"];
+}): Promise<string> {
+  if (!isClaudeConfigured()) return "";
+  await input.onProgress?.("🔬 Opus enquête sur ton sujet…");
+  try {
+    const research = await researchSubject({
+      brief: input.brief,
+      imageBase64: input.creativeUrl.split(",")[1],
+      today: new Date().toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Europe/Paris",
+      }),
+      timeoutMs: OPUS_RESEARCH_TIMEOUT_MS,
+    });
+    for (const s of research.sources) input.sources.set(s.url, s);
+    for (const [url, text] of research.pages) input.notes.set(url, text);
+    input.notes.set("dossier:opus", research.dossier);
+    await input.onProgress?.(
+      `📂 Dossier prêt : ${research.usage.searches} recherches, ${research.usage.fetches} pages lues en entier.`,
+    );
+    return research.dossier;
+  } catch (err) {
+    console.error("recherche opus", err);
+    input.warnings.push("Recherche Opus indisponible : Kimi a cherché à sa place.");
+    await input.onProgress?.("⚠️ Opus indisponible : Kimi reprend la recherche.");
+    return "";
+  }
 }
 
 /** Relecture indépendante de la rédaction : ne sait que comparer l'article aux sources. */
@@ -445,6 +502,8 @@ async function runAgent(input: {
   onSearch?: Hooks["onSearch"];
   /** Problèmes de format à renvoyer à Kimi ; liste vide = texte accepté. */
   check: (raw: string) => string[];
+  /** Le dossier est fourni : pas de recherche web pour le rédacteur. */
+  noTools?: boolean;
 }): Promise<string> {
   const messages: ChatMessage[] = [
     { role: "system", content: input.system + dateNote() },
@@ -453,6 +512,7 @@ async function runAgent(input: {
 
   for (let round = 0; round < input.maxRounds; round++) {
     const isLast = round === input.maxRounds - 1;
+    const useTools = !isLast && !input.noTools;
     let msg: ChatMessage;
     const fallback = FALLBACK[input.mode];
     try {
@@ -460,10 +520,10 @@ async function runAgent(input: {
         ? await claudeChatTurn({
             messages,
             tools: TOOLS,
-            allowTools: !isLast,
+            allowTools: useTools,
             timeoutMs: claudeBudget(input.deadline),
           })
-        : await chat(messages, !isLast, input.mode, {
+        : await chat(messages, useTools, input.mode, {
             timeoutMs: budget(input.deadline, input.mode, MODE_TIMEOUT_MS[fallback]),
           });
     } catch (err) {
@@ -474,13 +534,13 @@ async function runAgent(input: {
         msg = await claudeChatTurn({
           messages,
           tools: TOOLS,
-          allowTools: !isLast,
+          allowTools: useTools,
           timeoutMs: claudeBudget(input.deadline),
         });
       } else {
         if (input.engine.claude || !isTimeout(err)) throw err;
         await input.onProgress?.("⏳ Kimi est lent, nouvel essai en mode rapide…");
-        msg = await chat(messages, !isLast, fallback, {
+        msg = await chat(messages, useTools, fallback, {
           timeoutMs: budget(input.deadline, fallback, 0),
         });
       }
