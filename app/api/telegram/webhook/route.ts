@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import { after, NextRequest, NextResponse } from "next/server";
 import {
   abandonClaudeJob,
@@ -1114,13 +1114,31 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   }
 }
 
+function sameToken(received: string | null, expected: string): boolean {
+  const a = Buffer.from(received || "");
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/**
+ * Le canal Claude n'a pas le secret du webhook, illisible sur Vercel : il prouve qu'il
+ * détient le jeton du bot, sans l'envoyer. Même calcul dans tools/claude-channel/server.mjs.
+ */
+function claudeChannelOk(request: NextRequest): boolean {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  if (!botToken) return false;
+  const expected = createHash("sha256").update(`rempart-channel:${botToken}`).digest("hex");
+  return sameToken(request.headers.get("x-rempart-channel-token"), expected);
+}
+
 /** Sans secret configuré, le bot reste ouvert : l'activer ne doit pas le couper avant Telegram. */
 function telegramSecretOk(request: NextRequest): boolean {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
   if (!expected) return true;
-  const a = Buffer.from(request.headers.get("x-telegram-bot-api-secret-token") || "");
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return (
+    sameToken(request.headers.get("x-telegram-bot-api-secret-token"), expected) ||
+    claudeChannelOk(request)
+  );
 }
 
 export async function POST(request: NextRequest) {
