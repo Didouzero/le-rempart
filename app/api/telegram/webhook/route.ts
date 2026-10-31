@@ -123,7 +123,7 @@ async function saveCoverAndAskSubject(
 const SUBJECT_QUESTION = [
   "🧭 Sur quel sujet doit porter ce flash ?",
   "",
-  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Claude cherche et rédige sur le Mac, et rien n’est publié sans ton « ok ».",
+  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Claude cherche, rédige et publie depuis le Mac.",
   "",
   "/cancel pour annuler.",
 ].join("\n");
@@ -137,8 +137,7 @@ function commandsHelpText(): string {
     "2) Envoie l’illustration du site en fichier (JPG, PNG, WebP), 1 200 px de large minimum",
     "3) Choisis la rubrique avec les boutons",
     "4) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
-    "5) Claude cherche et rédige sur le Mac, puis t’envoie le texte ici",
-    "6) Réponds « ok » pour publier (site + Facebook), ou dis ce qu’il faut changer",
+    "→ Claude cherche, rédige et publie (site + Facebook) depuis le Mac",
     "Mac indisponible : le bot te propose Kimi, réponds « kimi » pour confirmer",
     "Texte déjà prêt : envoie le fichier .txt à la place du sujet",
     "/cancel — annuler la créative ou l’article en cours",
@@ -240,7 +239,7 @@ async function routeSubject(
     await startClaudeJob(job, newArticleMessage(job, label));
     await telegramSendMessage(
       chatId,
-      "Sujet reçu. Claude cherche et rédige sur le Mac, le texte arrivera ici pour validation. Rien n’est publié sans ton « ok ».\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
+      "Sujet reçu. Claude cherche et rédige sur le Mac, puis publie directement.\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
     );
     return;
   }
@@ -453,8 +452,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "2) Envoie l’illustration de l’article en fichier (JPG, PNG, WebP)",
           "3) Choisis la rubrique avec les boutons",
           "4) Décris le sujet : événement, angle, noms, liens si tu en as",
-          "5) Claude cherche et rédige sur le Mac, puis t’envoie le texte ici",
-          "6) Réponds « ok » pour publier sur le site et Facebook, ou dis ce qu’il faut changer",
+          "5) Claude cherche, rédige et publie sur le site et Facebook depuis le Mac",
           "",
           "Si le Mac n’est pas disponible, je te propose Kimi : réponds « kimi » pour confirmer.",
           "Texte déjà prêt : envoie le fichier .txt à la place du sujet.",
