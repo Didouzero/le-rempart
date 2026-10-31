@@ -10,7 +10,7 @@ import {
   type ConsentChoice,
 } from "@/lib/consent";
 
-/** Vrai quand le visiteur a accepté les cookies (MGID ne se charge qu'à cette condition). */
+/** Vrai quand le visiteur a accepté les cookies (Taboola ne se charge qu'à cette condition). */
 export function useConsentGranted(): boolean {
   const [granted, setGranted] = useState(false);
   useEffect(() => {
@@ -56,7 +56,8 @@ export function ConsentBanner() {
     >
       <p className="m-0 text-sm leading-snug text-white/85">
         Nous utilisons des cookies pour mesurer l&apos;audience (Google
-        Analytics) et afficher des publicités (MGID).{" "}
+        Analytics). Les publicités (MGID), affichées sauf aux abonnés
+        Rempart+, peuvent déposer leurs propres cookies.{" "}
         <Link
           href="/confidentialite#cookies"
           className="text-accent underline decoration-accent/60 underline-offset-2"

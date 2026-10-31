@@ -1,6 +1,6 @@
 /**
  * Consentement aux cookies, géré par le site (bandeau maison) :
- * mesure d'audience (Google Analytics via Consent Mode v2) et publicité MGID.
+ * mesure d'audience (Google Analytics via Consent Mode v2). MGID n'en dépend pas.
  * Le choix est gardé 6 mois sur l'appareil, puis le bandeau revient.
  */
 export const CONSENT_STORAGE_KEY = "rempart-consent";

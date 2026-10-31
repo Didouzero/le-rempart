@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Couleurs qui changent avec le thème : clair par défaut, sombre selon le réglage
-   de l'appareil ou le bouton lune/soleil (attribut data-theme sur <html>). */
+/* Couleurs qui changent avec le thème : sombre par défaut, clair au choix par le
+   bouton lune/soleil (attribut data-theme sur <html>). */
 :root {
   --ink: #0a0a0a;
   --paper: #f4f2ed;

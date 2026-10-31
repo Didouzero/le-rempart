@@ -106,21 +106,19 @@ export default function ConfidentialitePage() {
         (cookies, thème clair ou sombre).
       </p>
       <p>
-        Les autres traceurs ne sont utilisés qu&apos;avec votre accord, donné
-        par le bandeau affiché à votre première visite :
+        La mesure d&apos;audience, assurée par Google Analytics et Google Tag
+        Manager (Google Ireland Ltd), n&apos;est utilisée qu&apos;avec votre
+        accord, donné par le bandeau affiché à votre première visite. Tant que
+        vous n&apos;avez pas accepté, aucun cookie Google n&apos;est déposé ;
+        seuls des signaux anonymes, sans cookie, sont transmis pour estimer la
+        fréquentation.
       </p>
-      <ul>
-        <li>
-          mesure d&apos;audience : Google Analytics et Google Tag Manager
-          (Google Ireland Ltd). Tant que vous n&apos;avez pas accepté, aucun
-          cookie Google n&apos;est déposé ; seuls des signaux anonymes, sans
-          cookie, sont transmis pour estimer la fréquentation ;
-        </li>
-        <li>
-          publicité et contenus sponsorisés : MGID. Ses publicités et ses
-          cookies ne sont chargés qu&apos;après votre accord.
-        </li>
-      </ul>
+      <p>
+        Les publicités et contenus sponsorisés de MGID s&apos;affichent pour
+        tous les visiteurs, quel que soit leur choix dans le bandeau, et MGID
+        peut déposer ses propres cookies. Seuls les abonnés Rempart+ connectés
+        ne voient pas de publicité.
+      </p>
       <p>
         Refuser est aussi simple qu&apos;accepter, et sans conséquence sur
         l&apos;accès aux articles. Vous pouvez changer d&apos;avis à tout

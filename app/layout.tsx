@@ -113,7 +113,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <html
       lang="fr"
       className={`${openSans.variable} ${sourceSans.variable}`}
-      // data-theme est posé avant l'hydratation par THEME_INIT_SCRIPT.
+      // Mode nuit par défaut, sur tous les appareils ; THEME_INIT_SCRIPT applique
+      // le choix mémorisé avant l'hydratation.
+      data-theme="dark"
       suppressHydrationWarning
     >
       <head>

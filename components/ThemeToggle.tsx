@@ -9,11 +9,9 @@ type Theme = "light" | "dark";
 const THEME_EVENT = "rempart-theme-change";
 
 function currentTheme(): Theme {
-  const forced = document.documentElement.getAttribute("data-theme");
-  if (forced === "dark" || forced === "light") return forced;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return document.documentElement.getAttribute("data-theme") === "light"
+    ? "light"
+    : "dark";
 }
 
 function MoonIcon() {
@@ -56,14 +54,9 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
 
   useEffect(() => {
     setTheme(currentTheme());
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => setTheme(currentTheme());
-    mq.addEventListener("change", onChange);
     window.addEventListener(THEME_EVENT, onChange);
-    return () => {
-      mq.removeEventListener("change", onChange);
-      window.removeEventListener(THEME_EVENT, onChange);
-    };
+    return () => window.removeEventListener(THEME_EVENT, onChange);
   }, []);
 
   function applyTheme(next: Theme) {

@@ -1,18 +1,16 @@
 "use client";
 
 import Script from "next/script";
-import { useConsentGranted } from "@/components/ConsentBanner";
 import { mgidSiteId } from "@/lib/mgid";
 
 export function MgidWidget({ widgetId }: { widgetId: string }) {
   return <div data-type="_mgwidget" data-widget-id={widgetId} />;
 }
 
-/** Un seul loader par page (Next déduplique via l’id), seulement après « Accepter ». */
+/** Un seul loader par page (Next déduplique via l’id), quel que soit le choix sur les cookies. */
 export function MgidSiteScript() {
   const site = mgidSiteId();
-  const granted = useConsentGranted();
-  if (!site || !granted) return null;
+  if (!site) return null;
 
   return (
     <>
