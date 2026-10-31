@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import Module from "node:module";
 
 process.env.TELEGRAM_BOT_TOKEN = "faux";
+// Prisma charge le .env local : le vrai secret refuserait ces essais.
+process.env.TELEGRAM_WEBHOOK_SECRET = "";
 process.env.TELEGRAM_ALLOWED_USER_IDS = "788499709,555";
 process.env.DATABASE_URL = "postgresql://nulle-part/none";
 
@@ -41,9 +43,6 @@ const fakePrisma = {
   appSetting,
   $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   telegramUpdateLog: { create: async () => {} },
-  tiktokDraft: { findUnique: async () => null, deleteMany: async () => ({ count: 0 }), delete: async () => { throw new Error("absent"); } },
-  tiktokJob: { findFirst: async () => null, findMany: async () => [] },
-  tiktokAsset: {},
   publishDraft: {
     findUnique: async () => draft,
     delete: async () => {

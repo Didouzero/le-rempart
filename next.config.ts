@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typescript: {
-    // TikTok WIP must not block ads.txt / site deploys.
+    // Existing type errors must not block ads.txt / site deploys.
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ["sharp", "@prisma/client", "@resvg/resvg-js", "telegram"],

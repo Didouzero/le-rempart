@@ -159,15 +159,6 @@ function commandsHelpText(): string {
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
     "",
-    "── TikTok Droitocratie ──",
-    "/tiktok — démarre un montage 9:16 (> 1 min)",
-    "1) Envoie le lien de l’article",
-    "2) Photos / vidéos / URLs optionnelles",
-    "3) /tiktok_go — montage auto + aperçu",
-    "4) Bouton Poster (ou /tiktok_ok)",
-    "/tiktok_cancel — abandonner",
-    "/tt — alias de /tiktok",
-    "",
     "── Enquête Rempart+ (mercredi / samedi) ──",
     "/enquete — démarre une enquête",
     "1) Envoie la créative Facebook (PNG/JPG)",
@@ -413,15 +404,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       );
       return;
     }
-    if (data.startsWith("tt:")) {
-      const { handleTiktokCallback } = await import("@/lib/tiktok/telegram");
-      await handleTiktokCallback({
-        data,
-        chatId,
-        callbackQueryId: cq.id,
-      });
-      return;
-    }
     const handled = await handleVeilleCallback(data, chatId, cq.id);
     if (!handled) {
       await telegramAnswerCallbackQuery(cq.id);
@@ -487,19 +469,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await clearInvestigationSession();
         await telegramSendMessage(chatId, "Enquête annulée.");
         return;
-      }
-      {
-        const { deleteTiktokDraft } = await import("@/lib/tiktok/draft");
-        const { getLatestPreviewJob, cancelTiktokJob } = await import(
-          "@/lib/tiktok/job"
-        );
-        const tt = await deleteTiktokDraft(chatId);
-        const preview = await getLatestPreviewJob(chatId);
-        if (preview) await cancelTiktokJob(preview.id);
-        if (tt || preview) {
-          await telegramSendMessage(chatId, "Montage Droitocratie annulé.");
-          return;
-        }
       }
       const claudeJob = await loadClaudeJob(chatId);
       if (claudeJob) await abandonClaudeJob(claudeJob);
@@ -641,23 +610,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         );
       }
       return;
-    }
-
-    {
-      const { handleTiktokCommand, TIKTOK_COMMANDS } = await import(
-        "@/lib/tiktok/telegram"
-      );
-      if (TIKTOK_COMMANDS.has(cmd)) {
-        if (!isTelegramUserAllowed(userId)) {
-          await telegramSendMessage(
-            chatId,
-            `Accès non autorisé.\nTon id : ${userId}`,
-          );
-          return;
-        }
-        await handleTiktokCommand({ cmd, text, chatId, userId });
-        return;
-      }
     }
 
     if (
@@ -955,18 +907,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         );
         return;
       }
-    }
-
-    {
-      const { handleTiktokDraftMessage } = await import("@/lib/tiktok/telegram");
-      const handledTt = await handleTiktokDraftMessage({
-        chatId,
-        userId,
-        text,
-        cmd,
-        message,
-      });
-      if (handledTt) return;
     }
 
     // Un fichier .txt ou un texte prêt continue de passer directement par le flux habituel.

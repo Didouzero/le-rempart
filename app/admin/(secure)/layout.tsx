@@ -31,7 +31,6 @@ export default function AdminSecureLayout({
             <Link href="/admin">Articles</Link>
             <Link href="/admin/dossiers">Éditer enquêtes</Link>
             <Link href="/admin/abonnes">Abonnés</Link>
-            <Link href="/admin/tiktok">TikTok</Link>
             <Link href="/admin/new">Nouveau</Link>
             <form action="/api/admin/logout" method="POST">
               <button
