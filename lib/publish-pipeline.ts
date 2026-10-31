@@ -303,7 +303,7 @@ export async function publishBriefPipeline(input: {
   const research = await researchAndWrite({
     headline: input.headline,
     brief: input.brief,
-    creative: input.image,
+    creative: input.image.buffer.length ? input.image : undefined,
     linkable,
     onProgress: notify,
     onSearch: (queries) =>
@@ -357,6 +357,10 @@ export async function publishBriefPipeline(input: {
 
   await notify(["Article publié.", "", article.title, article.url].join("\n"));
 
+  if (!input.image.buffer.length) {
+    await notify("Site seul : rien n’est envoyé sur Facebook.");
+    return { article, facebook: {} };
+  }
   if (!isFacebookConfigured()) {
     await notify("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
     return { article, facebook: { error: "non configuré" } };
@@ -419,6 +423,10 @@ export async function publishReadyArticlePipeline(input: {
   });
   await notify(["Article publié.", "", article.title, article.url].join("\n"));
 
+  if (!input.image.buffer.length) {
+    await notify("Site seul : rien n’est envoyé sur Facebook.");
+    return { article, facebook: {} };
+  }
   if (!isFacebookConfigured()) {
     await notify("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
     return { article, facebook: { error: "non configuré" } };

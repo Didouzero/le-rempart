@@ -39,12 +39,15 @@ import {
 import { publishReadyInvestigation } from "@/lib/investigation";
 import { prisma } from "@/lib/prisma";
 import {
+  createSiteOnlyDraft,
   deletePublishDraft,
   draftHasCover,
   extractHttpUrl,
   getActivePublishDraft,
+  isSiteOnlyDraft,
   type PublishDraftRecord,
   restorePublishDraft,
+  setPublishDraftCaption,
   setPublishDraftCategory,
   setPublishDraftCoverFile,
   setPublishDraftHeadline,
@@ -97,6 +100,8 @@ function illustrationPromptLines(): string[] {
 }
 
 const CATEGORY_QUESTION = "📂 Dans quelle rubrique publier cette news ?";
+const SITE_CAPTION_QUESTION =
+  "Écris le titre de l’illustration, en un message : ce qu’elle montre, et le crédit si tu l’as.\n/cancel pour annuler.";
 
 /** Un bouton par rubrique du site ; le choix revient toujours à l'éditeur. */
 function categoryKeyboard() {
@@ -120,6 +125,13 @@ async function saveCoverAndAskSubject(
     width && width < DISCOVER_MIN_WIDTH
       ? `\n⚠️ Elle ne fait que ${width} px de large : Google Discover demande au moins ${DISCOVER_MIN_WIDTH} px. Renvoie-en une plus grande (en fichier) si tu en as une, sinon continue.`
       : "";
+  if (isSiteOnlyDraft(saved) && !saved.coverCaption) {
+    await telegramSendMessage(
+      chatId,
+      `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${sizeNote}\n\n${SITE_CAPTION_QUESTION}`,
+    );
+    return;
+  }
   await telegramSendMessage(
     chatId,
     `Illustration enregistrée${width ? ` (${width} px de large)` : ""}.${caption?.trim() ? `\nLégende : « ${caption.trim().slice(0, 200)} »` : ""}${sizeNote}\n\n${CATEGORY_QUESTION}`,
@@ -148,6 +160,10 @@ function commandsHelpText(): string {
     "Mac indisponible : le bot te propose Kimi, réponds « kimi » pour confirmer",
     "Texte déjà prêt : envoie le fichier .txt à la place du sujet",
     "/cancel — annuler la créative ou l’article en cours",
+    "",
+    "── Site seul, rien sur Facebook ──",
+    "/site — illustration en fichier, son titre, rubrique, puis sujet",
+    "→ Claude cherche, rédige et publie sur le site uniquement",
     "",
     "── Veille auto ──",
     "/veille_on — active l’agent (1 créneau/jour ~8h Paris, limite Hobby Vercel)",
@@ -226,16 +242,19 @@ async function routeSubject(
   draft: PublishDraftRecord,
   subject: string,
 ): Promise<void> {
+  const siteOnly = isSiteOnlyDraft(draft);
+  // Sans créative, le sujet tient lieu de titre pour la recherche de Kimi en secours.
+  if (siteOnly) await setPublishDraftHeadline(chatId, subject);
   const fields = {
     chatId,
-    headline: draft.headline,
+    headline: siteOnly ? subject : draft.headline,
     subject,
     category: draft.category,
   };
   if (await isMacOnline(chatId)) {
     const job = newClaudeJob({ ...fields, state: "writing" });
     const label = draft.category ? CATEGORY_META[draft.category].label : "non choisie";
-    await startClaudeJob(job, newArticleMessage(job, label));
+    await startClaudeJob(job, newArticleMessage(job, label, siteOnly));
     await telegramSendMessage(
       chatId,
       "Sujet reçu. Claude cherche et rédige sur le Mac, puis publie directement.\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
@@ -374,7 +393,12 @@ async function handleClaudeJob(
       );
       return;
     }
-    await telegramSendMessage(chatId, "Validé. Je publie ce texte sur le site et Facebook.");
+    await telegramSendMessage(
+      chatId,
+      isSiteOnlyDraft(draft)
+        ? "Validé. Je publie ce texte sur le site uniquement."
+        : "Validé. Je publie ce texte sur le site et Facebook.",
+    );
     await deletePublishDraft(chatId);
     try {
       await publishReadyArticlePipeline({ ...draftMedia(chatId, draft), ready });
@@ -644,6 +668,35 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         (on
           ? "Statut veille : ON\n→ auto aux créneaux + validation\n→ manuel toujours OK"
           : "Statut veille : OFF\n→ auto coupé\n→ manuel seul") + pendingLine,
+      );
+      return;
+    }
+
+    if (cmd === "/site") {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
+        return;
+      }
+      if (await loadClaudeJob(chatId)) {
+        await telegramSendMessage(
+          chatId,
+          "Claude travaille déjà sur un autre texte. Relance /site une fois celui-ci terminé, ou /cancel pour l’abandonner.",
+        );
+        return;
+      }
+      await createSiteOnlyDraft(chatId, userId);
+      await telegramSendMessage(
+        chatId,
+        [
+          "Article pour le site seul, rien sur Facebook.",
+          "",
+          ...illustrationPromptLines(),
+          "",
+          "/cancel pour annuler.",
+        ].join("\n"),
       );
       return;
     }
@@ -919,7 +972,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       if (
         pendingCover &&
         pendingCover.headline.trim() &&
-        !draftHasCover(pendingCover)
+        (!draftHasCover(pendingCover) || isSiteOnlyDraft(pendingCover))
       ) {
         try {
           await saveCoverAndAskSubject(
@@ -1044,6 +1097,18 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "/cancel pour annuler.",
         ].join("\n"),
       );
+      return;
+    }
+
+    if (draft && isSiteOnlyDraft(draft) && !draft.coverCaption) {
+      const typed = text.startsWith("/") ? "" : text;
+      if (typed.length < 3 || !(await setPublishDraftCaption(chatId, typed))) {
+        await telegramSendMessage(chatId, SITE_CAPTION_QUESTION);
+        return;
+      }
+      await telegramSendMessage(chatId, CATEGORY_QUESTION, {
+        reply_markup: categoryKeyboard(),
+      });
       return;
     }
 

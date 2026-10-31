@@ -48,6 +48,10 @@ const fakePrisma = {
   telegramUpdateLog: { create: async () => {} },
   publishDraft: {
     findUnique: async () => draft,
+    update: async ({ data }: { data: Record<string, unknown> }) => {
+      draft = { ...draft, ...data };
+      return draft;
+    },
     delete: async () => {
       if (!draft) throw new Error("absent");
       draft = null;
@@ -55,8 +59,12 @@ const fakePrisma = {
     create: async ({ data }: { data: Record<string, unknown> }) => {
       draft = { ...data, id: "restauré", createdAt: new Date() };
     },
-    upsert: async () => {
-      throw new Error("une nouvelle créative ne doit pas remplacer un brouillon en cours");
+    upsert: async ({ create }: { create: { imageData: Buffer } }) => {
+      if (create.imageData.length) {
+        throw new Error("une nouvelle créative ne doit pas remplacer un brouillon en cours");
+      }
+      draft = { ...create, id: "site", createdAt: new Date() };
+      return draft;
     },
   },
 };
@@ -402,6 +410,35 @@ const tests: [string, () => Promise<void>][] = [
     await text("/cancel");
     assert.equal(jobNow(), null);
     assert.ok(inbox().some((k) => /abandon/.test(settings.get(k)!.value)));
+  }],
+  ["/site : titre de l'illustration, rubrique, sujet, sans Facebook", async () => {
+    macOn();
+    draft = null;
+    await text("/site");
+    assert.equal((draft as unknown as { imageData: Buffer }).imageData.length, 0);
+    assert.match(sent.at(-1)!, /rien sur Facebook/);
+    await text("sans illustration");
+    assert.match(sent.at(-1)!, /J’attends encore l’illustration/);
+    Object.assign(draft!, { coverImageMime: "image/jpeg", coverImageData: Buffer.from("y") });
+    await text(SUBJECT);
+    assert.equal(draft!.coverCaption, SUBJECT);
+    assert.match(sent.at(-1)!, /Dans quelle rubrique/);
+    draft!.category = "politique";
+    await text(SUBJECT);
+    assert.match(settings.get(inbox()[0]!)!.value, /site seul/);
+    await clawSubmits();
+    await text("ok");
+    assert.match(sent.join("\n"), /sur le site uniquement/);
+    assert.equal(published.length, 1);
+    assert.equal(published[0]!.kind, "ready");
+    assert.equal((published[0]!.input.image as { buffer: Buffer }).buffer.length, 0);
+  }],
+  ["/site refusé pendant une rédaction", async () => {
+    macOn();
+    await text(SUBJECT);
+    await text("/site");
+    assert.match(sent.at(-1)!, /Claude travaille déjà/);
+    assert.equal(draft!.id, "d1");
   }],
   ["un autre compte autorisé reste sur Kimi", async () => {
     macOn();

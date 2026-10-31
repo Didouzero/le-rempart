@@ -55,6 +55,22 @@ function toRecord(row: {
   };
 }
 
+/** Article pour le site seul (/site) : pas de créative, donc rien sur Facebook. */
+const SITE_ONLY_HEADLINE = "Article pour le site seul";
+
+export function isSiteOnlyDraft(draft: PublishDraftRecord): boolean {
+  return draft.imageData.length === 0;
+}
+
+export function createSiteOnlyDraft(chatId: number, userId: number) {
+  return upsertPublishDraft({
+    chatId,
+    userId,
+    headline: SITE_ONLY_HEADLINE,
+    image: { buffer: Buffer.alloc(0), mime: "" },
+  });
+}
+
 export function draftHasCover(draft: PublishDraftRecord): boolean {
   return Boolean(
     draft.coverImageUrl?.trim() ||
@@ -134,6 +150,22 @@ export async function setPublishDraftCoverFile(
         coverImageData: Buffer.from(prepared.buffer),
         coverCaption: caption?.trim() ? utf8Text(caption.trim(), 400) : null,
       },
+    });
+    return toRecord(row);
+  } catch {
+    return null;
+  }
+}
+
+/** Légende tapée en message, quand elle n'était pas dans le fichier. */
+export async function setPublishDraftCaption(
+  chatId: number,
+  caption: string,
+): Promise<PublishDraftRecord | null> {
+  try {
+    const row = await prisma.publishDraft.update({
+      where: { chatId: BigInt(chatId) },
+      data: { coverCaption: utf8Text(caption.trim(), 400) },
     });
     return toRecord(row);
   } catch {

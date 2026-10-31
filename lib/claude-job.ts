@@ -120,10 +120,16 @@ export async function isMacOnline(chatId: number): Promise<boolean> {
   return isHeartbeatFresh(row?.value);
 }
 
-export function newArticleMessage(job: ClaudeJob, categoryLabel: string): string {
+export function newArticleMessage(
+  job: ClaudeJob,
+  categoryLabel: string,
+  siteOnly = false,
+): string {
   return [
     `[REMPART article ${job.id}]`,
-    `Titre de la créative : ${job.headline}`,
+    siteOnly
+      ? "Article pour le site seul, sans créative ni Facebook : écris quand même un flash court, le contrôle l'exige, il ne sera pas publié."
+      : `Titre de la créative : ${job.headline}`,
     `Rubrique : ${categoryLabel}`,
     "Sujet donné par l'éditeur :",
     job.subject,
