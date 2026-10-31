@@ -57,6 +57,8 @@ function toRecord(row: {
 
 /** Article pour le site seul (/site) : pas de créative, donc rien sur Facebook. */
 const SITE_ONLY_HEADLINE = "Article pour le site seul";
+/** Le titre de la créative n'est plus lu : le sujet le remplace à l'envoi. */
+export const NO_HEADLINE = "Sujet à venir";
 
 /** Post Facebook seul (/facebook) : repère stocké à la place de l'illustration du site. */
 const FACEBOOK_ONLY_MARK = "facebook-only";

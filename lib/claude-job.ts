@@ -127,9 +127,9 @@ export function newArticleMessage(
 ): string {
   return [
     `[REMPART article ${job.id}]`,
-    siteOnly
-      ? "Article pour le site seul, sans créative ni Facebook : écris quand même un flash court, le contrôle l'exige, il ne sera pas publié."
-      : `Titre de la créative : ${job.headline}`,
+    ...(siteOnly
+      ? ["Article pour le site seul, sans Facebook : écris quand même un flash court, le contrôle l'exige, il ne sera pas publié."]
+      : []),
     `Rubrique : ${categoryLabel}`,
     "Sujet donné par l'éditeur :",
     job.subject,
@@ -141,7 +141,6 @@ export function newArticleMessage(
 export function newFlashMessage(job: ClaudeJob): string {
   return [
     `[REMPART flash ${job.id}]`,
-    `Titre de la créative : ${job.headline}`,
     "Sujet donné par l'éditeur :",
     job.subject,
     "",

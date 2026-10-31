@@ -20,7 +20,6 @@ import {
   telegramChunks,
   type StoredClaudeJob,
 } from "@/lib/claude-job";
-import { extractHeadlineFromCreative } from "@/lib/extract-headline";
 import { looksLikeReadyArticle, parseReadyArticle } from "@/lib/ready-article";
 import {
   ARTICLE_CATEGORIES,
@@ -44,6 +43,7 @@ import {
   createSiteOnlyDraft,
   deletePublishDraft,
   draftHasCover,
+  NO_HEADLINE,
   extractHttpUrl,
   getActivePublishDraft,
   isFacebookOnlyDraft,
@@ -252,11 +252,11 @@ async function routeSubject(
   subject: string,
 ): Promise<void> {
   const siteOnly = isSiteOnlyDraft(draft);
-  // Sans créative, le sujet tient lieu de titre pour la recherche de Kimi en secours.
-  if (siteOnly) await setPublishDraftHeadline(chatId, subject);
+  // La consigne se suffit : le sujet tient lieu de titre pour Kimi en secours.
+  await setPublishDraftHeadline(chatId, subject);
   const fields = {
     chatId,
-    headline: siteOnly ? subject : draft.headline,
+    headline: subject,
     subject,
     category: draft.category,
   };
@@ -293,7 +293,7 @@ async function routeFlashSubject(
   const job = newClaudeJob({
     chatId,
     state: "writing",
-    headline: draft.headline,
+    headline: subject,
     subject,
     category: null,
     kind: "flash",
@@ -1059,13 +1059,10 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     if (fileId) {
       const pendingCover = await getActivePublishDraft(chatId);
       if (pendingCover && isFacebookOnlyDraft(pendingCover)) {
-        const image = await telegramDownloadFile(fileId);
-        const headline =
-          manualCaption || (await extractHeadlineFromCreative(image).catch(() => ""));
-        await setPublishDraftCreative(chatId, image, headline);
+        await setPublishDraftCreative(chatId, await telegramDownloadFile(fileId));
         await telegramSendMessage(
           chatId,
-          `Créative reçue.${headline ? `\nTitre : ${headline}` : ""}\n\nSur quel sujet doit porter le flash ? Donne l’angle, des noms ou des sources si tu en as.\n/cancel pour annuler.`,
+          "Créative reçue.\n\nSur quel sujet doit porter le flash ? Donne l’angle, des noms ou des sources si tu en as.\n/cancel pour annuler.",
         );
         return;
       }
@@ -1089,46 +1086,18 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         return;
       }
 
-      await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
-      const image = await telegramDownloadFile(fileId);
-
-      let headline = manualCaption;
-      if (!headline) {
-        try {
-          headline = await extractHeadlineFromCreative(image);
-          await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
-        } catch (err) {
-          console.error("flash headline", err);
-          headline = "";
-          if (isKimiQuotaError(err)) {
-            await telegramSendMessage(chatId, KIMI_QUOTA_USER_MESSAGE);
-          }
-        }
-      }
-
       await upsertPublishDraft({
         chatId,
         userId,
-        headline,
-        image,
+        headline: NO_HEADLINE,
+        image: await telegramDownloadFile(fileId),
       });
-
-      if (!headline) {
-        await telegramSendMessage(
-          chatId,
-          [
-            "Créative enregistrée. Tape le titre (un message texte).",
-            "Pas besoin de renvoyer l’image.",
-            "",
-            "/cancel pour annuler.",
-          ].join("\n"),
-        );
-        return;
-      }
 
       await telegramSendMessage(
         chatId,
         [
+          "Créative reçue.",
+          "",
           ...illustrationPromptLines(),
           "",
           "Ensuite je te demanderai le sujet du flash.",
@@ -1153,36 +1122,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (draft && !draft.headline.trim()) {
-      const typed = (text || "").trim();
-      if (typed && !url && !text.startsWith("/")) {
-        const saved = await setPublishDraftHeadline(chatId, typed);
-        if (!saved) {
-          await telegramSendMessage(
-            chatId,
-            "Titre trop court. Envoie le titre en un message texte.\n/cancel pour annuler.",
-          );
-          return;
-        }
-        await telegramSendMessage(
-          chatId,
-          [
-            `Titre enregistré : ${saved.headline}`,
-            "",
-            ...illustrationPromptLines(),
-            "",
-            "/cancel pour annuler.",
-          ].join("\n"),
-        );
-        return;
-      }
-      await telegramSendMessage(
-        chatId,
-        "La créative est déjà là. Tape le titre (un message texte), pas une URL.\n/cancel pour annuler.",
-      );
-      return;
-    }
-
     if (draft && url && !draftHasCover(draft)) {
       // Un lien est téléchargé puis hébergé sur le site, comme un fichier.
       try {
@@ -1203,8 +1142,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         chatId,
         [
           "J’attends encore l’illustration : un fichier JPG, PNG ou WebP.",
-          `Titre en attente : ${draft.headline.slice(0, 120)}`,
-          "",
           "/cancel pour annuler.",
         ].join("\n"),
       );
