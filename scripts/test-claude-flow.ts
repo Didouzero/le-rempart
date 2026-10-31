@@ -487,7 +487,13 @@ async function main() {
   const { claudeJobAction, isApproval, isHeartbeatFresh } = await import("@/lib/claude-job");
   for (const t of ["ok", "OK", "Ok.", " ok ! "]) assert.ok(isApproval(t), t);
   for (const t of ["okay", "ok mais non", "pas ok", "o k", ""]) assert.ok(!isApproval(t), t);
-  const { finishReadyFlash } = await import("@/lib/ready-article");
+  const { finishReadyArticle, finishReadyFlash, parseReadyArticle } = await import("@/lib/ready-article");
+  const video = "[video](https://x.com/compte/status/2116568338524418218?s=20)";
+  const withVideo = finishReadyArticle(parseReadyArticle(
+    `${READY}\n\n${video}\n\n[un lien](https://x.com/compte) et [video](https://x.com/compte)`,
+  )).finished.content;
+  assert.ok(withVideo.includes(video), withVideo);
+  assert.ok(withVideo.endsWith("un lien et video"), withVideo);
   assert.deepEqual(finishReadyFlash("FLASH :\nUn flash d'essai.").issues, []);
   assert.throws(() => finishReadyFlash("Sans repère"), /Flash incomplet/);
   assert.equal(claudeJobAction("ready", "/foo", true), "status");

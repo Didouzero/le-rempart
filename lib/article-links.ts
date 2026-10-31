@@ -28,8 +28,15 @@ function internalId(href: string): number | null {
 // Jamais de lien vers un réseau social dans un article : seulement la presse.
 const SOCIAL = /^https?:\/\/([a-z0-9-]+\.)*(instagram\.com|facebook\.com|fb\.watch|x\.com|twitter\.com|tiktok\.com|youtube\.com|youtu\.be|t\.me|threads\.net|snapchat\.com|linkedin\.com)\//i;
 
+const EMBEDDABLE_VIDEO = /^https?:\/\/(?:[a-z0-9-]+\.)?(?:(?:x|twitter)\.com\/[^\s/]+\/status(?:es)?\/\d+|youtube\.com\/(?:watch\?|shorts\/|embed\/)|youtu\.be\/)/i;
+
 export function isSocialUrl(href: string): boolean {
   return SOCIAL.test(href);
+}
+
+/** [video](url) : un lecteur intégré à l'article (ArticleBody), pas un lien sortant. */
+function isVideoEmbed(text: string, href: string): boolean {
+  return /^vid[ée]o$/i.test(text.trim()) && EMBEDDABLE_VIDEO.test(href);
 }
 
 /** Garde les liens autorisés (internes normalisés en /articles/ID), retire les autres. */
@@ -39,6 +46,7 @@ export function enforceLinks(markdown: string, policy: LinkPolicy): string {
     if (id !== null) {
       return policy.internal.has(id) ? `[${text}](${articlePublicPath(id)})` : text;
     }
+    if (isVideoEmbed(text, href)) return full;
     return policy.external.has(href) && !isSocialUrl(href) ? full : text;
   });
 }
