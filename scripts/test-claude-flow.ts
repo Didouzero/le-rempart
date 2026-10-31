@@ -70,9 +70,9 @@ const fakePrisma = {
 };
 (globalThis as unknown as { prisma: unknown }).prisma = fakePrisma;
 
-const published: { kind: "ready" | "kimi" | "enquete"; input: Record<string, unknown> }[] = [];
+const published: { kind: "ready" | "kimi" | "enquete" | "facebook"; input: Record<string, unknown> }[] = [];
 let failNextPublish = false;
-async function fakePublish(kind: "ready" | "kimi" | "enquete", input: Record<string, unknown>) {
+async function fakePublish(kind: "ready" | "kimi" | "enquete" | "facebook", input: Record<string, unknown>) {
   if (failNextPublish) {
     failNextPublish = false;
     throw new Error("échec simulé");
@@ -88,6 +88,7 @@ const load = (Module as unknown as { _load: (r: string, ...a: unknown[]) => unkn
     return {
       publishReadyArticlePipeline: (i: Record<string, unknown>) => fakePublish("ready", i),
       publishBriefPipeline: (i: Record<string, unknown>) => fakePublish("kimi", i),
+      publishFacebookOnlyPipeline: (i: Record<string, unknown>) => fakePublish("facebook", i),
       telegramNotifier: () => async () => {},
     };
   }
@@ -433,6 +434,39 @@ const tests: [string, () => Promise<void>][] = [
     assert.equal(published[0]!.kind, "ready");
     assert.equal((published[0]!.input.image as { buffer: Buffer }).buffer.length, 0);
   }],
+  ["/facebook : créative, sujet, flash, sans article ni Kimi", async () => {
+    macOn();
+    draft = null;
+    await text("/facebook");
+    assert.equal(draft!.coverImageUrl, "facebook-only");
+    await text(SUBJECT);
+    assert.match(sent.at(-1)!, /J’attends la créative/);
+    Object.assign(draft!, { imageMime: "image/png", imageData: Buffer.from("x") });
+    await text(SUBJECT);
+    assert.equal(jobNow().kind, "flash");
+    assert.match(settings.get(inbox()[0]!)!.value, /\[REMPART flash /);
+    await text("kimi");
+    assert.match(sent.at(-1)!, /ne passe pas par Kimi/);
+    await appSetting.updateMany({
+      where: { key: "claude-article-job", value: settings.get("claude-article-job")!.value },
+      data: { value: JSON.stringify({ ...jobNow(), state: "ready", text: "FLASH :\nUn flash." }) },
+    });
+    await text("ok");
+    assert.equal(published.length, 1);
+    assert.equal(published[0]!.kind, "facebook");
+    assert.equal(published[0]!.input.text, "FLASH :\nUn flash.");
+    assert.equal(jobNow(), null);
+    assert.equal(draft, null);
+  }],
+  ["/facebook sans VPS : rien en file, pas de Kimi", async () => {
+    macOff();
+    draft = null;
+    await text("/facebook");
+    Object.assign(draft!, { imageMime: "image/png", imageData: Buffer.from("x") });
+    await text(SUBJECT);
+    assert.equal(jobNow(), null);
+    assert.match(sent.at(-1)!, /VPS n’est pas disponible/);
+  }],
   ["/site refusé pendant une rédaction", async () => {
     macOn();
     await text(SUBJECT);
@@ -453,6 +487,9 @@ async function main() {
   const { claudeJobAction, isApproval, isHeartbeatFresh } = await import("@/lib/claude-job");
   for (const t of ["ok", "OK", "Ok.", " ok ! "]) assert.ok(isApproval(t), t);
   for (const t of ["okay", "ok mais non", "pas ok", "o k", ""]) assert.ok(!isApproval(t), t);
+  const { finishReadyFlash } = await import("@/lib/ready-article");
+  assert.deepEqual(finishReadyFlash("FLASH :\nUn flash d'essai.").issues, []);
+  assert.throws(() => finishReadyFlash("Sans repère"), /Flash incomplet/);
   assert.equal(claudeJobAction("ready", "/foo", true), "status");
   assert.equal(claudeJobAction("writing", "", true), "status");
   assert.equal(claudeJobAction("ready", "Kimi.", true), "kimi");

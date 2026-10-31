@@ -27,7 +27,7 @@ export type ClaudeJob = {
   subject: string;
   category: string | null;
   /** Absent pour un article, la forme des suivis déjà en base. */
-  kind?: "enquete";
+  kind?: "enquete" | "flash";
   /** Enquête : créative et illustration, demandées après le « ok » du bilan. */
   fileId?: string;
   coverFileId?: string;
@@ -138,6 +138,17 @@ export function newArticleMessage(
   ].join("\n");
 }
 
+export function newFlashMessage(job: ClaudeJob): string {
+  return [
+    `[REMPART flash ${job.id}]`,
+    `Titre de la créative : ${job.headline}`,
+    "Sujet donné par l'éditeur :",
+    job.subject,
+    "",
+    "Post pour Facebook seul : applique le mode Telegram de la méthode rediger-article.",
+  ].join("\n");
+}
+
 export function newInvestigationMessage(job: ClaudeJob): string {
   return [
     `[REMPART enquête ${job.id}]`,
@@ -207,7 +218,7 @@ export function newClaudeJob(input: {
   headline: string;
   subject: string;
   category: string | null;
-  kind?: "enquete";
+  kind?: "enquete" | "flash";
   dossierId?: string;
 }): ClaudeJob {
   return { ...input, id: randomUUID().slice(0, 8) };

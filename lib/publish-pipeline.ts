@@ -17,7 +17,11 @@ import type { ArticleCategory } from "@/lib/categories";
 import { purgeOldCreatives } from "@/lib/creatives-retention";
 import { insertReadAlso, linkedArticleIds } from "@/lib/article-links";
 import { prisma } from "@/lib/prisma";
-import { finishReadyArticle, type ReadyArticle } from "@/lib/ready-article";
+import {
+  finishReadyArticle,
+  finishReadyFlash,
+  type ReadyArticle,
+} from "@/lib/ready-article";
 import { chooseReadAlso } from "@/lib/read-also";
 import { findLinkableArticles, findReadAlso } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
@@ -445,6 +449,38 @@ export async function publishReadyArticlePipeline(input: {
     notify,
   });
   return { article, facebook };
+}
+
+/** Post Facebook seul (/facebook) : flash, créative et story, sans article ni lien. */
+export async function publishFacebookOnlyPipeline(input: {
+  text: string;
+  image: { buffer: Buffer; mime: string };
+  notify: PipelineNotify;
+}): Promise<void> {
+  const { flash, issues } = finishReadyFlash(input.text);
+  if (issues.length) throw new Error(`Flash à corriger : ${issues.join(" ; ")}`);
+  if (!isFacebookConfigured()) {
+    throw new Error("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
+  }
+  const feed = await publishFacebookFeedPost({
+    imageUrl: "",
+    caption: flash,
+    commentLink: "",
+    image: input.image,
+  });
+  await input.notify(`✅ Post Facebook publié.\nID : ${feed.postId}`);
+  try {
+    const storyId = await publishFacebookStory({
+      imageUrl: "",
+      image: input.image,
+      pageId: feed.pageId,
+      token: feed.token,
+    });
+    await input.notify(`✅ Story Facebook publiée.\nID : ${storyId}`);
+  } catch (err) {
+    console.error(err);
+    await input.notify(`❌ Story Facebook : échec\n${formatFacebookError(err)}`);
+  }
 }
 
 function hostOf(url: string): string {

@@ -50,6 +50,16 @@ export function parseReadyArticle(text: string): ReadyArticle {
   };
 }
 
+/** Flash pour Facebook seul : « FLASH : » suivi du texte, sans article. */
+export function finishReadyFlash(text: string) {
+  const raw = text.match(/^\s*FLASH\s*:\s*\n([\s\S]+)$/i)?.[1]?.trim();
+  if (!raw) {
+    throw new Error("Flash incomplet : le fichier doit commencer par FLASH :.");
+  }
+  const flash = finishFlash(raw);
+  return { flash, issues: wrongWeekdays(flash) };
+}
+
 /** Enquête : mêmes contrôles qu'un article, avec la longueur d'un dossier payant. */
 export function finishReadyInvestigation(ready: ReadyArticle) {
   const done = finishReadyArticle(ready);

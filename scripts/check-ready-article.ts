@@ -5,6 +5,7 @@
 
 import {
   finishReadyArticle,
+  finishReadyFlash,
   finishReadyInvestigation,
   parseReadyArticle,
 } from "@/lib/ready-article";
@@ -12,8 +13,9 @@ import {
 async function main() {
   let text = "";
   for await (const part of process.stdin) text += part;
-  const finish = process.argv[2] === "enquete" ? finishReadyInvestigation : finishReadyArticle;
-  const { issues } = finish(parseReadyArticle(text));
+  const kind = process.argv[2];
+  const finish = kind === "enquete" ? finishReadyInvestigation : finishReadyArticle;
+  const { issues } = kind === "flash" ? finishReadyFlash(text) : finish(parseReadyArticle(text));
   if (issues.length) throw new Error(`Texte à corriger : ${issues.join(" ; ")}`);
 }
 

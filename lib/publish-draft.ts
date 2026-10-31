@@ -58,8 +58,16 @@ function toRecord(row: {
 /** Article pour le site seul (/site) : pas de créative, donc rien sur Facebook. */
 const SITE_ONLY_HEADLINE = "Article pour le site seul";
 
+/** Post Facebook seul (/facebook) : repère stocké à la place de l'illustration du site. */
+const FACEBOOK_ONLY_MARK = "facebook-only";
+const FACEBOOK_ONLY_HEADLINE = "Post pour Facebook seul";
+
+export function isFacebookOnlyDraft(draft: PublishDraftRecord): boolean {
+  return draft.coverImageUrl === FACEBOOK_ONLY_MARK;
+}
+
 export function isSiteOnlyDraft(draft: PublishDraftRecord): boolean {
-  return draft.imageData.length === 0;
+  return draft.imageData.length === 0 && !isFacebookOnlyDraft(draft);
 }
 
 export function createSiteOnlyDraft(chatId: number, userId: number) {
@@ -68,6 +76,16 @@ export function createSiteOnlyDraft(chatId: number, userId: number) {
     userId,
     headline: SITE_ONLY_HEADLINE,
     image: { buffer: Buffer.alloc(0), mime: "" },
+  });
+}
+
+export function createFacebookOnlyDraft(chatId: number, userId: number) {
+  return upsertPublishDraft({
+    chatId,
+    userId,
+    headline: FACEBOOK_ONLY_HEADLINE,
+    image: { buffer: Buffer.alloc(0), mime: "" },
+    coverImageUrl: FACEBOOK_ONLY_MARK,
   });
 }
 
@@ -88,7 +106,9 @@ export async function upsertPublishDraft(input: {
   userId: number;
   headline: string;
   image: { buffer: Buffer; mime: string };
+  coverImageUrl?: string;
 }): Promise<PublishDraftRecord> {
+  const coverImageUrl = input.coverImageUrl ?? null;
   const row = await prisma.publishDraft.upsert({
     where: { chatId: BigInt(input.chatId) },
     create: {
@@ -97,7 +117,7 @@ export async function upsertPublishDraft(input: {
       headline: utf8Text(input.headline, 500),
       imageMime: input.image.mime,
       imageData: Buffer.from(input.image.buffer),
-      coverImageUrl: null,
+      coverImageUrl,
       coverImageMime: null,
       coverImageData: null,
       coverCaption: null,
@@ -108,7 +128,7 @@ export async function upsertPublishDraft(input: {
       headline: utf8Text(input.headline, 500),
       imageMime: input.image.mime,
       imageData: Buffer.from(input.image.buffer),
-      coverImageUrl: null,
+      coverImageUrl,
       coverImageMime: null,
       coverImageData: null,
       coverCaption: null,
@@ -116,6 +136,22 @@ export async function upsertPublishDraft(input: {
     },
   });
   return toRecord(row);
+}
+
+/** Créative reçue après /facebook. */
+export async function setPublishDraftCreative(
+  chatId: number,
+  image: { buffer: Buffer; mime: string },
+  headline?: string,
+): Promise<void> {
+  await prisma.publishDraft.update({
+    where: { chatId: BigInt(chatId) },
+    data: {
+      imageMime: image.mime,
+      imageData: Buffer.from(image.buffer),
+      ...(headline ? { headline: utf8Text(headline, 500) } : {}),
+    },
+  });
 }
 
 export async function setPublishDraftHeadline(

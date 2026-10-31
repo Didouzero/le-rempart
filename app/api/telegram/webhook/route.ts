@@ -10,6 +10,7 @@ import {
   missingEnqueteMedia,
   newArticleMessage,
   newClaudeJob,
+  newFlashMessage,
   newInvestigationMessage,
   replaceClaudeJob,
   retouchMessage,
@@ -39,22 +40,26 @@ import {
 import { publishReadyInvestigation } from "@/lib/investigation";
 import { prisma } from "@/lib/prisma";
 import {
+  createFacebookOnlyDraft,
   createSiteOnlyDraft,
   deletePublishDraft,
   draftHasCover,
   extractHttpUrl,
   getActivePublishDraft,
+  isFacebookOnlyDraft,
   isSiteOnlyDraft,
   type PublishDraftRecord,
   restorePublishDraft,
   setPublishDraftCaption,
   setPublishDraftCategory,
   setPublishDraftCoverFile,
+  setPublishDraftCreative,
   setPublishDraftHeadline,
   upsertPublishDraft,
 } from "@/lib/publish-draft";
 import {
   publishBriefPipeline,
+  publishFacebookOnlyPipeline,
   publishReadyArticlePipeline,
   telegramNotifier,
 } from "@/lib/publish-pipeline";
@@ -165,6 +170,10 @@ function commandsHelpText(): string {
     "/site — illustration en fichier, son titre, rubrique, puis sujet",
     "→ Claude cherche, rédige et publie sur le site uniquement",
     "",
+    "── Facebook seul, rien sur le site ──",
+    "/facebook — créative, puis sujet",
+    "→ Claude rédige le flash et publie le post et la story, sans lien",
+    "",
     "── Veille auto ──",
     "/veille_on — active l’agent (1 créneau/jour ~8h Paris, limite Hobby Vercel)",
     "/veille_off — coupe l’agent (manuel seul)",
@@ -268,6 +277,34 @@ async function routeSubject(
   );
 }
 
+/** Post Facebook seul : Claude uniquement, le flash passe par la même file que les articles. */
+async function routeFlashSubject(
+  chatId: number,
+  draft: PublishDraftRecord,
+  subject: string,
+): Promise<void> {
+  if (!(await isMacOnline(chatId))) {
+    await telegramSendMessage(
+      chatId,
+      "Le VPS n’est pas disponible : Claude ne peut pas rédiger le flash pour l’instant. Renvoie le sujet quand il est revenu, ou /cancel pour abandonner.",
+    );
+    return;
+  }
+  const job = newClaudeJob({
+    chatId,
+    state: "writing",
+    headline: draft.headline,
+    subject,
+    category: null,
+    kind: "flash",
+  });
+  await startClaudeJob(job, newFlashMessage(job));
+  await telegramSendMessage(
+    chatId,
+    "Sujet reçu. Claude cherche et rédige le flash, puis le publie sur Facebook.\n\n/cancel pour abandonner.",
+  );
+}
+
 const CLAUDE_JOB_STATUS = {
   "kimi-offer":
     "Sujet en attente, le Mac n’était pas disponible. Réponds « kimi » pour que Kimi rédige, renvoie le sujet pour réessayer Claude, ou /cancel.",
@@ -301,6 +338,14 @@ async function handleClaudeJob(
     await telegramSendMessage(
       chatId,
       "Les enquêtes ne passent plus par Kimi. /cancel pour abandonner celle-ci.",
+    );
+    return;
+  }
+
+  if (job.kind === "flash" && action === "kimi") {
+    await telegramSendMessage(
+      chatId,
+      "Le post pour Facebook seul ne passe pas par Kimi. /cancel pour l’abandonner.",
     );
     return;
   }
@@ -381,6 +426,27 @@ async function handleClaudeJob(
       chatId,
       "Le brouillon de cet article n’existe plus. Renvoie la créative pour recommencer.",
     );
+    return;
+  }
+
+  if (action === "publish" && draft && job.kind === "flash") {
+    if (!(await claimClaudeJob(stored))) {
+      await telegramSendMessage(chatId, "Le texte vient de changer : relis la dernière version.");
+      return;
+    }
+    await telegramSendMessage(chatId, "Validé. Je publie ce flash sur Facebook uniquement.");
+    await deletePublishDraft(chatId);
+    try {
+      await publishFacebookOnlyPipeline({
+        text: job.text || "",
+        image: { buffer: draft.imageData, mime: draft.imageMime },
+        notify: telegramNotifier(chatId),
+      });
+    } catch (err) {
+      await restorePublishDraft(draft);
+      await saveClaudeJob(job);
+      throw err;
+    }
     return;
   }
 
@@ -701,7 +767,30 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    if (cmd === "/fb" || cmd === "/facebook") {
+    if (cmd === "/facebook") {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(
+          chatId,
+          `Accès non autorisé.\nTon id : ${userId}`,
+        );
+        return;
+      }
+      if (await loadClaudeJob(chatId)) {
+        await telegramSendMessage(
+          chatId,
+          "Claude travaille déjà sur un autre texte. Relance /facebook une fois celui-ci terminé, ou /cancel pour l’abandonner.",
+        );
+        return;
+      }
+      await createFacebookOnlyDraft(chatId, userId);
+      await telegramSendMessage(
+        chatId,
+        "Post pour Facebook seul, rien sur le site.\n\nEnvoie la créative (PNG/JPG).\n/cancel pour annuler.",
+      );
+      return;
+    }
+
+    if (cmd === "/fb") {
       if (!isTelegramUserAllowed(userId)) {
         await telegramSendMessage(
           chatId,
@@ -969,6 +1058,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     // ── Étape 1 : créative. 2e image = illustration site (si titre déjà là). ──
     if (fileId) {
       const pendingCover = await getActivePublishDraft(chatId);
+      if (pendingCover && isFacebookOnlyDraft(pendingCover)) {
+        const image = await telegramDownloadFile(fileId);
+        const headline =
+          manualCaption || (await extractHeadlineFromCreative(image).catch(() => ""));
+        await setPublishDraftCreative(chatId, image, headline);
+        await telegramSendMessage(
+          chatId,
+          `Créative reçue.${headline ? `\nTitre : ${headline}` : ""}\n\nSur quel sujet doit porter le flash ? Donne l’angle, des noms ou des sources si tu en as.\n/cancel pour annuler.`,
+        );
+        return;
+      }
       if (
         pendingCover &&
         pendingCover.headline.trim() &&
@@ -1041,6 +1141,17 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     // ── Étapes 2–3 : titre manquant, puis URLs ──
     const draft = await getActivePublishDraft(chatId);
     const url = text ? extractHttpUrl(text) : null;
+
+    if (draft && isFacebookOnlyDraft(draft)) {
+      if (!draft.imageData.length) {
+        await telegramSendMessage(chatId, "J’attends la créative (PNG/JPG).\n/cancel pour annuler.");
+      } else if (text.length < 10 || text.startsWith("/")) {
+        await telegramSendMessage(chatId, "Sur quel sujet doit porter le flash ?\n/cancel pour annuler.");
+      } else {
+        await routeFlashSubject(chatId, draft, text);
+      }
+      return;
+    }
 
     if (draft && !draft.headline.trim()) {
       const typed = (text || "").trim();
