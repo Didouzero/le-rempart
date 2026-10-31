@@ -17,7 +17,7 @@ export const HEARTBEAT_MAX_AGE_MS = 2 * 60 * 1000;
 /** Le canal écrit à ce seul compte : les autres passent par Kimi. */
 const CLAUDE_EDITOR_CHAT = 788499709;
 
-export type ClaudeJobState = "kimi-offer" | "writing" | "ready";
+export type ClaudeJobState = "kimi-offer" | "writing" | "ready" | "awaiting-media";
 
 export type ClaudeJob = {
   id: string;
@@ -28,9 +28,11 @@ export type ClaudeJob = {
   category: string | null;
   /** Absent pour un article, la forme des suivis déjà en base. */
   kind?: "enquete";
-  /** Enquête : créative Telegram pour Facebook, et dossier à remplacer si c'est une réécriture. */
+  /** Enquête : créative et illustration, demandées après le « ok » du bilan. */
   fileId?: string;
-  imageMime?: string;
+  coverFileId?: string;
+  coverAlt?: string;
+  /** Dossier à remplacer si c'est une réécriture : ni créative ni illustration. */
   dossierId?: string;
   /** Dernier texte soumis par Claude : c'est lui que publie le « ok ». */
   text?: string;
@@ -45,6 +47,9 @@ export type ClaudeJobAction =
   | "kimi"
   | "new-subject"
   | "not-ready"
+  | "media"
+  | "show-text"
+  | "refused"
   | "mac-down"
   | "status";
 
@@ -63,14 +68,45 @@ export function claudeJobAction(
   text: string,
   macOnline: boolean,
 ): ClaudeJobAction {
+  if (state === "awaiting-media") return "media";
   if (!text.trim() || text.trim().startsWith("/")) return "status";
   // Accepté même Mac allumé : le battement ne dit pas si la session répond encore.
   if (asksKimi(text)) return "kimi";
   if (state === "kimi-offer") return "new-subject";
   if (state === "ready" && isApproval(text)) return "publish";
+  if (state === "ready" && /^texte[\s.!]*$/i.test(text.trim())) return "show-text";
+  if (state === "ready" && /^pas ok[\s.!]*$/i.test(text.trim())) return "refused";
   if (isApproval(text)) return "not-ready";
   if (!macOnline) return "mac-down";
   return state === "ready" ? "retouch" : "complement";
+}
+
+/** Prochaine pièce à demander à l'éditeur, ou null si l'enquête peut partir. */
+export function missingEnqueteMedia(job: ClaudeJob): "creative" | "cover" | "alt" | null {
+  if (job.dossierId) return null;
+  if (!job.fileId) return "creative";
+  if (!job.coverFileId) return "cover";
+  return job.coverAlt ? null : "alt";
+}
+
+/** Telegram refuse les messages de plus de 4 096 caractères : on coupe entre les paragraphes. */
+export function telegramChunks(text: string, max = 3900): string[] {
+  const parts: string[] = [];
+  let current = "";
+  for (const paragraph of text.split(/\n{2,}/)) {
+    for (let i = 0; i < paragraph.length; i += max) {
+      const piece = paragraph.slice(i, i + max);
+      const joined = current ? `${current}\n\n${piece}` : piece;
+      if (joined.length > max) {
+        parts.push(current);
+        current = piece;
+      } else {
+        current = joined;
+      }
+    }
+  }
+  if (current) parts.push(current);
+  return parts;
 }
 
 export function isHeartbeatFresh(value: string | undefined, now = Date.now()): boolean {
@@ -99,7 +135,6 @@ export function newArticleMessage(job: ClaudeJob, categoryLabel: string): string
 export function newInvestigationMessage(job: ClaudeJob): string {
   return [
     `[REMPART enquête ${job.id}]`,
-    `Titre de la créative : ${job.headline || "aucun"}`,
     job.dossierId
       ? `Réécriture intégrale du dossier ${job.dossierId}, même lien, sans Facebook.`
       : "Nouvelle enquête, réservée à Rempart+.",
@@ -167,8 +202,6 @@ export function newClaudeJob(input: {
   subject: string;
   category: string | null;
   kind?: "enquete";
-  fileId?: string;
-  imageMime?: string;
   dossierId?: string;
 }): ClaudeJob {
   return { ...input, id: randomUUID().slice(0, 8) };

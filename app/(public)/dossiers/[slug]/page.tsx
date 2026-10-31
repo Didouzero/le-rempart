@@ -9,6 +9,7 @@ import { PremiumBanner } from "@/components/PremiumBanner";
 import { PublishedAt } from "@/components/PublishedAt";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
+import { getDossierCoverAlt } from "@/lib/investigation-draft";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import {
@@ -28,6 +29,7 @@ type Props = { params: Promise<{ slug: string }> };
 export const dynamic = "force-dynamic";
 
 type DossierRow = {
+  id: string;
   title: string;
   excerpt: string;
   content: string;
@@ -42,6 +44,7 @@ async function findPublishedDossier(slug: string): Promise<DossierRow | null> {
     prisma.specialDossier.findFirst({
       where: { slug, publishedAt: { not: null } },
       select: {
+        id: true,
         title: true,
         excerpt: true,
         content: true,
@@ -112,6 +115,7 @@ export default async function DossierPage({ params }: Props) {
 
   if (!dossier) notFound();
 
+  const coverAlt = await getDossierCoverAlt(dossier.id).catch(() => null);
   const locked = dossier.membersOnly && !plus;
   const body = locked ? teaserMarkdown(dossier.content) : dossier.content;
 
@@ -195,7 +199,7 @@ export default async function DossierPage({ params }: Props) {
           <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
             <CoverImg
               url={dossier.coverImageUrl}
-              alt={dossier.title}
+              alt={coverAlt || dossier.title}
               sizes="(min-width: 800px) 48rem, 100vw"
               priority
               className="h-full w-full object-cover"

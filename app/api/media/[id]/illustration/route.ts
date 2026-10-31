@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { ILLUSTRATION_WIDTHS } from "@/lib/cover-image";
+import { getDossierCover } from "@/lib/investigation-draft";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
 type Params = { params: Promise<{ id: string }> };
@@ -49,11 +50,13 @@ export async function GET(request: Request, { params }: Params) {
       }),
     );
 
-    if (!article?.illustrationData) {
+    // Sans article à cet identifiant, c'est peut-être l'illustration d'une enquête.
+    const dossier = article?.illustrationData ? null : await withDbTimeout(getDossierCover(id));
+    if (!article?.illustrationData && !dossier) {
       return new NextResponse("Not found", { status: 404 });
     }
 
-    const buffer = Buffer.from(article.illustrationData);
+    const buffer = dossier?.buffer ?? Buffer.from(article!.illustrationData!);
 
     if (resize) {
       try {
@@ -70,10 +73,10 @@ export async function GET(request: Request, { params }: Params) {
       }
     }
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
-        "Content-Type": sniffMime(buffer, article.illustrationMime),
+        "Content-Type": sniffMime(buffer, dossier?.mime ?? article?.illustrationMime ?? null),
         "Cache-Control": CACHE_CONTROL,
       },
     });

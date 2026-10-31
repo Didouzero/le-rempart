@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 const KEY = "investigation:draft";
 export const INVESTIGATION_DRAFT_TTL_MS = 3 * 60 * 60 * 1000;
 
-export type InvestigationStep = "awaiting_creative" | "awaiting_prompt";
+export type InvestigationStep = "awaiting_prompt";
 
 export type InvestigationSession = {
   chatId: number;
@@ -23,9 +23,7 @@ function parse(raw: string | null): InvestigationSession | null {
   try {
     const v = JSON.parse(raw) as InvestigationSession;
     if (!v?.chatId) return null;
-    if (v.step !== "awaiting_creative" && v.step !== "awaiting_prompt") {
-      return null;
-    }
+    if (v.step !== "awaiting_prompt") return null;
     if (Date.now() - (v.startedAt || 0) > INVESTIGATION_DRAFT_TTL_MS) {
       return null;
     }
@@ -57,7 +55,7 @@ export async function startInvestigationSession(
 ): Promise<InvestigationSession> {
   const session: InvestigationSession = {
     chatId,
-    step: "awaiting_creative",
+    step: "awaiting_prompt",
     urls: [],
     startedAt: Date.now(),
   };
@@ -109,18 +107,43 @@ export async function getDossierBrief(
   return value.length >= 40 ? value : null;
 }
 
-export async function setInvestigationCreative(
-  chatId: number,
-  input: { fileId: string; imageMime?: string; headline?: string },
-): Promise<InvestigationSession | null> {
-  const session = await getInvestigationSession(chatId);
-  if (!session) return null;
-  session.fileId = input.fileId;
-  session.imageMime = input.imageMime;
-  session.headline = input.headline?.trim().slice(0, 280) || session.headline;
-  session.step = "awaiting_prompt";
-  await save(session);
-  return session;
+/** Illustration d'une enquête : gardée ici pour ne pas changer la table des dossiers. */
+export async function saveDossierCover(
+  dossierId: string,
+  image: { buffer: Buffer; mime: string },
+  alt: string,
+): Promise<void> {
+  const cover = JSON.stringify({ mime: image.mime, data: image.buffer.toString("base64") });
+  const coverKey = `dossier:cover:${dossierId}`;
+  const altKey = `dossier:alt:${dossierId}`;
+  await prisma.appSetting.upsert({
+    where: { key: coverKey },
+    create: { key: coverKey, value: cover },
+    update: { value: cover },
+  });
+  await prisma.appSetting.upsert({
+    where: { key: altKey },
+    create: { key: altKey, value: alt },
+    update: { value: alt },
+  });
+}
+
+export async function getDossierCover(
+  dossierId: string,
+): Promise<{ buffer: Buffer; mime: string } | null> {
+  const row = await prisma.appSetting.findUnique({
+    where: { key: `dossier:cover:${dossierId}` },
+  });
+  if (!row) return null;
+  const { mime, data } = JSON.parse(row.value) as { mime: string; data: string };
+  return { buffer: Buffer.from(data, "base64"), mime };
+}
+
+export async function getDossierCoverAlt(dossierId: string): Promise<string | null> {
+  const row = await prisma.appSetting.findUnique({
+    where: { key: `dossier:alt:${dossierId}` },
+  });
+  return row?.value || null;
 }
 
 export async function clearInvestigationSession(): Promise<void> {

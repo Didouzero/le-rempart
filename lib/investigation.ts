@@ -12,7 +12,9 @@ import {
   extractAllHttpUrls,
   extractInvestigationFocus,
   saveDossierBrief,
+  saveDossierCover,
 } from "@/lib/investigation-draft";
+import { prepareSiteIllustration } from "@/lib/illustration";
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
 import { prisma } from "@/lib/prisma";
@@ -286,20 +288,24 @@ export async function persistNewInvestigationDossier(input: {
   title: string;
   excerpt: string;
   content: string;
+  /** Illustration fournie par l'éditeur, à la place d'une recherche sur le web. */
+  cover?: { image: { buffer: Buffer; mime: string }; alt: string };
 }): Promise<{
   id: string;
   slug: string;
   title: string;
   url: string;
 }> {
-  const cover = await withTimeout(
-    resolveRelevantCoverUrl({
-      title: input.title,
-      excerpt: input.excerpt,
-    }),
-    28_000,
-    "Timeout illustration",
-  ).catch(() => null);
+  const cover = input.cover
+    ? null
+    : await withTimeout(
+        resolveRelevantCoverUrl({
+          title: input.title,
+          excerpt: input.excerpt,
+        }),
+        28_000,
+        "Timeout illustration",
+      ).catch(() => null);
 
   const slug = await uniqueDossierSlug(input.title);
   const author = await allocateNextAuthorName();
@@ -321,6 +327,13 @@ export async function persistNewInvestigationDossier(input: {
     },
   });
   await saveDossierBrief(created.id, input.prompt);
+  if (input.cover) {
+    await saveDossierCover(created.id, input.cover.image, input.cover.alt);
+    await prisma.specialDossier.update({
+      where: { id: created.id },
+      data: { coverImageUrl: absoluteUrl(`/api/media/${created.id}/illustration`) },
+    });
+  }
 
   return {
     id: created.id,
@@ -370,7 +383,8 @@ export async function publishReadyInvestigation(input: {
   prompt: string;
   dossierId?: string;
   fileId?: string;
-  imageMime?: string;
+  coverFileId?: string;
+  coverAlt?: string;
   notify: (text: string) => Promise<void>;
 }): Promise<void> {
   const { ready, prompt, notify } = input;
@@ -389,12 +403,16 @@ export async function publishReadyInvestigation(input: {
     return;
   }
 
-  let creative: { buffer: Buffer; mime: string } | undefined;
-  if (input.fileId) {
-    const image = await telegramDownloadFile(input.fileId);
-    creative = { buffer: image.buffer, mime: image.mime || input.imageMime || "image/jpeg" };
+  if (!input.fileId || !input.coverFileId || !input.coverAlt) {
+    throw new Error("Il manque la créative, l'illustration ou le texte alt.");
   }
-  const saved = await persistNewInvestigationDossier({ prompt, ...finished });
+  const creative = await telegramDownloadFile(input.fileId);
+  const image = await prepareSiteIllustration(await telegramDownloadFile(input.coverFileId));
+  const saved = await persistNewInvestigationDossier({
+    prompt,
+    ...finished,
+    cover: { image, alt: input.coverAlt },
+  });
   await notify(`Enquête publiée (Rempart+).\n${saved.title}\n${saved.url}`);
   await publishInvestigationFacebook({
     ...finished,

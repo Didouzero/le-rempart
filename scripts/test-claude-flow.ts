@@ -174,21 +174,10 @@ const SUBJECT = "Yannick Jadot quitte le plateau de CNews";
 const PROMPT = "Enquête sur les marchés publics d'une métropole, avec les délibérations de 2025 et 2026.";
 async function startEnquete() {
   await text("/enquete");
-  settings.set("investigation:draft", {
-    key: "investigation:draft",
-    value: JSON.stringify({
-      chatId: EDITOR,
-      step: "awaiting_prompt",
-      urls: [],
-      fileId: "creative",
-      imageMime: "image/png",
-      headline: "Titre de la créative",
-      startedAt: Date.now(),
-    }),
-    updatedAt: new Date(),
-  });
   await text(PROMPT);
 }
+const photo = (id: string) => say({ photo: [{ file_id: id, width: 10, height: 10 }] });
+
 const tests: [string, () => Promise<void>][] = [
   ["Mac disponible : sujet en file, brouillon gardé, rien de publié", async () => {
     macOn();
@@ -335,7 +324,6 @@ const tests: [string, () => Promise<void>][] = [
     macOn();
     await startEnquete();
     assert.equal(jobNow().kind, "enquete");
-    assert.equal(jobNow().fileId, "creative");
     assert.ok(inbox().some((k) => /\[REMPART enquête/.test(settings.get(k)!.value)));
     assert.equal(published.length, 0);
     await text("ok");
@@ -347,19 +335,52 @@ const tests: [string, () => Promise<void>][] = [
     assert.equal(jobNow().state, "writing");
     assert.equal(published.length, 0);
     await clawSubmits();
+    await text("texte");
+    assert.ok(sent.some((m) => m.startsWith("TITRE")));
+    await text("pas ok");
+    assert.equal(jobNow().state, "ready");
+    assert.equal(published.length, 0);
     await text("ok");
+    assert.equal(jobNow().state, "awaiting-media");
+    assert.match(sent.at(-1)!, /créative/);
+    await text("un mot");
+    assert.match(sent.at(-1)!, /créative/);
+    await photo("creative");
+    assert.match(sent.at(-1)!, /illustration/);
+    await text("toujours rien");
+    assert.match(sent.at(-1)!, /illustration/);
+    await photo("illustration");
+    assert.match(sent.at(-1)!, /texte alt/);
+    assert.equal(published.length, 0);
+    await text("Le conseil métropolitain en séance");
     assert.equal(published[0]!.kind, "enquete");
     assert.equal(published[0]!.input.fileId, "creative");
+    assert.equal(published[0]!.input.coverFileId, "illustration");
+    assert.equal(published[0]!.input.coverAlt, "Le conseil métropolitain en séance");
     assert.equal(jobNow(), null);
+  }],
+  ["texte alt dans la légende : publication sans question de plus", async () => {
+    draft = null;
+    macOn();
+    await startEnquete();
+    await clawSubmits();
+    await text("ok");
+    await photo("creative");
+    await say({ photo: [{ file_id: "illustration", width: 10, height: 10 }], caption: "Le conseil en séance" });
+    assert.equal(published[0]!.input.coverAlt, "Le conseil en séance");
   }],
   ["enquête en échec de publication : le texte reste à valider", async () => {
     draft = null;
     macOn();
     await startEnquete();
     await clawSubmits();
-    failNextPublish = true;
     await text("ok");
+    await photo("creative");
+    await photo("illustration");
+    failNextPublish = true;
+    await text("Le conseil en séance");
     assert.equal(jobNow().state, "ready");
+    assert.equal(jobNow().coverFileId, "illustration");
     await text("ok");
     assert.equal(published.length, 1);
   }],

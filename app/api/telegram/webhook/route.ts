@@ -7,6 +7,7 @@ import {
   complementMessage,
   isMacOnline,
   loadClaudeJob,
+  missingEnqueteMedia,
   newArticleMessage,
   newClaudeJob,
   newInvestigationMessage,
@@ -15,6 +16,7 @@ import {
   saveClaudeJob,
   sendToClaude,
   startClaudeJob,
+  telegramChunks,
   type StoredClaudeJob,
 } from "@/lib/claude-job";
 import { extractHeadlineFromCreative } from "@/lib/extract-headline";
@@ -166,10 +168,10 @@ function commandsHelpText(): string {
     "",
     "── Enquête Rempart+ (mercredi / samedi) ──",
     "/enquete — démarre une enquête",
-    "1) Envoie la créative Facebook (PNG/JPG)",
-    "2) Envoie le prompt : un message, ou un fichier .txt si c’est trop long",
-    "3) Claude enquête et rédige sur le VPS, puis t’envoie le texte ici",
-    "4) Réponds « ok » pour publier, ou dis ce qu’il faut changer",
+    "1) Transmets le sujet et tout ce qu’il faut (message ou fichier .txt)",
+    "2) Claude enquête et rédige sur le VPS, puis t’envoie son bilan et des titres",
+    "3) « ok » pour continuer, « texte » pour tout lire, ou dis ce qu’il faut changer",
+    "4) Envoie la créative, l’illustration du site et son texte alt",
     "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
     "/enquete_refaire — réécrire entièrement la dernière enquête (même lien, pas de FB)",
     "/enquete_cancel — abandonner",
@@ -253,7 +255,15 @@ const CLAUDE_JOB_STATUS = {
   writing:
     "Claude rédige. Le texte arrivera ici. « kimi » pour lui confier le sujet, /cancel pour abandonner.",
   ready:
-    "Un texte attend ta réponse : « ok » pour publier, ou dis ce qu’il faut changer. /cancel pour abandonner.",
+    "Un texte attend ta réponse : « ok » pour continuer, « texte » pour le lire en entier, ou dis ce qu’il faut changer. /cancel pour abandonner.",
+  "awaiting-media": "",
+};
+
+const ENQUETE_MEDIA_QUESTIONS = {
+  creative: "Envoie la créative Facebook (PNG/JPG), avec le titre de ton choix.\n/cancel pour abandonner.",
+  cover:
+    "Créative reçue. Envoie l’illustration de l’enquête pour le site, en FICHIER (JPG, PNG ou WebP), 1 200 px de large minimum.\nTu peux écrire le texte alt dans la légende du fichier.\n/cancel pour abandonner.",
+  alt: "Illustration reçue. Écris le texte alt de la photo : ce qu’elle montre, en une phrase.\n/cancel pour abandonner.",
 };
 
 /** Traite le message si un article est en cours. Rien ne se publie ici sans le « ok ». */
@@ -261,6 +271,7 @@ async function handleClaudeJob(
   chatId: number,
   text: string,
   stored: StoredClaudeJob,
+  image: { fileId: string | null; caption: string },
 ): Promise<void> {
   const { job } = stored;
   const online = await isMacOnline(chatId);
@@ -275,27 +286,69 @@ async function handleClaudeJob(
     return;
   }
 
-  if (enquete && action === "publish") {
-    const ready = parseReadyArticle(job.text || "");
-    if (!(await claimClaudeJob(stored))) {
-      await telegramSendMessage(
-        chatId,
-        "Le texte vient de changer : relis la dernière version avant de répondre « ok ».",
-      );
+  if (action === "show-text") {
+    for (const part of telegramChunks((job.text || "").trim())) {
+      await telegramSendMessage(chatId, part);
+    }
+    await telegramSendMessage(chatId, CLAUDE_JOB_STATUS.ready);
+    return;
+  }
+
+  if (action === "refused") {
+    await telegramSendMessage(
+      chatId,
+      "Dis-moi ce qu’il faut changer, ou /cancel pour abandonner.",
+    );
+    return;
+  }
+
+  if (enquete && (action === "publish" || action === "media")) {
+    let next = job;
+    if (action === "media") {
+      const typed = text.trim();
+      const needed = missingEnqueteMedia(job);
+      if (needed === "alt" && typed.length >= 5 && !typed.startsWith("/")) {
+        next = { ...job, coverAlt: typed };
+      } else if (needed === "creative" && image.fileId) {
+        next = { ...job, fileId: image.fileId };
+      } else if (needed === "cover" && image.fileId) {
+        next = {
+          ...job,
+          coverFileId: image.fileId,
+          coverAlt: image.caption.length >= 5 ? image.caption : job.coverAlt,
+        };
+      }
+    }
+
+    const missing = missingEnqueteMedia(next);
+    if (missing) {
+      if (!(await replaceClaudeJob(stored, { ...next, state: "awaiting-media" }))) {
+        await telegramSendMessage(chatId, "Le texte vient de changer : relis le bilan.");
+        return;
+      }
+      await telegramSendMessage(chatId, ENQUETE_MEDIA_QUESTIONS[missing]);
       return;
     }
-    await telegramSendMessage(chatId, "Validé. Je publie l’enquête.");
+
+    const ready = parseReadyArticle(job.text || "");
+    if (!(await claimClaudeJob(stored))) {
+      await telegramSendMessage(chatId, "Le texte vient de changer : relis le bilan.");
+      return;
+    }
+    await telegramSendMessage(chatId, "C’est parti, je publie l’enquête.");
     try {
       await publishReadyInvestigation({
         ready,
         prompt: job.subject,
-        dossierId: job.dossierId,
-        fileId: job.fileId,
-        imageMime: job.imageMime,
+        dossierId: next.dossierId,
+        fileId: next.fileId,
+        coverFileId: next.coverFileId,
+        coverAlt: next.coverAlt,
         notify: telegramNotifier(chatId),
       });
     } catch (err) {
-      await saveClaudeJob(job);
+      // Pièces gardées : un nouveau « ok » relance la publication sans tout redemander.
+      await saveClaudeJob({ ...next, state: "ready" });
       throw err;
     }
     return;
@@ -694,20 +747,13 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         if (!session) {
           await telegramSendMessage(
             chatId,
-            "Aucune enquête en cours. Envoie /enquete, puis la créative, puis le prompt.",
-          );
-          return;
-        }
-        if (session.step === "awaiting_creative") {
-          await telegramSendMessage(
-            chatId,
-            "J’attends d’abord la créative Facebook (PNG/JPG).",
+            "Aucune enquête en cours. Envoie /enquete, puis le sujet.",
           );
           return;
         }
         await telegramSendMessage(
           chatId,
-          "Pas besoin de /enquete_ok. Envoie le prompt : un message, ou un fichier .txt.",
+          "Pas besoin de /enquete_ok. Envoie le sujet : un message, ou un fichier .txt.",
         );
         return;
       }
@@ -744,9 +790,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       await telegramSendMessage(
         chatId,
         [
-          "Enquête : envoie maintenant la créative Facebook (PNG/JPG), comme d’habitude.",
+          "Enquête : transmets-moi le sujet et tout ce qu’il faut : les faits, les noms, les liens, l’angle, ou le dossier de recherche.",
           "",
-          "Ensuite je te demanderai un prompt complet (message, ou fichier .txt si trop long).",
+          "Un message, ou un fichier .txt si c’est trop long. Claude enquête ensuite du début à la fin, puis t’envoie son bilan.",
           "/enquete_cancel pour abandonner.",
         ].join("\n"),
       );
@@ -777,55 +823,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       const {
         clearInvestigationSession,
         getInvestigationSession,
-        setInvestigationCreative,
       } = await import("@/lib/investigation-draft");
       const inv = await getInvestigationSession(chatId);
       if (inv) {
-        if (fileId && !inv.replaceDossierId) {
-          await telegramSendMessage(chatId, "Créative reçue. Lecture du titre…");
-          const image = await telegramDownloadFile(fileId);
-          let headline = manualCaption;
-          if (!headline) {
-            try {
-              headline = await extractHeadlineFromCreative(image);
-              await telegramSendMessage(chatId, `Titre détecté : ${headline}`);
-            } catch (err) {
-              console.error("investigation headline", err);
-              headline = "Enquête Le Rempart";
-              await telegramSendMessage(
-                chatId,
-                isKimiQuotaError(err)
-                  ? KIMI_QUOTA_USER_MESSAGE
-                  : "Titre illisible sur la créative — on continue. Envoie le prompt.",
-              );
-            }
-          }
-          await setInvestigationCreative(chatId, {
-            fileId,
-            imageMime: image.mime,
-            headline,
-          });
-          await telegramSendMessage(
-            chatId,
-            [
-              "Tape un prompt complet sur ton enquête.",
-              "Donne-moi les infos que tu as en amont, les liens éventuels, donne-moi des directives pour que je cherche, un angle d’attaque du dossier, etc.",
-              "",
-              "Un seul message, ou un fichier .txt si c’est trop long pour Telegram.",
-              "/enquete_cancel pour abandonner.",
-            ].join("\n"),
-          );
-          return;
-        }
-
-        if (inv.step === "awaiting_creative") {
-          await telegramSendMessage(
-            chatId,
-            "J’attends d’abord la créative Facebook (PNG/JPG).\n/enquete_cancel pour abandonner.",
-          );
-          return;
-        }
-
         if (inv.step === "awaiting_prompt") {
           let prompt = "";
           const doc = message.document;
@@ -857,14 +857,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
             if (prompt.length < 40) {
               await telegramSendMessage(
                 chatId,
-                "Prompt trop court. Un message, ou un .txt, avec infos, liens éventuels, angle et directives de recherche.",
-              );
-              return;
-            }
-            if (!inv.fileId && !inv.replaceDossierId) {
-              await telegramSendMessage(
-                chatId,
-                "Il me manque la créative. Renvoie une image PNG/JPG, puis le prompt.",
+                "Sujet trop court. Un message, ou un .txt, avec les faits, les noms, les liens et l’angle.",
               );
               return;
             }
@@ -889,15 +882,13 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               subject: prompt,
               category: null,
               kind: "enquete",
-              fileId: inv.fileId,
-              imageMime: inv.imageMime,
               dossierId: inv.replaceDossierId,
             });
             await startClaudeJob(job, newInvestigationMessage(job));
             await clearInvestigationSession();
             await telegramSendMessage(
               chatId,
-              "Prompt reçu. Claude enquête et rédige sur le VPS, cela peut prendre longtemps. Le texte arrivera ici : rien n’est publié sans ton « ok ».\n\n/cancel pour abandonner.",
+              "Sujet reçu. Claude enquête et rédige sur le VPS, du début à la fin, cela peut prendre longtemps. Son bilan arrivera ici : rien n’est publié sans ton « ok ».\n\n/cancel pour abandonner.",
             );
             return;
           }
@@ -905,7 +896,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
         await telegramSendMessage(
           chatId,
-          "J’attends le prompt de l’enquête : un message, ou un fichier .txt si c’est trop long.\n/enquete_cancel pour abandonner.",
+          "J’attends le sujet de l’enquête : un message, ou un fichier .txt si c’est trop long.\n/enquete_cancel pour abandonner.",
         );
         return;
       }
@@ -918,7 +909,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       (looksLikeReadyArticle(text) ||
         (message.document && isTelegramPromptDocument(message.document)));
     if (claudeJob && !readyDrop) {
-      await handleClaudeJob(chatId, text, claudeJob);
+      await handleClaudeJob(chatId, text, claudeJob, { fileId, caption: manualCaption });
       return;
     }
 
