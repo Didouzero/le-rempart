@@ -17,6 +17,7 @@ import {
   finishFlash,
   wrongWeekdays,
 } from "@/lib/brief-writer";
+import { ARTICLE_LENGTH } from "@/lib/writing/constraints";
 
 export type ReadyArticle = {
   title: string;
@@ -47,6 +48,19 @@ export function parseReadyArticle(text: string): ReadyArticle {
     flash: m[4]!.trim(),
     content: m[5]!.trim(),
   };
+}
+
+/** Enquête : mêmes contrôles qu'un article, avec la longueur d'un dossier payant. */
+export function finishReadyInvestigation(ready: ReadyArticle) {
+  const done = finishReadyArticle(ready);
+  const words = done.finished.content.split(/\s+/).filter(Boolean).length;
+  const issues = [...done.issues];
+  if (words < ARTICLE_LENGTH.investigationMinWords) {
+    issues.push(
+      `l'enquête fait ${words} mots, il en faut au moins ${ARTICLE_LENGTH.investigationMinWords}`,
+    );
+  }
+  return { ...done, issues };
 }
 
 /** Mise en forme finale et contrôles, communs à la publication et au canal Claude. */

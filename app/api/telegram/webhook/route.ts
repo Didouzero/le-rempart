@@ -9,6 +9,7 @@ import {
   loadClaudeJob,
   newArticleMessage,
   newClaudeJob,
+  newInvestigationMessage,
   replaceClaudeJob,
   retouchMessage,
   saveClaudeJob,
@@ -33,6 +34,7 @@ import {
   isKimiQuotaError,
   KIMI_QUOTA_USER_MESSAGE,
 } from "@/lib/moonshot";
+import { publishReadyInvestigation } from "@/lib/investigation";
 import { prisma } from "@/lib/prisma";
 import {
   deletePublishDraft,
@@ -72,7 +74,10 @@ export const maxDuration = 800;
 
 /** Normalise `/veille_on@MonBot` → `/veille_on`. */
 function normalizeCommand(text: string): string {
-  const raw = text.trim().split(/\s+/)[0] || "";
+  const words = text.trim().split(/\s+/);
+  const raw = words[0] || "";
+  // Sans barre, seul un mot isolé est une commande : « Enquête sur… » est un prompt.
+  if (!raw.startsWith("/") && words.length > 1) return "";
   const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
   return withSlash
     .toLowerCase()
@@ -163,9 +168,10 @@ function commandsHelpText(): string {
     "/enquete — démarre une enquête",
     "1) Envoie la créative Facebook (PNG/JPG)",
     "2) Envoie le prompt : un message, ou un fichier .txt si c’est trop long",
+    "3) Claude enquête et rédige sur le VPS, puis t’envoie le texte ici",
+    "4) Réponds « ok » pour publier, ou dis ce qu’il faut changer",
     "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
     "/enquete_refaire — réécrire entièrement la dernière enquête (même lien, pas de FB)",
-    "/enquete_reprendre — reprendre une enquête coincée (garde les sources déjà lues)",
     "/enquete_cancel — abandonner",
     "",
     "Veille auto : 1×/jour vers 8h (heure FR) — plan Vercel Hobby.",
@@ -259,9 +265,45 @@ async function handleClaudeJob(
   const { job } = stored;
   const online = await isMacOnline(chatId);
   const action = claudeJobAction(job.state, text, online);
-  const draft = await getActivePublishDraft(chatId);
+  const enquete = job.kind === "enquete";
 
-  if (!draft) {
+  if (enquete && action === "kimi") {
+    await telegramSendMessage(
+      chatId,
+      "Les enquêtes ne passent plus par Kimi. /cancel pour abandonner celle-ci.",
+    );
+    return;
+  }
+
+  if (enquete && action === "publish") {
+    const ready = parseReadyArticle(job.text || "");
+    if (!(await claimClaudeJob(stored))) {
+      await telegramSendMessage(
+        chatId,
+        "Le texte vient de changer : relis la dernière version avant de répondre « ok ».",
+      );
+      return;
+    }
+    await telegramSendMessage(chatId, "Validé. Je publie l’enquête.");
+    try {
+      await publishReadyInvestigation({
+        ready,
+        prompt: job.subject,
+        dossierId: job.dossierId,
+        fileId: job.fileId,
+        imageMime: job.imageMime,
+        notify: telegramNotifier(chatId),
+      });
+    } catch (err) {
+      await saveClaudeJob(job);
+      throw err;
+    }
+    return;
+  }
+
+  const draft = enquete ? null : await getActivePublishDraft(chatId);
+
+  if (!enquete && !draft) {
     await abandonClaudeJob(stored);
     await telegramSendMessage(
       chatId,
@@ -270,7 +312,7 @@ async function handleClaudeJob(
     return;
   }
 
-  if (action === "publish") {
+  if (action === "publish" && draft) {
     const ready = parseReadyArticle(job.text || "");
     if (!(await claimClaudeJob(stored))) {
       await telegramSendMessage(
@@ -291,13 +333,13 @@ async function handleClaudeJob(
     return;
   }
 
-  if (action === "kimi") {
+  if (action === "kimi" && draft) {
     await abandonClaudeJob(stored);
     await publishWithKimi(chatId, draft, job.subject);
     return;
   }
 
-  if (action === "new-subject") {
+  if (action === "new-subject" && draft) {
     if (text.trim().length < 10) {
       await telegramSendMessage(chatId, CLAUDE_JOB_STATUS["kimi-offer"]);
       return;
@@ -331,13 +373,17 @@ async function handleClaudeJob(
       await saveClaudeJob({ ...job, state: "ready" });
       await telegramSendMessage(
         chatId,
-        "Le Mac n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, « kimi » fait tout réécrire et publier sans relecture, /cancel abandonne.",
+        enquete
+          ? "Le VPS n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, /cancel abandonne."
+          : "Le Mac n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, « kimi » fait tout réécrire et publier sans relecture, /cancel abandonne.",
       );
       return;
     }
     await telegramSendMessage(
       chatId,
-      "Le Mac n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est rallumé, ou réponds « kimi » pour que Kimi rédige et publie sans relecture. /cancel pour abandonner.",
+      enquete
+        ? "Le VPS n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est revenu. /cancel pour abandonner."
+        : "Le Mac n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est rallumé, ou réponds « kimi » pour que Kimi rédige et publie sans relecture. /cancel pour abandonner.",
     );
     return;
   }
@@ -346,7 +392,9 @@ async function handleClaudeJob(
     chatId,
     action === "not-ready"
       ? "Claude n’a pas encore envoyé de texte à valider : rien n’est publié."
-      : CLAUDE_JOB_STATUS[job.state],
+      : enquete && job.state === "writing"
+        ? "Claude enquête. Le texte arrivera ici. /cancel pour abandonner."
+        : CLAUDE_JOB_STATUS[job.state],
   );
 }
 
@@ -475,7 +523,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       const deleted = await deletePublishDraft(chatId);
       await telegramSendMessage(
         chatId,
-        deleted
+        deleted || claudeJob
           ? "Brouillon annulé. Renvoie une créative quand tu veux."
           : "Aucun brouillon en attente.",
       );
@@ -619,9 +667,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       cmd === "/enquete_cancel" ||
       cmd === "/enquete_annuler" ||
       cmd === "/enquete_refaire" ||
-      cmd === "/enquete_redo" ||
-      cmd === "/enquete_reprendre" ||
-      cmd === "/enquete_resume"
+      cmd === "/enquete_redo"
     ) {
       if (!isTelegramUserAllowed(userId)) {
         await telegramSendMessage(
@@ -663,32 +709,6 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           chatId,
           "Pas besoin de /enquete_ok. Envoie le prompt : un message, ou un fichier .txt.",
         );
-        return;
-      }
-
-      if (cmd === "/enquete_reprendre" || cmd === "/enquete_resume") {
-        const {
-          continueInvestigationJobInProcess,
-          findActiveInvestigationJobForChat,
-          kickInvestigationJob,
-          scheduleInvestigationContinuation,
-        } = await import("@/lib/investigation-job");
-        const job = await findActiveInvestigationJobForChat(chatId);
-        if (!job) {
-          await telegramSendMessage(
-            chatId,
-            "Aucune enquête en cours à reprendre. Si tu relances /enquete_refaire, tu perds les sources déjà lues.",
-          );
-          return;
-        }
-        await telegramSendMessage(
-          chatId,
-          `Reprise du checkpoint (${job.checkpoint.sources.length} sources déjà lues, ${Math.round((Date.now() - job.startedAt) / 60000)} min).`,
-        );
-        scheduleInvestigationContinuation(
-          kickInvestigationJob(job.id, "watchdog"),
-        );
-        await continueInvestigationJobInProcess(job.id, Date.now() + 240_000);
         return;
       }
 
@@ -848,55 +868,37 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
               );
               return;
             }
+            if (!(await isMacOnline(chatId))) {
+              await telegramSendMessage(
+                chatId,
+                "Le VPS n’est pas disponible : Claude ne peut pas enquêter pour l’instant. Ton enquête reste en attente, renvoie le prompt quand il est revenu.\n/enquete_cancel pour abandonner.",
+              );
+              return;
+            }
+            if (await loadClaudeJob(chatId)) {
+              await telegramSendMessage(
+                chatId,
+                "Claude travaille déjà sur un autre texte. Renvoie ce prompt une fois celui-ci terminé, ou /cancel pour l’abandonner.",
+              );
+              return;
+            }
+            const job = newClaudeJob({
+              chatId,
+              state: "writing",
+              headline: inv.headline || "",
+              subject: prompt,
+              category: null,
+              kind: "enquete",
+              fileId: inv.fileId,
+              imageMime: inv.imageMime,
+              dossierId: inv.replaceDossierId,
+            });
+            await startClaudeJob(job, newInvestigationMessage(job));
+            await clearInvestigationSession();
             await telegramSendMessage(
               chatId,
-              inv.replaceDossierId
-                ? "Prompt reçu. Réécriture intégrale (même lien). Recherche web réelle, pas de limite de durée, pas de raccourci sur le brief."
-                : "Prompt reçu. Lancement de l’enquête. Recherche web réelle, pas de limite de durée, pas de raccourci sur le brief.",
+              "Prompt reçu. Claude enquête et rédige sur le VPS, cela peut prendre longtemps. Le texte arrivera ici : rien n’est publié sans ton « ok ».\n\n/cancel pour abandonner.",
             );
-            try {
-              const {
-                createInvestigationJob,
-                continueInvestigationJobInProcess,
-                kickInvestigationJob,
-                scheduleInvestigationContinuation,
-              } = await import("@/lib/investigation-job");
-              const job = await createInvestigationJob(
-                inv.replaceDossierId
-                  ? {
-                      kind: "rewrite",
-                      prompt,
-                      headline: inv.headline,
-                      dossierId: inv.replaceDossierId,
-                      chatId,
-                    }
-                  : {
-                      kind: "create",
-                      prompt,
-                      headline: inv.headline,
-                      fileId: inv.fileId,
-                      imageMime: inv.imageMime,
-                      chatId,
-                    },
-              );
-              await clearInvestigationSession();
-              await telegramSendMessage(
-                chatId,
-                `C’est parti. Round 1 en cours — tu dois recevoir des updates, pas le silence.`,
-              );
-              scheduleInvestigationContinuation(
-                kickInvestigationJob(job.id, "watchdog"),
-              );
-              await continueInvestigationJobInProcess(
-                job.id,
-                Date.now() + 240_000,
-              );
-            } catch (err) {
-              await telegramSendMessage(
-                chatId,
-                `❌ Enquête : ${err instanceof Error ? err.message : "échec"}`,
-              );
-            }
             return;
           }
         }

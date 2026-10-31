@@ -16,8 +16,10 @@ import {
 import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
 import { prisma } from "@/lib/prisma";
+import { finishReadyInvestigation, type ReadyArticle } from "@/lib/ready-article";
 import { absoluteUrl } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
+import { telegramDownloadFile } from "@/lib/telegram";
 import { utf8Text, utf8TextOrNull } from "@/lib/utf8";
 import { withTimeout } from "@/lib/with-timeout";
 
@@ -72,6 +74,8 @@ export async function publishInvestigationFacebook(input: {
   articleUrl: string;
   sourceText?: string;
   creative?: { buffer: Buffer; mime: string };
+  /** Flash déjà rédigé par Claude : pas de passage par Kimi. */
+  flash?: string;
   notify: (text: string) => Promise<void>;
 }): Promise<void> {
   const notify = input.notify;
@@ -89,8 +93,8 @@ export async function publishInvestigationFacebook(input: {
     "://www.le-rempart.org",
   );
 
-  await notify("Facebook : rédaction du flash…");
-  const flash = await buildFlashInfoText({
+  if (!input.flash) await notify("Facebook : rédaction du flash…");
+  const flash = input.flash || await buildFlashInfoText({
     title: input.title,
     excerpt: input.excerpt,
     sourceText: [input.sourceText, input.content].filter(Boolean).join("\n\n"),
@@ -355,6 +359,50 @@ export async function rewriteInvestigation(input: {
   });
   await notify(`Enquête réécrite (même lien).\n${saved.title}\n${saved.url}`);
   return saved;
+}
+
+/**
+ * Enquête rédigée par Claude et validée par l'éditeur : même enregistrement et même
+ * envoi Facebook que le circuit Kimi, sans recherche ni rédaction sur Vercel.
+ */
+export async function publishReadyInvestigation(input: {
+  ready: ReadyArticle;
+  prompt: string;
+  dossierId?: string;
+  fileId?: string;
+  imageMime?: string;
+  notify: (text: string) => Promise<void>;
+}): Promise<void> {
+  const { ready, prompt, notify } = input;
+  const { finished, flash, issues } = finishReadyInvestigation(ready);
+  if (issues.length) {
+    throw new Error(`Enquête à corriger : ${issues.join(" ; ")}`);
+  }
+
+  if (input.dossierId) {
+    const saved = await persistRewrittenInvestigation({
+      dossierId: input.dossierId,
+      prompt,
+      ...finished,
+    });
+    await notify(`Enquête réécrite (même lien).\n${saved.title}\n${saved.url}`);
+    return;
+  }
+
+  let creative: { buffer: Buffer; mime: string } | undefined;
+  if (input.fileId) {
+    const image = await telegramDownloadFile(input.fileId);
+    creative = { buffer: image.buffer, mime: image.mime || input.imageMime || "image/jpeg" };
+  }
+  const saved = await persistNewInvestigationDossier({ prompt, ...finished });
+  await notify(`Enquête publiée (Rempart+).\n${saved.title}\n${saved.url}`);
+  await publishInvestigationFacebook({
+    ...finished,
+    articleUrl: saved.url,
+    creative,
+    flash,
+    notify,
+  });
 }
 
 export async function publishInvestigation(input: {

@@ -26,6 +26,12 @@ export type ClaudeJob = {
   headline: string;
   subject: string;
   category: string | null;
+  /** Absent pour un article, la forme des suivis déjà en base. */
+  kind?: "enquete";
+  /** Enquête : créative Telegram pour Facebook, et dossier à remplacer si c'est une réécriture. */
+  fileId?: string;
+  imageMime?: string;
+  dossierId?: string;
   /** Dernier texte soumis par Claude : c'est lui que publie le « ok ». */
   text?: string;
   /** Fichier sur le Mac, repris pour les retouches. */
@@ -90,6 +96,20 @@ export function newArticleMessage(job: ClaudeJob, categoryLabel: string): string
   ].join("\n");
 }
 
+export function newInvestigationMessage(job: ClaudeJob): string {
+  return [
+    `[REMPART enquête ${job.id}]`,
+    `Titre de la créative : ${job.headline || "aucun"}`,
+    job.dossierId
+      ? `Réécriture intégrale du dossier ${job.dossierId}, même lien, sans Facebook.`
+      : "Nouvelle enquête, réservée à Rempart+.",
+    "Consigne de l'éditeur :",
+    job.subject,
+    "",
+    "Applique la méthode rediger-enquete.",
+  ].join("\n");
+}
+
 export function retouchMessage(job: ClaudeJob, request: string): string {
   return [
     `[REMPART retouche ${job.id}]`,
@@ -98,7 +118,9 @@ export function retouchMessage(job: ClaudeJob, request: string): string {
     "Demande de l'éditeur :",
     request,
     "",
-    "Applique le mode Telegram de la méthode rediger-article.",
+    job.kind === "enquete"
+      ? "Applique la méthode rediger-enquete."
+      : "Applique le mode Telegram de la méthode rediger-article.",
   ].join("\n");
 }
 
@@ -144,6 +166,10 @@ export function newClaudeJob(input: {
   headline: string;
   subject: string;
   category: string | null;
+  kind?: "enquete";
+  fileId?: string;
+  imageMime?: string;
+  dossierId?: string;
 }): ClaudeJob {
   return { ...input, id: randomUUID().slice(0, 8) };
 }

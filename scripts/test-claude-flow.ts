@@ -40,7 +40,10 @@ const appSetting = {
   },
 };
 const fakePrisma = {
-  appSetting,
+  appSetting: {
+    ...appSetting,
+    delete: async ({ where }: { where: { key: string } }) => settings.delete(where.key),
+  },
   $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   telegramUpdateLog: { create: async () => {} },
   publishDraft: {
@@ -59,9 +62,9 @@ const fakePrisma = {
 };
 (globalThis as unknown as { prisma: unknown }).prisma = fakePrisma;
 
-const published: { kind: "ready" | "kimi"; input: Record<string, unknown> }[] = [];
+const published: { kind: "ready" | "kimi" | "enquete"; input: Record<string, unknown> }[] = [];
 let failNextPublish = false;
-async function fakePublish(kind: "ready" | "kimi", input: Record<string, unknown>) {
+async function fakePublish(kind: "ready" | "kimi" | "enquete", input: Record<string, unknown>) {
   if (failNextPublish) {
     failNextPublish = false;
     throw new Error("échec simulé");
@@ -79,6 +82,9 @@ const load = (Module as unknown as { _load: (r: string, ...a: unknown[]) => unkn
       publishBriefPipeline: (i: Record<string, unknown>) => fakePublish("kimi", i),
       telegramNotifier: () => async () => {},
     };
+  }
+  if (request.endsWith("lib/investigation")) {
+    return { publishReadyInvestigation: (i: Record<string, unknown>) => fakePublish("enquete", i) };
   }
   if (request === "next/server") {
     const real = load(request, ...rest) as object;
@@ -165,6 +171,24 @@ async function say(body: Record<string, unknown>, chat = EDITOR) {
 const text = (t: string, chat?: number) => say({ text: t }, chat);
 
 const SUBJECT = "Yannick Jadot quitte le plateau de CNews";
+const PROMPT = "Enquête sur les marchés publics d'une métropole, avec les délibérations de 2025 et 2026.";
+async function startEnquete() {
+  await text("/enquete");
+  settings.set("investigation:draft", {
+    key: "investigation:draft",
+    value: JSON.stringify({
+      chatId: EDITOR,
+      step: "awaiting_prompt",
+      urls: [],
+      fileId: "creative",
+      imageMime: "image/png",
+      headline: "Titre de la créative",
+      startedAt: Date.now(),
+    }),
+    updatedAt: new Date(),
+  });
+  await text(PROMPT);
+}
 const tests: [string, () => Promise<void>][] = [
   ["Mac disponible : sujet en file, brouillon gardé, rien de publié", async () => {
     macOn();
@@ -305,6 +329,58 @@ const tests: [string, () => Promise<void>][] = [
     await say({ document: { file_id: "t", file_name: "a.txt", mime_type: "text/plain", file_size: 100 } });
     assert.equal(published[1]!.kind, "ready");
     assert.equal(jobNow(), null);
+  }],
+  ["enquête : part chez Claude, rien de lancé chez Kimi, publiée au « ok » seulement", async () => {
+    draft = null;
+    macOn();
+    await startEnquete();
+    assert.equal(jobNow().kind, "enquete");
+    assert.equal(jobNow().fileId, "creative");
+    assert.ok(inbox().some((k) => /\[REMPART enquête/.test(settings.get(k)!.value)));
+    assert.equal(published.length, 0);
+    await text("ok");
+    await text("kimi");
+    assert.equal(published.length, 0);
+    assert.equal(jobNow().state, "writing");
+    await clawSubmits();
+    await text("change l'intertitre");
+    assert.equal(jobNow().state, "writing");
+    assert.equal(published.length, 0);
+    await clawSubmits();
+    await text("ok");
+    assert.equal(published[0]!.kind, "enquete");
+    assert.equal(published[0]!.input.fileId, "creative");
+    assert.equal(jobNow(), null);
+  }],
+  ["enquête en échec de publication : le texte reste à valider", async () => {
+    draft = null;
+    macOn();
+    await startEnquete();
+    await clawSubmits();
+    failNextPublish = true;
+    await text("ok");
+    assert.equal(jobNow().state, "ready");
+    await text("ok");
+    assert.equal(published.length, 1);
+  }],
+  ["enquête VPS éteint : refusée sans Kimi, renvoyable au retour", async () => {
+    draft = null;
+    macOff();
+    await startEnquete();
+    assert.equal(jobNow(), null);
+    assert.equal(published.length, 0);
+    assert.match(sent.at(-1)!, /VPS n’est pas disponible/);
+    macOn();
+    await text(PROMPT);
+    assert.equal(jobNow().kind, "enquete");
+  }],
+  ["enquête annulée : Claude prévenu", async () => {
+    draft = null;
+    macOn();
+    await startEnquete();
+    await text("/cancel");
+    assert.equal(jobNow(), null);
+    assert.ok(inbox().some((k) => /abandon/.test(settings.get(k)!.value)));
   }],
   ["un autre compte autorisé reste sur Kimi", async () => {
     macOn();

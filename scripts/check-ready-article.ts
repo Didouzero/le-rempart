@@ -3,12 +3,17 @@
  * Appelé par le canal Claude (tools/claude-channel) avant d'envoyer le texte à l'éditeur.
  */
 
-import { finishReadyArticle, parseReadyArticle } from "@/lib/ready-article";
+import {
+  finishReadyArticle,
+  finishReadyInvestigation,
+  parseReadyArticle,
+} from "@/lib/ready-article";
 
 async function main() {
   let text = "";
   for await (const part of process.stdin) text += part;
-  const { issues } = finishReadyArticle(parseReadyArticle(text));
+  const finish = process.argv[2] === "enquete" ? finishReadyInvestigation : finishReadyArticle;
+  const { issues } = finish(parseReadyArticle(text));
   if (issues.length) throw new Error(`Texte à corriger : ${issues.join(" ; ")}`);
 }
 
