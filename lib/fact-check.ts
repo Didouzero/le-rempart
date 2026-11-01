@@ -56,6 +56,7 @@ SIGNALE
 - Toute affirmation absolue non sourcée (« jamais », « toujours », « aucun »), et toute absence présentée comme un fait (« n'a pas réagi ») sans source qui l'établisse.
 - Toute citation qui ne figure pas dans les sources, ou présentée comme certaine alors que les sources en donnent des versions différentes.
 - Toute absence affirmée alors que les sources disent seulement n'avoir rien trouvé (« n'a pas réagi » pour « aucune réaction trouvée »).
+- Toute remarque sur ce que la rédaction n'a pas vu, lu ou trouvé (« que nous n'avons pas pu voir », « nous n'avons pas trouvé de réaction ») : la phrase doit sortir du texte, sans être remplacée par une autre remarque du même genre.
 - Toute personne mise en cause dont la défense, connue des sources, manque au chapô.
 - Toute phrase qui préjuge d'une décision de justice.
 

@@ -496,6 +496,15 @@ async function main() {
   assert.ok(withVideo.endsWith("un lien et video"), withVideo);
   assert.deepEqual(finishReadyFlash("FLASH :\nUn flash d'essai.").issues, []);
   assert.throws(() => finishReadyFlash("Sans repère"), /Flash incomplet/);
+  const { newsroomGaps } = await import("@/lib/brief-writer");
+  for (const t of [
+    "Boulevard Voltaire a décrit une vidéo TikTok, que nous n'avons pas pu voir, sur le slogan.",
+    "Nous n’avons pas trouvé de réaction du député à ce stade.",
+    "Aucune réaction de sa part à ce stade.",
+    "On ignore si le maire était présent.",
+  ]) assert.equal(newsroomGaps(t).length, 1, t);
+  assert.deepEqual(newsroomGaps("Le ministre a répondu : « Nous n'avons pas pu agir. »"), []);
+  assert.deepEqual(newsroomGaps("Aucun compte n'a été publié depuis 2013, et le député n'a pas réagi."), []);
   assert.equal(claudeJobAction("ready", "/foo", true), "status");
   assert.equal(claudeJobAction("writing", "", true), "status");
   assert.equal(claudeJobAction("ready", "Kimi.", true), "kimi");

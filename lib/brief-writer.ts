@@ -72,6 +72,25 @@ const WORN_PHRASES = [
   "ce n'est pas la première fois",
   "dans la foulée",
 ];
+/**
+ * Remarques sur ce que la rédaction n'a pas vu, lu ou trouvé : hors sujet pour le lecteur.
+ * Testées hors citations, car une personne citée peut dire « nous n'avons pas pu ».
+ */
+const NEWSROOM_GAPS = [
+  /\bnous n'avons (?:pas|ni|rien|aucun|aucune|jamais)\b/,
+  /\bje n'ai (?:pas|rien|aucun|aucune)\b/,
+  /\bnous (?:ignorons|ne savons pas|ne disposons|n'avons trouvé|n'en savons)\b/,
+  /(?:à notre connaissance|à ma connaissance|sauf erreur)\b/,
+  /\ble rempart n'a (?:pas|rien|aucun|aucune)\b/,
+  /\bnotre rédaction n'a\b/,
+  /\bn'a pas pu être (?:vue?|lue?|vérifiée?|consultée?|visionnée?|confirmée?)/,
+  /\bimpossible de (?:dire|savoir|vérifier|confirmer|voir)\b/,
+  /\bon ignore\b/,
+  /\brien ne (?:permet|confirme|prouve|dit|indique)\b/,
+  /\baucun élément n'(?:indique|établit|permet|confirme)\b/,
+  /\baucune? (?:réaction|réponse|commentaire|déclaration)\b.{0,50}à ce stade/,
+  /\bpas (?:encore )?(?:réagi|répondu)\b.{0,30}à ce stade/,
+];
 /** La consigne dit 60 mots : la marge laisse passer une longue citation. */
 const PARAGRAPH_MAX_WORDS = 80;
 
@@ -95,7 +114,7 @@ const EDITORIAL_LINE = `LIGNE ÉDITORIALE
 - Les consignes de l'éditeur fixent le sujet et l'angle. Les faits, eux, viennent uniquement des consignes, de la créative et de tes recherches : ne jamais inventer de fait, de chiffre, de citation, de nom ou de date. Si une information n'est pas confirmée par tes recherches, attribue-la ("selon …", "d'après les premiers éléments"). Si tes recherches contredisent un détail des consignes (une peine, un chiffre, une date), c'est la version des sources qui fait foi.
 - Pas d'accusation nominative non étayée, pas d'insulte ni d'appel à la haine ou à la violence.
 - Une personne mise en cause a droit à sa version : si elle s'est défendue ou a nuancé ses propos, cela figure dès le début du texte. Une plainte annoncée, une enquête ou une accusation restent présentées comme telles.
-- N'écris jamais qu'une chose n'a pas eu lieu parce que tu ne l'as pas trouvée. « Sofia Tizaoui ne s'est pas exprimée » devient « nous n'avons pas trouvé de réaction de sa part à ce stade ».
+- N'écris jamais qu'une chose n'a pas eu lieu parce que tu ne l'as pas trouvée. Ce que tu n'as pas trouvé, vu ou lu ne figure simplement pas dans le texte : le lecteur n'a pas à connaître tes recherches ni leurs limites. Jamais de « nous n'avons pas pu voir », « nous n'avons pas trouvé de réaction », « à ce stade, aucune réaction », « on ignore si » ni tournure voisine. « Boulevard Voltaire a décrit une vidéo que nous n'avons pas pu voir » devient « Boulevard Voltaire a décrit une vidéo ». Une absence ne s'écrit que si une source l'établit elle-même comme un fait.
 - Si les sources divergent sur une citation, ne la présente pas comme certaine : attribue-la au média qui la rapporte, ou garde seulement ce sur quoi elles s'accordent.
 - Reste dans le périmètre du sujet. Ne rattache pas une affaire à un autre fait divers ou à un groupe de population sans lien factuel direct, établi par tes sources. La nationalité, l'origine ou le statut d'une personne se mentionne quand il fait partie du fait rapporté.
 - Pas de généralisation (« dans certains quartiers », « dans certaines bouches ») ni d'affirmation absolue invérifiable (« jamais », « toujours », « aucun ») sans source précise.
@@ -868,7 +887,7 @@ function splitFlash(raw: string): { body: string; outlets: string[] } {
 }
 
 function flashIssues(body: string): string[] {
-  const issues = wrongWeekdays(body);
+  const issues = [...wrongWeekdays(body), ...newsroomGaps(body)];
   const words = countWords(body);
   if (words < FLASH_MIN_WORDS || words > FLASH_MAX_WORDS) {
     issues.push(
@@ -965,8 +984,24 @@ export function wrongWeekdays(text: string, now = new Date()): string[] {
   return [...new Set(issues)];
 }
 
+/** Phrases qui parlent des recherches de la rédaction au lieu du sujet. */
+export function newsroomGaps(text: string): string[] {
+  const issues: string[] = [];
+  const speech = text.replace(/«[^»]*»/g, " ").replace(/\*\*?/g, "").replace(/’/g, "'");
+  for (const sentence of speech.split(/(?<=[.!?])\s+|\n+/)) {
+    const line = sentence.toLowerCase();
+    if (NEWSROOM_GAPS.some((gap) => gap.test(line))) {
+      issues.push(`retire cette remarque hors sujet, ce qui manque ne s'écrit pas : « ${sentence.trim()} »`);
+    }
+  }
+  return [...new Set(issues)];
+}
+
 export function articleIssues(a: { title: string; excerpt: string; content: string }) {
-  const issues = wrongWeekdays(`${a.title}\n${a.excerpt}\n${a.content}`);
+  const issues = [
+    ...wrongWeekdays(`${a.title}\n${a.excerpt}\n${a.content}`),
+    ...newsroomGaps(`${a.title}\n${a.excerpt}\n${a.content}`),
+  ];
   if (a.title.length < 15) issues.push("le titre manque ou est trop court");
   if (a.title.length > TITLE_MAX_CHARS) {
     issues.push(`le titre fait ${a.title.length} caractères, ${TITLE_MAX_CHARS} au plus`);
