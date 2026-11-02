@@ -502,6 +502,7 @@ async function main() {
     "Nous n’avons pas trouvé de réaction du député à ce stade.",
     "Aucune réaction de sa part à ce stade.",
     "On ignore si le maire était présent.",
+    "Aucun de ses éléments ne permet de conclure à un manquement.",
   ]) assert.equal(newsroomGaps(t).length, 1, t);
   assert.equal(newsroomGaps("Le candidat a écrit cela « sans plus de précision », relève Le Figaro.").length, 1);
   assert.deepEqual(newsroomGaps("L'Assemblée note Le Pen et révèle Le Parisien."), []);

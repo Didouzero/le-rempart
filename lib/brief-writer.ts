@@ -88,6 +88,7 @@ const NEWSROOM_GAPS = [
   /\bon ignore\b/,
   /\brien ne (?:permet|confirme|prouve|dit|indique)\b/,
   /\baucun élément n'(?:indique|établit|permet|confirme)\b/,
+  /\baucun (?:de ses|de ces|des) éléments ne (?:permet|indique|établit|confirme)\b/,
   /\baucune? (?:réaction|réponse|commentaire|déclaration)\b.{0,50}à ce stade/,
   /\bpas (?:encore )?(?:réagi|répondu)\b.{0,30}à ce stade/,
 ];
