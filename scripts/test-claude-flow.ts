@@ -503,6 +503,8 @@ async function main() {
     "Aucune réaction de sa part à ce stade.",
     "On ignore si le maire était présent.",
   ]) assert.equal(newsroomGaps(t).length, 1, t);
+  assert.equal(newsroomGaps("Le candidat a écrit cela « sans plus de précision », relève Le Figaro.").length, 1);
+  assert.deepEqual(newsroomGaps("L'Assemblée note Le Pen et révèle Le Parisien."), []);
   assert.deepEqual(newsroomGaps("Le ministre a répondu : « Nous n'avons pas pu agir. »"), []);
   assert.deepEqual(newsroomGaps("Aucun compte n'a été publié depuis 2013, et le député n'a pas réagi."), []);
   assert.equal(claudeJobAction("ready", "/foo", true), "status");

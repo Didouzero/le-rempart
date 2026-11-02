@@ -91,6 +91,9 @@ const NEWSROOM_GAPS = [
   /\baucune? (?:réaction|réponse|commentaire|déclaration)\b.{0,50}à ce stade/,
   /\bpas (?:encore )?(?:réagi|répondu)\b.{0,30}à ce stade/,
 ];
+/** Un média cité pour un simple constat : la consigne ne le réserve qu'à ses exclusivités. */
+const MEDIA_REMARK =
+  /\b(?:relève|relèvent|note|notent|souligne|soulignent|observe|observent|constate|constatent|remarque|remarquent|pointe|pointent|commente|commentent) (?:le figaro|le monde|libération|le parisien|l'express|le point|l'opinion|les échos|le jdd|le journal du dimanche|mediapart|marianne|valeurs actuelles|bfmtv|bfm tv|cnews|franceinfo|france info|ouest-france|boulevard voltaire|atlantico|frontières|l'afp|rmc|europe 1|tf1|lci)\b/;
 /** La consigne dit 60 mots : la marge laisse passer une longue citation. */
 const PARAGRAPH_MAX_WORDS = 80;
 
@@ -122,6 +125,7 @@ const EDITORIAL_LINE = `LIGNE ÉDITORIALE
 CITER UN MÉDIA
 - Un média n'est nommé que lorsqu'il est réellement à l'origine de l'information : exclusivité ou révélation, document qu'il a obtenu, enquête ou chiffres qu'il a produits, interview qu'il a lui-même menée, propos tenus sur son antenne ou dans ses colonnes (« au micro de RMC », « interrogés par CNEWS », « révèle Le Parisien »). Dans ce cas, reprends entre guillemets un ou deux fragments exacts de son article.
 - Tout ce qui est public s'écrit comme un fait établi, sans « rapporte X », « souligne Y », « selon Z », « indique W » : débats et votes au Parlement, déclarations publiques, communiqués, conférences de presse, audiences et décisions publiques, chiffres officiels, faits de notoriété publique et antécédents déjà connus d'une personnalité. Un ministre qui parle dans l'hémicycle n'a pas besoin d'un média pour exister.
+- Un média ne se cite jamais pour un constat que n'importe qui peut faire en lisant un message public, un tweet, un communiqué ou une vidéo. Pas de « sans plus de précision, relève Le Figaro » : fais le constat toi-même, avec tes mots, par exemple « Le candidat n'a pas justifié son choix, il a simplement annoncé le verdict ».
 - En cas de doute, demande-toi si l'information existerait sans ce média. Si oui, ne le cite pas.
 
 STYLE
@@ -992,6 +996,9 @@ export function newsroomGaps(text: string): string[] {
     const line = sentence.toLowerCase();
     if (NEWSROOM_GAPS.some((gap) => gap.test(line))) {
       issues.push(`retire cette remarque hors sujet, ce qui manque ne s'écrit pas : « ${sentence.trim()} »`);
+    }
+    if (MEDIA_REMARK.test(line)) {
+      issues.push(`fais ce constat toi-même, sans citer le média : « ${sentence.trim()} »`);
     }
   }
   return [...new Set(issues)];
