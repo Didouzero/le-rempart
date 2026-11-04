@@ -150,6 +150,8 @@ model Membership {
 /// Dossiers / enquêtes Rempart+ (contenu approfondi).
 model SpecialDossier {
   id          String    @id @default(cuid())
+  /// Numéro court de l'adresse publique : /dossiers/12.
+  publicId    Int       @unique @default(autoincrement())
   slug        String    @unique
   title       String
   excerpt     String

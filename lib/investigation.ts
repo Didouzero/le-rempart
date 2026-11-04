@@ -19,7 +19,7 @@ import { resolveRelevantCoverUrl } from "@/lib/openverse";
 import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
 import { prisma } from "@/lib/prisma";
 import { finishReadyInvestigation, type ReadyArticle } from "@/lib/ready-article";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, dossierPath } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { telegramDownloadFile } from "@/lib/telegram";
 import { utf8Text, utf8TextOrNull } from "@/lib/utf8";
@@ -279,7 +279,7 @@ export async function persistRewrittenInvestigation(input: {
   return {
     slug: existing.slug,
     title: input.title,
-    url: absoluteUrl(`/dossiers/${existing.slug}`),
+    url: absoluteUrl(dossierPath(existing.publicId)),
   };
 }
 
@@ -339,7 +339,7 @@ export async function persistNewInvestigationDossier(input: {
     id: created.id,
     slug,
     title: input.title,
-    url: absoluteUrl(`/dossiers/${slug}`),
+    url: absoluteUrl(dossierPath(created.publicId)),
   };
 }
 

@@ -32,7 +32,7 @@ export async function GET() {
           where: { publishedAt: { gte: since } },
           orderBy: { publishedAt: "desc" },
           take: 100,
-          select: { slug: true, title: true, publishedAt: true },
+          select: { publicId: true, title: true, publishedAt: true },
         }),
       ]),
     );
@@ -43,7 +43,7 @@ export async function GET() {
         publishedAt: a.publishedAt,
       })),
       ...dossiers.map((d) => ({
-        loc: `${base}${dossierPath(d.slug)}`,
+        loc: `${base}${dossierPath(d.publicId)}`,
         title: d.title,
         publishedAt: d.publishedAt,
       })),

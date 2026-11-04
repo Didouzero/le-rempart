@@ -38,6 +38,7 @@ import {
 } from "@/lib/moonshot";
 import { publishReadyInvestigation } from "@/lib/investigation";
 import { prisma } from "@/lib/prisma";
+import { absoluteUrl, dossierPath } from "@/lib/seo";
 import {
   createFacebookOnlyDraft,
   createSiteOnlyDraft,
@@ -903,7 +904,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       if (cmd === "/enquete_refaire" || cmd === "/enquete_redo") {
         const latest = await prisma.specialDossier.findFirst({
           orderBy: { updatedAt: "desc" },
-          select: { id: true, title: true, slug: true },
+          select: { id: true, title: true, publicId: true },
         });
         if (!latest) {
           await telegramSendMessage(
@@ -918,7 +919,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           [
             `Réécriture intégrale de :`,
             latest.title,
-            `https://www.le-rempart.org/dossiers/${latest.slug}`,
+            absoluteUrl(dossierPath(latest.publicId)),
             "",
             "Même lien public. Pas de nouveau post Facebook.",
             "Envoie le prompt complet (message ou fichier .txt).",

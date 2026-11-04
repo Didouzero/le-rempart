@@ -2,9 +2,11 @@ import Link from "next/link";
 import { CrownIcon } from "@/components/BrandIcons";
 import { CoverImg } from "@/components/CoverImg";
 import { PublishedAt } from "@/components/PublishedAt";
+import { dossierPath } from "@/lib/seo";
 
 export type DossierTeaser = {
-  slug: string;
+  /** 0 pour un encart « à venir », sans page. */
+  publicId: number;
   title: string;
   excerpt: string;
   publishedAt: Date | null;
@@ -59,7 +61,7 @@ export function DossierCard({
 }) {
   // Enquête publiée : sa page montre un aperçu aux non-abonnés. Encart à venir : page d'abonnement.
   const href =
-    locked && !dossier.publishedAt ? "/s-abonner" : `/dossiers/${dossier.slug}`;
+    locked && !dossier.publishedAt ? "/s-abonner" : dossierPath(dossier.publicId);
   const delayClass =
     index === 0 ? "" : index === 1 ? "delay-1" : index === 2 ? "delay-2" : "delay-3";
 

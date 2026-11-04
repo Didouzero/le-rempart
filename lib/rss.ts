@@ -64,7 +64,7 @@ export async function rssResponse(category?: ArticleCategory): Promise<Response>
               orderBy: { publishedAt: "desc" },
               take: FEED_SIZE,
               select: {
-                slug: true,
+                publicId: true,
                 title: true,
                 excerpt: true,
                 publishedAt: true,
@@ -84,7 +84,7 @@ export async function rssResponse(category?: ArticleCategory): Promise<Response>
         coverImageUrl: a.coverImageUrl,
       })),
       ...dossiers.map((d) => ({
-        url: `${base}${dossierPath(d.slug)}`,
+        url: `${base}${dossierPath(d.publicId)}`,
         title: d.title,
         excerpt: d.excerpt,
         author: SITE_AUTHOR.name,

@@ -17,6 +17,7 @@ function formatDate(value: Date | null): string {
 export default async function AdminDossiersPage() {
   let dossiers: {
     id: string;
+    publicId: number;
     slug: string;
     title: string;
     membersOnly: boolean;
@@ -31,6 +32,7 @@ export default async function AdminDossiersPage() {
         take: 200,
         select: {
           id: true,
+          publicId: true,
           slug: true,
           title: true,
           membersOnly: true,
@@ -93,7 +95,7 @@ export default async function AdminDossiersPage() {
                     <div className="flex gap-3">
                       <Link href={`/admin/dossiers/${d.id}`}>Éditer</Link>
                       {d.publishedAt ? (
-                        <Link href={`/dossiers/${d.slug}`}>Voir</Link>
+                        <Link href={`/dossiers/${d.publicId}`}>Voir</Link>
                       ) : null}
                     </div>
                   </td>

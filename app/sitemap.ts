@@ -118,13 +118,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  let dossiers: Array<{ slug: string; publishedAt: Date | null; updatedAt: Date }> = [];
+  let dossiers: Array<{ publicId: number; publishedAt: Date | null; updatedAt: Date }> = [];
   try {
     dossiers = await withDbTimeout(
       prisma.specialDossier.findMany({
         where: { publishedAt: { not: null } },
         orderBy: { publishedAt: "desc" },
-        select: { slug: true, publishedAt: true, updatedAt: true },
+        select: { publicId: true, publishedAt: true, updatedAt: true },
         take: 1000,
       }),
     );
@@ -133,7 +133,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   const dossierEntries: MetadataRoute.Sitemap = dossiers.map((d) => ({
-    url: `${base}${dossierPath(d.slug)}`,
+    url: `${base}${dossierPath(d.publicId)}`,
     lastModified: d.updatedAt || d.publishedAt || now,
     changeFrequency: "weekly",
     priority: 0.8,

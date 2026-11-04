@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 
 const PLACEHOLDERS: DossierTeaser[] = [
   {
-    slug: "mercredi",
+    publicId: 0,
     title: "Enquête du mercredi",
     excerpt:
       "Révélation documentée — première livraison mercredi. Réservée aux abonnés Rempart+.",
@@ -27,7 +27,7 @@ const PLACEHOLDERS: DossierTeaser[] = [
     coverImageUrl: null,
   },
   {
-    slug: "samedi",
+    publicId: 0,
     title: "Enquête du samedi",
     excerpt:
       "Dossier exclusif — prochaine livraison samedi. Réservée aux abonnés Rempart+.",
@@ -51,7 +51,7 @@ export default async function EnquetesPage({
         where: { publishedAt: { not: null } },
         orderBy: { publishedAt: "desc" },
         select: {
-          slug: true,
+          publicId: true,
           title: true,
           excerpt: true,
           publishedAt: true,
@@ -113,7 +113,7 @@ export default async function EnquetesPage({
             {rest.length > 0 ? (
               <ul className="grid list-none gap-8 p-0 sm:grid-cols-2">
                 {rest.map((d, i) => (
-                  <li key={d.slug}>
+                  <li key={d.publicId}>
                     <DossierCard dossier={d} index={i + 1} />
                   </li>
                 ))}

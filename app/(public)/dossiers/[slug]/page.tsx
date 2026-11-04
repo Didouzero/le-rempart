@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ArticleBody } from "@/components/ArticleBody";
 import { Caption, captionText } from "@/components/CoverCaption";
 import { CoverImg } from "@/components/CoverImg";
@@ -31,6 +31,7 @@ export const dynamic = "force-dynamic";
 
 type DossierRow = {
   id: string;
+  publicId: number;
   title: string;
   excerpt: string;
   content: string;
@@ -40,12 +41,15 @@ type DossierRow = {
   updatedAt: Date;
 };
 
-async function findPublishedDossier(slug: string): Promise<DossierRow | null> {
+/** Numéro court (/dossiers/12) ou ancienne adresse longue tirée du titre. */
+async function findPublishedDossier(param: string): Promise<DossierRow | null> {
+  const where = /^\d+$/.test(param) ? { publicId: Number(param) } : { slug: param };
   return withDbTimeout(
     prisma.specialDossier.findFirst({
-      where: { slug, publishedAt: { not: null } },
+      where: { ...where, publishedAt: { not: null } },
       select: {
         id: true,
+        publicId: true,
         title: true,
         excerpt: true,
         content: true,
@@ -65,14 +69,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const d = await findPublishedDossier(slug);
     if (!d) return { title: "Enquête introuvable" };
 
-    const url = absoluteUrl(dossierPath(slug));
+    const url = absoluteUrl(dossierPath(d.publicId));
     const imageUrl = d.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
 
     return {
       ...buildPageMetadata({
         title: d.title,
         description: d.excerpt,
-        path: dossierPath(slug),
+        path: dossierPath(d.publicId),
         ogType: "article",
         image: imageUrl,
         imageAlt: d.title,
@@ -115,6 +119,8 @@ export default async function DossierPage({ params }: Props) {
   }
 
   if (!dossier) notFound();
+  // Les anciennes adresses longues restent valables et renvoient vers le numéro court.
+  if (!/^\d+$/.test(slug)) permanentRedirect(dossierPath(dossier.publicId));
 
   const coverAlt = await getDossierCoverAlt(dossier.id).catch(() => null);
   const locked = dossier.membersOnly && !plus;
@@ -126,7 +132,7 @@ export default async function DossierPage({ params }: Props) {
         data={newsArticleJsonLd({
           title: dossier.title,
           excerpt: dossier.excerpt,
-          url: absoluteUrl(dossierPath(slug)),
+          url: absoluteUrl(dossierPath(dossier.publicId)),
           imageUrl: dossier.coverImageUrl,
           publishedAt: dossier.publishedAt,
           updatedAt: dossier.updatedAt,
@@ -139,7 +145,7 @@ export default async function DossierPage({ params }: Props) {
         data={breadcrumbJsonLd([
           { name: "Dernières news", path: "/" },
           { name: PREMIUM_CATEGORY.label, path: PREMIUM_CATEGORY.path },
-          { name: dossier.title, path: dossierPath(slug) },
+          { name: dossier.title, path: dossierPath(dossier.publicId) },
         ])}
       />
 

@@ -31,7 +31,7 @@ export default async function AdminEditDossierPage({ params }: Props) {
           coverImageUrl: dossier.coverImageUrl ?? "",
           membersOnly: dossier.membersOnly,
           published: Boolean(dossier.publishedAt),
-          slug: dossier.slug,
+          publicId: dossier.publicId,
           brief,
         }}
       />

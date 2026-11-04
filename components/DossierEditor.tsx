@@ -12,7 +12,7 @@ type DossierEditorProps = {
     coverImageUrl: string;
     membersOnly: boolean;
     published: boolean;
-    slug: string;
+    publicId: number;
     brief: string;
   };
 };
@@ -148,8 +148,8 @@ export function DossierEditor({ dossierId, initial }: DossierEditorProps) {
     <div className="space-y-4 rounded-lg border border-rule bg-white p-5">
       <p className="text-sm text-muted">
         Lien public :{" "}
-        <a href={`/dossiers/${initial.slug}`} className="underline">
-          /dossiers/{initial.slug}
+        <a href={`/dossiers/${initial.publicId}`} className="underline">
+          /dossiers/{initial.publicId}
         </a>
       </p>
       <label className="block text-sm font-semibold">

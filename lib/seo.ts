@@ -226,9 +226,9 @@ export function breadcrumbTitle(title: string): string {
   return `${t.slice(0, 33).trimEnd()}...`;
 }
 
-/** Adresse publique d'une enquête Rempart+. */
-export function dossierPath(slug: string): string {
-  return `/dossiers/${slug}`;
+/** Adresse publique courte d'une enquête Rempart+ : /dossiers/12. */
+export function dossierPath(publicId: number): string {
+  return `/dossiers/${publicId}`;
 }
 
 export function breadcrumbJsonLd(
