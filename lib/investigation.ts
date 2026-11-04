@@ -404,7 +404,7 @@ export async function publishReadyInvestigation(input: {
   }
 
   if (!input.fileId || !input.coverFileId || !input.coverAlt) {
-    throw new Error("Il manque la créative, l'illustration ou le texte alt.");
+    throw new Error("Il manque la créative, l'illustration ou sa légende.");
   }
   const creative = await telegramDownloadFile(input.fileId);
   const image = await prepareSiteIllustration(await telegramDownloadFile(input.coverFileId));

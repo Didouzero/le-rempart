@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleBody } from "@/components/ArticleBody";
+import { Caption, captionText } from "@/components/CoverCaption";
 import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
 import { PlusSubscribeButton } from "@/components/PlusSubscribeButton";
@@ -199,12 +200,17 @@ export default async function DossierPage({ params }: Props) {
           <div className="media-frame aspect-[16/9] w-full shadow-[var(--shadow-soft)]">
             <CoverImg
               url={dossier.coverImageUrl}
-              alt={coverAlt || dossier.title}
+              alt={coverAlt ? captionText(coverAlt) : dossier.title}
               sizes="(min-width: 800px) 48rem, 100vw"
               priority
               className="h-full w-full object-cover"
             />
           </div>
+          {coverAlt ? (
+            <figcaption className="mt-2 text-sm italic text-muted">
+              <Caption source={coverAlt} />
+            </figcaption>
+          ) : null}
         </figure>
       ) : null}
 

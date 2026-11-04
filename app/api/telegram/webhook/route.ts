@@ -196,7 +196,7 @@ function commandsHelpText(): string {
     "1) Transmets le sujet et tout ce qu’il faut (message ou fichier .txt)",
     "2) Claude enquête et rédige sur le VPS, puis t’envoie son bilan et des titres",
     "3) « ok » pour continuer, « texte » pour tout lire, ou dis ce qu’il faut changer",
-    "4) Envoie la créative, l’illustration du site et son texte alt",
+    "4) Envoie la créative, l’illustration du site et sa légende",
     "→ dossier payant + post FB (flash) + lien en commentaire épinglé",
     "/enquete_refaire — réécrire entièrement la dernière enquête (même lien, pas de FB)",
     "/enquete_cancel — abandonner",
@@ -318,8 +318,8 @@ const CLAUDE_JOB_STATUS = {
 const ENQUETE_MEDIA_QUESTIONS = {
   creative: "Envoie la créative Facebook (PNG/JPG), avec le titre de ton choix.\n/cancel pour abandonner.",
   cover:
-    "Créative reçue. Envoie l’illustration de l’enquête pour le site, en FICHIER (JPG, PNG ou WebP), 1 200 px de large minimum.\nTu peux écrire le texte alt dans la légende du fichier.\n/cancel pour abandonner.",
-  alt: "Illustration reçue. Écris le texte alt de la photo : ce qu’elle montre, en une phrase.\n/cancel pour abandonner.",
+    "Créative reçue. Envoie l’illustration de l’enquête pour le site, en FICHIER (JPG, PNG ou WebP), 1 200 px de large minimum.\nTu peux écrire la légende et le crédit dans la légende du fichier (ex. « Le siège de l’association à Massy. Photo : AFP »).\n/cancel pour abandonner.",
+  alt: "Illustration reçue. Écris la légende de la photo : ce qu’elle montre, en une phrase, et le crédit si besoin. Elle s’affichera sous l’image.\n/cancel pour abandonner.",
 };
 
 /** Traite le message si un article est en cours. Rien ne se publie ici sans le « ok ». */

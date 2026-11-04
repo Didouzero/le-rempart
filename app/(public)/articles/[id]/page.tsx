@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { cache, type ReactNode } from "react";
+import { cache } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
 import { ArticleSideAds } from "@/components/ArticleSideAds";
+import { Caption, captionText } from "@/components/CoverCaption";
 import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
@@ -57,37 +58,6 @@ type ArticleRow = {
   coverCaption: string | null;
   category: ArticleCategory;
 };
-
-// L'adresse peut contenir une paire de parenthèses (fréquent sur Wikimedia Commons).
-const CAPTION_LINK = /\[([^\]]+)\]\((https?:\/\/(?:[^()\s]|\([^()\s]*\))+)\)/g;
-
-/** Légende sans balisage, pour l'attribut alt. */
-function captionText(source: string): string {
-  return source.replace(CAPTION_LINK, "$1");
-}
-
-/** Légende d'illustration : texte simple, liens [texte](url) permis pour les crédits. */
-function Caption({ source }: { source: string }) {
-  const parts: ReactNode[] = [];
-  let last = 0;
-  for (const m of source.matchAll(CAPTION_LINK)) {
-    parts.push(source.slice(last, m.index));
-    parts.push(
-      <a
-        key={m.index}
-        href={m[2]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline"
-      >
-        {m[1]}
-      </a>,
-    );
-    last = (m.index ?? 0) + m[0].length;
-  }
-  parts.push(source.slice(last));
-  return <>{parts}</>;
-}
 
 /** Mémorisée le temps d'un rendu : métadonnées et page partagent la même requête. */
 const findByPublicId = cache(async function findByPublicId(
