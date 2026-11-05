@@ -15,7 +15,7 @@ export function isXConfigured(): boolean {
 /**
  * Publie la créative et le flash sur X via upload-post.
  * Upload-post retire tout lien des posts X : le flash part donc sans l'adresse de l'article.
- * Un flash trop long devient un fil, sauf UPLOAD_POST_X_LONG_POST=1 (compte X Premium).
+ * Le compte est Premium : le flash part en un seul post, identique à la légende Facebook.
  */
 async function publishXPost(input: {
   text: string;
@@ -28,9 +28,7 @@ async function publishXPost(input: {
   form.append("user", config.user);
   form.append("platform[]", "x");
   form.append("title", input.text);
-  if (process.env.UPLOAD_POST_X_LONG_POST === "1") {
-    form.append("x_long_text_as_post", "true");
-  }
+  form.append("x_long_text_as_post", "true");
   const ext = input.image.mime.includes("png") ? "png" : "jpg";
   form.append(
     "photos[]",
