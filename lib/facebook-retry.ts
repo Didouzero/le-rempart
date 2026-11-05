@@ -133,6 +133,7 @@ export async function republishArticleToFacebook(input: {
       },
       sourceText: flashCorpus,
       sourceUrl: article.sourceUrl,
+      x: false,
       notify,
     });
 

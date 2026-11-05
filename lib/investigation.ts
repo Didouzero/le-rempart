@@ -7,6 +7,7 @@ import {
   publishFacebookStory,
 } from "@/lib/facebook";
 import { fetchSourceText } from "@/lib/fetch-source";
+import { publishXForPost } from "@/lib/x-post";
 import { buildFlashInfoText } from "@/lib/flash-info";
 import {
   extractAllHttpUrls,
@@ -176,6 +177,8 @@ export async function publishInvestigationFacebook(input: {
     console.error("investigation fb post", err);
     await notify(`❌ Post Facebook : échec\n${formatFacebookError(err)}`);
   }
+
+  await publishXForPost({ text: flash, image: input.creative, notify });
 }
 
 export async function draftInvestigationArticle(input: {

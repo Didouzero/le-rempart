@@ -25,6 +25,7 @@ import {
 import { chooseReadAlso } from "@/lib/read-also";
 import { findLinkableArticles, findReadAlso } from "@/lib/related-articles";
 import { telegramSendMessage } from "@/lib/telegram";
+import { publishXForPost } from "@/lib/x-post";
 
 export type PipelineNotify = (text: string) => Promise<void>;
 
@@ -52,6 +53,8 @@ export async function publishFacebookForArticle(input: {
   researchNotes?: string | null;
   /** Flash déjà rédigé (moteur brief) : on saute la rédaction. */
   flash?: string;
+  /** false pour /fb_retry : le post X est déjà parti. */
+  x?: boolean;
   notify: PipelineNotify;
 }): Promise<CreativePipelineResult["facebook"]> {
   const facebook: CreativePipelineResult["facebook"] = {};
@@ -177,6 +180,10 @@ export async function publishFacebookForArticle(input: {
             .join("\n")
         : `❌ Post Facebook : échec\n${formatFacebookError(err)}`,
     );
+  }
+
+  if (input.x !== false) {
+    await publishXForPost({ text: flash, image: input.creative, notify: input.notify });
   }
 
   return facebook;
@@ -462,6 +469,7 @@ export async function publishFacebookOnlyPipeline(input: {
   if (!isFacebookConfigured()) {
     throw new Error("Facebook : non configuré (FACEBOOK_PAGE_ID + TOKEN).");
   }
+  await publishXForPost({ text: flash, image: input.image, notify: input.notify });
   const feed = await publishFacebookFeedPost({
     imageUrl: "",
     caption: flash,
