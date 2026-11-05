@@ -88,9 +88,9 @@ export const metadata: Metadata = {
     images: [SITE_LOGO_WORDMARK],
   },
   icons: {
-    icon: [{ url: "/favicon.png?v=2", type: "image/png", sizes: "512x512" }],
-    apple: [{ url: "/favicon.png?v=2", sizes: "512x512", type: "image/png" }],
-    shortcut: "/favicon.png?v=2",
+    icon: [{ url: "/favicon.png?v=3", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/favicon.png?v=3", sizes: "512x512", type: "image/png" }],
+    shortcut: "/favicon.png?v=3",
   },
   other: {
     "msapplication-TileColor": "#0c0a09",
