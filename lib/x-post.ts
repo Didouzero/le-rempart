@@ -58,32 +58,16 @@ async function publishXPost(input: {
   return x?.url;
 }
 
-/**
- * Adresse écrite « le-rempart[.]org/articles/12 » : X n'en fait pas un lien,
- * donc upload-post la laisse. Placée juste avant la ligne des sources.
- */
-export function withPlainLink(flash: string, label: string, url: string): string {
-  const plain = url.replace(/^https?:\/\/(www\.)?/, "").replace(/\./g, "[.]");
-  const line = `${label} : ${plain}`;
-  const at = flash.lastIndexOf("\n\n(Source");
-  return at === -1 ? `${flash}\n\n${line}` : `${flash.slice(0, at)}\n\n${line}${flash.slice(at)}`;
-}
-
 /** Post X best effort : un échec est signalé sur Telegram sans bloquer le reste. */
 export async function publishXForPost(input: {
   text: string;
   image?: { buffer: Buffer; mime: string };
-  /** Adresse de l'article ou de l'enquête, écrite sans lien avant les sources. */
-  link?: { label: string; url: string };
   notify: (text: string) => Promise<void>;
 }): Promise<void> {
   if (!isXConfigured() || !input.image?.buffer.length) return;
   await input.notify("X : publication du post…");
-  const text = input.link
-    ? withPlainLink(input.text, input.link.label, input.link.url)
-    : input.text;
   try {
-    const url = await publishXPost({ text, image: input.image });
+    const url = await publishXPost({ text: input.text, image: input.image });
     await input.notify(url ? `✅ Post X publié.\n${url}` : "✅ Post X envoyé (traitement en cours chez upload-post).");
   } catch (err) {
     console.error("x post", err);

@@ -183,12 +183,7 @@ export async function publishFacebookForArticle(input: {
   }
 
   if (input.x !== false) {
-    await publishXForPost({
-      text: flash,
-      image: input.creative,
-      link: { label: "Article complet", url: articleWww },
-      notify: input.notify,
-    });
+    await publishXForPost({ text: flash, image: input.creative, notify: input.notify });
   }
 
   return facebook;
