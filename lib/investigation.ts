@@ -178,7 +178,12 @@ export async function publishInvestigationFacebook(input: {
     await notify(`❌ Post Facebook : échec\n${formatFacebookError(err)}`);
   }
 
-  await publishXForPost({ text: flash, image: input.creative, notify });
+  await publishXForPost({
+    text: flash,
+    image: input.creative,
+    link: { label: "Enquête complète", url: articleWww },
+    notify,
+  });
 }
 
 export async function draftInvestigationArticle(input: {
