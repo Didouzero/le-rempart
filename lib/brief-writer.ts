@@ -53,7 +53,7 @@ const AUDIT_MAX_PROBLEMS = 8;
 const AUDIT_MAX_TOKENS = 10_000;
 const AUDIT_TIMEOUT_MS = 180_000;
 
-export const FLASH_PREFIX = "‼️🇫🇷 𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢 —";
+export const FLASH_PREFIX = "🗞️❗ꜰʟᴀꜱʜ ɪɴꜰᴏ —";
 const FLASH_MIN_WORDS = 60;
 const FLASH_MAX_WORDS = 200;
 const ARTICLE_MIN_WORDS = 300;
@@ -885,7 +885,7 @@ function splitFlash(raw: string): { body: string; outlets: string[] } {
     text = text.slice(0, line.index).trim();
   }
   const head = text.match(
-    /^[^\p{L}\p{N}]*(?:FLASH INFO|𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢)\s*[—–:-]?\s*/iu,
+    /^[^\p{L}\p{N}]*(?:FLASH INFO|𝗙𝗟𝗔𝗦𝗛 𝗜𝗡𝗙𝗢|ꜰʟᴀꜱʜ ɪɴꜰᴏ)\s*[—–:-]?\s*/iu,
   );
   if (head) text = text.slice(head[0].length);
   return { body: text.trim(), outlets };
