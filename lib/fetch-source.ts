@@ -355,7 +355,63 @@ function finish(text: string): string {
   return scrubBoilerplate(text.replace(/\u0000/g, "")).slice(0, 12000);
 }
 
+const TWEET_URL =
+  /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx)\.com\/[^/]+\/status(?:es)?\/(\d+)/i;
+
+type FxTweet = {
+  text?: string;
+  created_timestamp?: number;
+  author?: { name?: string; screen_name?: string; description?: string };
+  media?: { videos?: unknown[]; photos?: unknown[] };
+  quote?: FxTweet;
+  community_note?: { text?: string } | null;
+};
+
+function tweetDate(t: FxTweet): string {
+  if (!t.created_timestamp) return "";
+  return new Date(t.created_timestamp * 1000).toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+}
+
+function tweetBlock(t: FxTweet): string {
+  const media = [
+    t.media?.videos?.length ? `[${t.media.videos.length} vidéo(s)]` : "",
+    t.media?.photos?.length ? `[${t.media.photos.length} photo(s)]` : "",
+  ].filter(Boolean).join(" ");
+  const quote = t.quote
+    ? `\n\nTweet cité, de ${t.quote.author?.name} (@${t.quote.author?.screen_name}) :\n${t.quote.text || ""}`
+    : "";
+  const note = t.community_note?.text ? `\n\nNote de la communauté : ${t.community_note.text}` : "";
+  return [t.text || "", media].filter(Boolean).join("\n") + quote + note;
+}
+
+/**
+ * x.com refuse les lecteurs sans compte : le tweet et son fil passent par l'API publique de fxtwitter.
+ */
+async function fetchTweetText(id: string): Promise<string> {
+  const res = await fetch(`https://api.fxtwitter.com/2/thread/${id}`, {
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`fxtwitter HTTP ${res.status}`);
+  const data = (await res.json()) as { status?: FxTweet; thread?: FxTweet[] };
+  const first = data.status;
+  if (!first?.text) throw new Error("tweet introuvable ou supprimé");
+  const posts = data.thread?.length ? data.thread : [first];
+  const a = first.author;
+  const head = [
+    `Tweet de ${a?.name} (@${a?.screen_name}), ${tweetDate(first)}.`,
+    a?.description ? `Présentation du compte : ${a.description}` : "",
+    posts.length > 1 ? `Fil de ${posts.length} tweets :` : "",
+  ].filter(Boolean).join("\n");
+  return [head, ...posts.map(tweetBlock)].join("\n\n").slice(0, 12000);
+}
+
 export async function fetchSourceText(url: string): Promise<string> {
+  const tweet = TWEET_URL.exec(url);
+  if (tweet) return fetchTweetText(tweet[1]);
   if (/\.(jpe?g|png|gif|webp|avif|pdf)(\?|#|$)/i.test(url)) {
     throw new Error(
       "Ce lien n’est pas une page article (image/PDF). Envoie l’URL de l’article source.",
