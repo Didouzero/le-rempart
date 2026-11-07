@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
         destination: "/rubriques/enquetes",
         permanent: true,
       },
+      {
+        // Articles supprimés de la base, encore connus de Google.
+        source: "/articles/:id(1|2|80|107|109|131)",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
 };
