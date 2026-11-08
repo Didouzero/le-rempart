@@ -415,12 +415,24 @@ export async function publishReadyArticlePipeline(input: {
   }
   await purgeOldCreatives().catch((err) => console.error("purge créatives", err));
 
+  // Encadré « À lire aussi » : choix du rédacteur, sinon même choix automatique
+  // que le circuit Kimi (présélection par noms propres, tri final par Opus).
   const readAlso = ready.readAlsoIds.length
     ? await prisma.article.findMany({
         where: { publicId: { in: ready.readAlsoIds }, status: "published" },
         select: { publicId: true, title: true },
       })
-    : [];
+    : await findReadAlso({
+        title: finished.title,
+        excerpt: finished.excerpt,
+        excludePublicIds: linkedArticleIds(finished.content),
+        take: 8,
+      })
+        .then((candidates) => chooseReadAlso(finished, candidates))
+        .catch((err) => {
+          console.error("à lire aussi ignoré", err);
+          return [];
+        });
 
   const article = await saveGeneratedArticle({
     generated: { ...finished, content: insertReadAlso(finished.content, readAlso) },

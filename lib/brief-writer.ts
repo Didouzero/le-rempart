@@ -869,7 +869,26 @@ async function imageDataUrl(image: { buffer: Buffer; mime: string }) {
 const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}]/gu;
 const HASHTAG = /#[\p{L}\p{N}_]+/gu;
 const DASH = /[–—]|(?:^|\s)-+(?=\s|$)/mu;
-const URLISH = /https?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:fr|com|org|net|tv|info)\b/i;
+const URLISH =
+  /https?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:fr|com|org|net|tv|info|io|eu|be|ch|co|news|media|me|ly)\b/i;
+
+/**
+ * Interdit de l'éditeur : aucun lien dans un flash Facebook ou X, ligne des sources comprise.
+ * « jeanmarcmorandini.com » devient « Jean-Marc Morandini » au lieu d'un lien cliquable.
+ */
+export function outletName(raw: string): string {
+  const name = raw.trim();
+  if (!URLISH.test(name)) return name;
+  const url = /^https?:\/\//i.test(name) ? name : `https://${name.replace(/^www\./i, "")}`;
+  return outletFromUrl(url) || name.replace(URLISH, "").trim();
+}
+
+/** Contrôle final d'un flash prêt à partir : aucune URL ni nom de domaine. */
+export function flashLinkIssues(flash: string): string[] {
+  return URLISH.test(flash)
+    ? ["le flash contient une URL ou un nom de domaine (interdit sur Facebook et X)"]
+    : [];
+}
 
 /** Sépare le corps du flash de la ligne « SOURCES : … » finale. */
 function splitFlash(raw: string): { body: string; outlets: string[] } {
@@ -879,7 +898,7 @@ function splitFlash(raw: string): { body: string; outlets: string[] } {
   if (line) {
     outlets = line[1]!
       .split(/,|\bet\b/)
-      .map((s) => s.trim().replace(/\.$/, ""))
+      .map((s) => outletName(s.trim().replace(/\.$/, "")))
       .filter(Boolean)
       .slice(0, 2);
     text = text.slice(0, line.index).trim();

@@ -15,6 +15,7 @@ import {
   articleIssues,
   finishArticle,
   finishFlash,
+  flashLinkIssues,
   newsroomGaps,
   wrongWeekdays,
 } from "@/lib/brief-writer";
@@ -58,7 +59,10 @@ export function finishReadyFlash(text: string) {
     throw new Error("Flash incomplet : le fichier doit commencer par FLASH :.");
   }
   const flash = finishFlash(raw);
-  return { flash, issues: [...wrongWeekdays(flash), ...newsroomGaps(flash)] };
+  return {
+    flash,
+    issues: [...wrongWeekdays(flash), ...newsroomGaps(flash), ...flashLinkIssues(flash)],
+  };
 }
 
 /** Enquête : mêmes contrôles qu'un article, avec la longueur d'un dossier payant. */
@@ -84,6 +88,11 @@ export function finishReadyArticle(ready: ReadyArticle) {
   return {
     finished,
     flash,
-    issues: [...articleIssues(finished), ...wrongWeekdays(flash), ...newsroomGaps(flash)],
+    issues: [
+      ...articleIssues(finished),
+      ...wrongWeekdays(flash),
+      ...newsroomGaps(flash),
+      ...flashLinkIssues(flash),
+    ],
   };
 }

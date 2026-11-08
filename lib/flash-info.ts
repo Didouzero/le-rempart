@@ -58,7 +58,7 @@ export function outletFromUrl(url?: string): string | null {
       "tf1info.fr": "TF1 Info",
       "francebleu.fr": "France Bleu",
       "ici.fr": "ici",
-      "actu.fr": "Actu.fr",
+      "actu.fr": "Actu",
       "leprogres.fr": "Le Progrès",
       "letelegramme.fr": "Le Télégramme",
       "nicematin.com": "Nice-Matin",
