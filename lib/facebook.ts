@@ -1,3 +1,4 @@
+import { SITE_DEFAULT_TITLE } from "@/lib/seo";
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 function getPageConfig(): { pageId: string; token: string } | null {
@@ -281,19 +282,52 @@ export async function commentArticleLinkOnPost(input: {
   return commentAndPin(input.postId, message, input.token, input.pin);
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Titre d'un aperçu raté : Facebook a lu une page 404 ou en erreur (base endormie, cache). */
+function isGenericPreview(title: string | undefined): boolean {
+  return !title?.trim() || title.trim() === SITE_DEFAULT_TITLE;
+}
+
+/** Charge l'article nous-mêmes jusqu'à obtenir la vraie page (réveille la base, remplit le cache). */
+async function warmArticlePage(url: string): Promise<void> {
+  for (let i = 0; i < 4; i++) {
+    try {
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: { "User-Agent": "facebookexternalhit/1.1" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      const html = await res.text();
+      const title = html.match(/<meta property="og:title" content="([^"]*)"/)?.[1]
+        ?.replace(/&amp;/g, "&");
+      if (res.ok && !isGenericPreview(title)) return;
+    } catch {
+      /* nouvel essai */
+    }
+    await sleep(3_000);
+  }
+}
+
 /**
- * Fait lire l'article par Facebook avant le commentaire : sans ce scrape,
- * l'illustration (servie depuis la base) n'est pas prête au 1er partage et
- * l'aperçu retombe sur le logo de la page. Best effort.
+ * Fait lire l'article par Facebook avant le commentaire. Si Facebook a lu une
+ * page 404 ou en erreur, l'aperçu du lien retombe sur le titre du site et le
+ * bouclier : on relance la lecture jusqu'à obtenir le vrai titre.
  */
 async function scrapeLinkPreview(url: string, token: string): Promise<void> {
-  try {
-    await graphJson(
-      `${GRAPH}/?id=${encodeURIComponent(url)}&scrape=true&access_token=${encodeURIComponent(token)}`,
-      { method: "POST" },
-    );
-  } catch (err) {
-    console.error("facebook scrape", formatFacebookError(err));
+  await warmArticlePage(url);
+  for (let i = 0; i < 3; i++) {
+    try {
+      const og = await graphJson<{ title?: string }>(
+        `${GRAPH}/?id=${encodeURIComponent(url)}&scrape=true&access_token=${encodeURIComponent(token)}`,
+        { method: "POST" },
+      );
+      if (!isGenericPreview(og.title)) return;
+      console.warn("facebook scrape: aperçu générique", url, og.title);
+    } catch (err) {
+      console.error("facebook scrape", formatFacebookError(err));
+    }
+    await sleep(4_000);
   }
 }
 
