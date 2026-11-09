@@ -131,15 +131,29 @@ export async function telegramGetFileUrl(fileId: string): Promise<string> {
   return `${TELEGRAM_API}/file/bot${token}/${data.result.file_path}`;
 }
 
-export async function telegramDownloadFile(
-  fileId: string,
-): Promise<{ buffer: Buffer; mime: string }> {
+async function downloadOnce(fileId: string): Promise<{ buffer: Buffer; mime: string }> {
   const url = await telegramGetFileUrl(fileId);
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error("Téléchargement image Telegram échoué");
   const mime = res.headers.get("content-type") || "image/jpeg";
   const buffer = Buffer.from(await res.arrayBuffer());
   return { buffer, mime };
+}
+
+/** Telegram renvoie parfois « Gateway Timeout » : on réessaie avant d'abandonner. */
+export async function telegramDownloadFile(
+  fileId: string,
+): Promise<{ buffer: Buffer; mime: string }> {
+  let last: unknown;
+  for (let i = 0; i < 4; i++) {
+    try {
+      return await downloadOnce(fileId);
+    } catch (err) {
+      last = err;
+      await new Promise((r) => setTimeout(r, 2_000 * (i + 1)));
+    }
+  }
+  throw last instanceof Error ? last : new Error("Téléchargement image Telegram échoué");
 }
 
 const PROMPT_FILE_MAX_BYTES = 800_000;
