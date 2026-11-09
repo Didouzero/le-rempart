@@ -26,6 +26,7 @@ gamoshi.io, 267-b6491, DIRECT, 20e30b2ae1f670f2
 themediagrid.com, YZ2I83, DIRECT, 9fac4a4a87c2a44f
 adform.com, 3448, RESELLER, 9f5210a2f0999e32
 multibrain.tech, 96817, DIRECT
+eskimi.com, 2020000802, RESELLER
 `;
 
 export function GET() {
