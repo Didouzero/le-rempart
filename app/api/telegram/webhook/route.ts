@@ -189,6 +189,7 @@ function commandsHelpText(): string {
     "/fb — tester la connexion Facebook",
     "/fb_retry — republier le dernier article sur Facebook (dans les 24 h)",
     "/fb_retry 69 — republier l’article #69 sur Facebook",
+    "/repost 69 — republier l’article #69 sur Facebook et X avec une nouvelle créative, puis le flash collé tel quel",
     "/id — afficher ton user id Telegram",
     "/help ou /commandes — cette liste",
     "",
@@ -662,6 +663,11 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         await telegramSendMessage(chatId, "Enquête annulée.");
         return;
       }
+      const { clearRepostSession } = await import("@/lib/article-repost");
+      if (await clearRepostSession(chatId)) {
+        await telegramSendMessage(chatId, "Republication annulée.");
+        return;
+      }
       const claudeJob = await loadClaudeJob(chatId);
       if (claudeJob) await abandonClaudeJob(claudeJob);
       const deleted = await deletePublishDraft(chatId);
@@ -822,6 +828,41 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
+    if (cmd === "/repost") {
+      if (!isTelegramUserAllowed(userId)) {
+        await telegramSendMessage(chatId, `Accès non autorisé.\nTon id : ${userId}`);
+        return;
+      }
+      const publicId = Number(text.trim().split(/\s+/)[1]);
+      if (!Number.isInteger(publicId) || publicId <= 0) {
+        await telegramSendMessage(
+          chatId,
+          "Indique le numéro de l’article : /repost 460\n(c’est le nombre à la fin de son adresse, le-rempart.org/articles/460)",
+        );
+        return;
+      }
+      try {
+        const { startRepost } = await import("@/lib/article-repost");
+        const title = await startRepost(chatId, publicId);
+        await telegramSendMessage(
+          chatId,
+          [
+            `Republication de l’article #${publicId} sur Facebook et X :`,
+            title,
+            "",
+            "Envoie la nouvelle créative (PNG/JPG).",
+            "/cancel pour annuler.",
+          ].join("\n"),
+        );
+      } catch (err) {
+        await telegramSendMessage(
+          chatId,
+          `❌ /repost : ${err instanceof Error ? err.message : "échec"}`,
+        );
+      }
+      return;
+    }
+
     if (
       cmd === "/fb_retry" ||
       cmd === "/facebook_retry" ||
@@ -961,6 +1002,62 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     const manualCaption = (message.caption || "").trim();
+
+    // ── /repost : nouvelle créative, puis flash collé tel quel ──
+    {
+      const { getRepostSession, publishRepost, setRepostCreative } = await import(
+        "@/lib/article-repost"
+      );
+      const repost = await getRepostSession(chatId);
+      if (repost) {
+        if (repost.step === "creative") {
+          if (!fileId) {
+            await telegramSendMessage(
+              chatId,
+              `J’attends la nouvelle créative de l’article #${repost.publicId} (PNG/JPG).\n/cancel pour annuler.`,
+            );
+            return;
+          }
+          await setRepostCreative(chatId, repost, await telegramDownloadFile(fileId));
+          await telegramSendMessage(
+            chatId,
+            [
+              "Créative remplacée.",
+              "",
+              "Colle maintenant le flash tel qu’il doit paraître (ou envoie le .txt de l’article) : il sera publié sans être réécrit.",
+              "/cancel pour annuler.",
+            ].join("\n"),
+          );
+          return;
+        }
+
+        let flashText = text;
+        const doc = message.document;
+        if (doc && isTelegramPromptDocument(doc)) {
+          flashText = await telegramDownloadUtf8Text({
+            fileId: doc.file_id,
+            fileSize: doc.file_size,
+          });
+        }
+        if (fileId || flashText.trim().length < 20) {
+          await telegramSendMessage(
+            chatId,
+            "J’attends le texte du flash (message ou .txt).\n/cancel pour annuler.",
+          );
+          return;
+        }
+        try {
+          await telegramSendMessage(chatId, `Republication de l’article #${repost.publicId}…`);
+          await publishRepost(chatId, repost, flashText, telegramNotifier(chatId));
+        } catch (err) {
+          await telegramSendMessage(
+            chatId,
+            `❌ ${err instanceof Error ? err.message : "échec"}\nCorrige le flash et renvoie-le, ou /cancel.`,
+          );
+        }
+        return;
+      }
+    }
 
     {
       const {
