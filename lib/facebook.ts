@@ -269,7 +269,7 @@ export async function commentArticleLinkOnPost(input: {
   token: string;
   message?: string;
   pin?: boolean;
-}): Promise<{ commentId: string; pinned: boolean; pinError?: string }> {
+}): Promise<{ commentId: string; pinned: boolean; pinError?: string; preview: string }> {
   const url = input.articleUrl.replace(
     "://le-rempart.org",
     "://www.le-rempart.org",
@@ -278,8 +278,52 @@ export async function commentArticleLinkOnPost(input: {
     "://le-rempart.org",
     "://www.le-rempart.org",
   );
-  await scrapeLinkPreview(url, input.token);
-  return commentAndPin(input.postId, message, input.token, input.pin);
+  const scraped = await scrapeLinkPreview(url, input.token);
+  let result = await commentAndPin(input.postId, message, input.token, input.pin);
+
+  // L'aperçu d'un commentaire est figé à sa création : s'il est générique,
+  // on fait relire la page, on supprime le commentaire et on le repose.
+  let shown = await commentPreviewTitle(result.commentId, input.token);
+  for (let i = 0; i < 2 && shown !== undefined && isGenericPreview(shown); i++) {
+    await sleep(8_000);
+    await scrapeLinkPreview(url, input.token);
+    try {
+      await graphJson(
+        `${GRAPH}/${result.commentId}?access_token=${encodeURIComponent(input.token)}`,
+        { method: "DELETE" },
+      );
+    } catch (err) {
+      console.error("facebook comment delete", formatFacebookError(err));
+      break;
+    }
+    result = await commentAndPin(input.postId, message, input.token, input.pin);
+    shown = await commentPreviewTitle(result.commentId, input.token);
+  }
+
+  const preview =
+    shown === undefined
+      ? `aperçu non vérifiable (lecture Facebook : ${scraped})`
+      : isGenericPreview(shown)
+        ? `⚠️ aperçu générique malgré les relectures (lecture Facebook : ${scraped})`
+        : `aperçu : « ${shown.slice(0, 80)} »`;
+  return { ...result, preview };
+}
+
+/** Titre de l'aperçu que Facebook a attaché au commentaire ; undefined si illisible. */
+async function commentPreviewTitle(commentId: string, token: string): Promise<string | undefined> {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const c = await graphJson<{ attachment?: { title?: string } }>(
+        `${GRAPH}/${commentId}?fields=attachment&access_token=${encodeURIComponent(token)}`,
+      );
+      if (c.attachment) return c.attachment.title || "";
+    } catch (err) {
+      console.error("facebook comment attachment", formatFacebookError(err));
+      return undefined;
+    }
+    await sleep(3_000);
+  }
+  return "";
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -310,25 +354,27 @@ async function warmArticlePage(url: string): Promise<void> {
 }
 
 /**
- * Fait lire l'article par Facebook avant le commentaire. Si Facebook a lu une
- * page 404 ou en erreur, l'aperçu du lien retombe sur le titre du site et le
- * bouclier : on relance la lecture jusqu'à obtenir le vrai titre.
+ * Fait lire l'article par Facebook avant le commentaire. Renvoie ce que
+ * Facebook a lu (titre ou erreur), pour le compte rendu Telegram.
  */
-async function scrapeLinkPreview(url: string, token: string): Promise<void> {
+async function scrapeLinkPreview(url: string, token: string): Promise<string> {
   await warmArticlePage(url);
+  let last = "rien";
   for (let i = 0; i < 3; i++) {
     try {
       const og = await graphJson<{ title?: string }>(
         `${GRAPH}/?id=${encodeURIComponent(url)}&scrape=true&access_token=${encodeURIComponent(token)}`,
         { method: "POST" },
       );
-      if (!isGenericPreview(og.title)) return;
-      console.warn("facebook scrape: aperçu générique", url, og.title);
+      last = `« ${(og.title || "sans titre").slice(0, 80)} »`;
+      if (!isGenericPreview(og.title)) return last;
     } catch (err) {
-      console.error("facebook scrape", formatFacebookError(err));
+      last = `erreur ${formatFacebookError(err).slice(0, 160)}`;
+      console.error("facebook scrape", last);
     }
     await sleep(4_000);
   }
+  return last;
 }
 
 async function publishFeedWithPhoto(input: {

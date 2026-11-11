@@ -136,8 +136,8 @@ export async function publishInvestigationFacebook(input: {
       });
       await notify(
         commented.pinned
-          ? `✅ Lien enquête en commentaire (épinglé).\n${commentBody}`
-          : `✅ Lien enquête en commentaire.\n${commentBody}`,
+          ? `✅ Lien enquête en commentaire (épinglé).\n${commentBody}\n${commented.preview}`
+          : `✅ Lien enquête en commentaire.\n${commentBody}\n${commented.preview}`,
       );
     } catch (commentErr) {
       console.error("investigation fb comment", commentErr);

@@ -111,8 +111,8 @@ export async function publishFacebookForArticle(input: {
       facebook.commentOk = true;
       await input.notify(
         commented.pinned
-          ? `✅ Lien article en commentaire (épinglé).\n${articleWww}`
-          : `✅ Lien article en commentaire.\n${articleWww}`,
+          ? `✅ Lien article en commentaire (épinglé).\n${articleWww}\n${commented.preview}`
+          : `✅ Lien article en commentaire.\n${articleWww}\n${commented.preview}`,
       );
     } catch (commentErr) {
       console.error(commentErr);
