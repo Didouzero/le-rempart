@@ -335,7 +335,13 @@ function isGenericPreview(title: string | undefined): boolean {
 
 /** Charge l'article nous-mêmes jusqu'à obtenir la vraie page (réveille la base, remplit le cache). */
 async function warmArticlePage(url: string): Promise<void> {
-  for (let i = 0; i < 4; i++) {
+  const publicId = Number(url.match(/\/articles\/(\d+)/)?.[1]);
+  for (let i = 0; i < 8; i++) {
+    // Une page restée en erreur dans le cache : on la fait régénérer avant de relire.
+    if (i > 0 && publicId) {
+      const { revalidateArticle } = await import("@/lib/revalidate-article");
+      revalidateArticle(publicId);
+    }
     try {
       const res = await fetch(url, {
         cache: "no-store",

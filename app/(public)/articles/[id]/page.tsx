@@ -155,7 +155,22 @@ export default async function ArticlePage({ params }: Props) {
   // Une panne de base lève une erreur : le cache garde la version précédente au lieu d'un 404.
   const article = await findByPublicId(asNumber);
 
-  if (!article) notFound();
+  if (!article) {
+    // Un 404 reste en cache plusieurs minutes, et Vercel peut le resservir après la
+    // publication : Facebook lit alors une page d'erreur et l'aperçu du lien est
+    // générique. Pour un numéro encore libre ou un article pas encore publié, on lève
+    // une erreur, qui n'est jamais mise en cache. Le 404 ne sert qu'aux numéros morts.
+    const [row, latest] = await Promise.all([
+      withDbTimeout(
+        prisma.article.findUnique({ where: { publicId: asNumber }, select: { id: true } }),
+      ),
+      withDbTimeout(prisma.article.aggregate({ _max: { publicId: true } })),
+    ]);
+    if (row || asNumber > (latest._max.publicId ?? 0)) {
+      throw new Error(`Article ${asNumber} pas encore publié`);
+    }
+    notFound();
+  }
 
   let related: Awaited<ReturnType<typeof findRelatedArticles>> = [];
   try {
