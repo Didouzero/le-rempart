@@ -8,7 +8,7 @@ import {
 } from "@/lib/french-copy";
 import { searchWebForSubject } from "@/lib/research/web-search";
 
-const PREFIX = "🗞️❗ꜰʟᴀꜱʜ ɪɴꜰᴏ —";
+const PREFIX = "🗞️❗𝙁𝙇𝘼𝙎𝙃 𝙄𝙉𝙁𝙊 —";
 const MIN_CHARS = 80;
 const MIN_WORDS = 90;
 
@@ -98,7 +98,7 @@ export function outletFromUrl(url?: string): string | null {
 function stripFlashPrefix(text: string): string {
   return text
     .replace(/^["']|["']$/g, "")
-    .replace(/^[^\p{L}\p{N}]*(𝗙𝗟𝗔𝗦𝗛\s*𝗜𝗡𝗙𝗢|ꜰʟᴀꜱʜ\s*ɪɴꜰᴏ|FLASH INFO)\s*[—–:-]?\s*/iu, "")
+    .replace(/^[^\p{L}\p{N}]*(𝙁𝙇𝘼𝙎𝙃\s*𝙄𝙉𝙁𝙊|𝗙𝗟𝗔𝗦𝗛\s*𝗜𝗡𝗙𝗢|ꜰʟᴀꜱʜ\s*ɪɴꜰᴏ|FLASH INFO)\s*[—–:-]?\s*/iu, "")
     .trim();
 }
 
@@ -345,7 +345,7 @@ FORME :
 - EXACTEMENT 3 paragraphes (4 max), séparés par UNE LIGNE VIDE (\\n\\n).
 - Une ou deux citations courtes max, toujours fermées (« … »).
 - Termine par une phrase COMPLÈTE (. ! ? ou »).
-- SANS préfixe 🗞️❗ꜰʟᴀꜱʜ ɪɴꜰᴏ (ajouté après).
+- SANS préfixe 🗞️❗𝙁𝙇𝘼𝙎𝙃 𝙄𝙉𝙁𝙊 (ajouté après).
 - INTERDIT : emojis, hashtags, markdown, URL, nom de domaine, « Source : » dans le corps.
 - N'invente rien. N'écris jamais « non sourcé ».
 
