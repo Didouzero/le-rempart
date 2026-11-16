@@ -1,3 +1,5 @@
+import { looksLikeRtf, rtfToText } from "@/lib/rtf";
+
 const TELEGRAM_API = "https://api.telegram.org";
 
 function getToken(): string {
@@ -167,15 +169,17 @@ export function isTelegramPromptDocument(doc?: {
   if (!doc?.file_id) return false;
   const name = (doc.file_name || "").toLowerCase();
   const mime = (doc.mime_type || "").toLowerCase();
-  if (name.endsWith(".txt") || name.endsWith(".md")) return true;
+  if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".rtf")) return true;
   return (
     mime === "text/plain" ||
     mime === "text/markdown" ||
-    mime === "text/x-markdown"
+    mime === "text/x-markdown" ||
+    mime === "text/rtf" ||
+    mime === "application/rtf"
   );
 }
 
-/** Lit un .txt / .md Telegram en UTF-8 (prompt d'enquête trop long pour un message). */
+/** Lit un .txt / .md Telegram en UTF-8, ou le texte brut d'un .rtf (prompt d'enquête, précision). */
 export async function telegramDownloadUtf8Text(input: {
   fileId: string;
   fileSize?: number;
@@ -192,9 +196,8 @@ export async function telegramDownloadUtf8Text(input: {
   if (buffer.includes(0)) {
     throw new Error("Ce fichier n’est pas du texte. Envoie un .txt (UTF-8).");
   }
-  const text = buffer
-    .toString("utf8")
-    .replace(/^\uFEFF/, "")
+  const raw = buffer.toString("utf8").replace(/^\uFEFF/, "");
+  const text = (looksLikeRtf(raw) ? rtfToText(raw) : raw)
     .replace(/\r\n/g, "\n")
     .trim();
   if (!text) {

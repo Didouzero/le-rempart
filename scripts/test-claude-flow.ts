@@ -109,11 +109,12 @@ globalThis.fetch = (async (url: string, init?: { body?: string }) => {
   if (String(url).includes("/getFile")) {
     return new Response(JSON.stringify({ ok: true, result: { file_path: "a.txt" } }));
   }
-  if (String(url).includes("/file/")) return new Response(READY);
+  if (String(url).includes("/file/")) return new Response(fileBody);
   sent.push(String(JSON.parse(init?.body || "{}").text));
   return new Response(JSON.stringify({ ok: true }));
 }) as typeof fetch;
 
+let fileBody = "";
 const READY = `TITRE : Yannick Jadot face à CNews sur un écran noir
 CHAPO : Le sénateur écologiste répond à la chaîne après sa sortie du plateau.
 FLASH :
@@ -141,6 +142,7 @@ function freshDraft(ageMs = 0) {
 
 function reset() {
   settings.clear();
+  fileBody = READY;
   sent.length = 0;
   published.length = 0;
   freshDraft();
@@ -328,6 +330,23 @@ const tests: [string, () => Promise<void>][] = [
     assert.equal(published[1]!.kind, "ready");
     assert.equal(jobNow(), null);
   }],
+  [".rtf ou .txt sans texte prêt pendant un article : précision transmise, rien de publié", async () => {
+    macOn();
+    await text(SUBJECT);
+    fileBody = "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0 8:10\\par drapeaux palestiniens, \\'e9ponges \\u8217?ici\\par}";
+    await say({ document: { file_id: "r", file_name: "s.rtf", mime_type: "application/rtf", file_size: 200 } });
+    assert.equal(published.length, 0);
+    const note = inbox().map((k) => settings.get(k)!.value).find((v) => /\[REMPART complément/.test(v));
+    assert.ok(note, "précision absente de la file");
+    assert.match(note!, /Fichier joint « s\.rtf »/);
+    assert.match(note!, /8:10\ndrapeaux palestiniens, éponges ’ici/);
+    assert.doesNotMatch(note!, /Helvetica|\\rtf/);
+    assert.match(sent.at(-1)!, /Précision transmise/);
+    fileBody = "Le passage est à 7 min 52.";
+    await say({ document: { file_id: "t", file_name: "note.txt", mime_type: "text/plain", file_size: 30 } });
+    assert.equal(published.length, 0);
+    assert.notEqual(jobNow(), null);
+  }],
   ["enquête : part chez Claude, rien de lancé chez Kimi, publiée au « ok » seulement", async () => {
     draft = null;
     macOn();
@@ -359,7 +378,7 @@ const tests: [string, () => Promise<void>][] = [
     await text("toujours rien");
     assert.match(sent.at(-1)!, /illustration/);
     await photo("illustration");
-    assert.match(sent.at(-1)!, /texte alt/);
+    assert.match(sent.at(-1)!, /légende de la photo/);
     assert.equal(published.length, 0);
     await text("Le conseil métropolitain en séance");
     assert.equal(published[0]!.kind, "enquete");

@@ -1142,14 +1142,38 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       }
     }
 
-    // Un fichier .txt ou un texte prêt continue de passer directement par le flux habituel.
+    // Un texte prêt (collé ou en fichier) continue de passer directement par le flux habituel.
+    // Tout autre fichier texte (.txt, .md, .rtf) pendant un article est une précision pour Claude.
     const claudeJob = await loadClaudeJob(chatId);
+    const textDoc =
+      !fileId && message.document && isTelegramPromptDocument(message.document)
+        ? message.document
+        : null;
+    let docText = "";
+    if (claudeJob && textDoc) {
+      try {
+        docText = await telegramDownloadUtf8Text({
+          fileId: textDoc.file_id,
+          fileSize: textDoc.file_size,
+        });
+      } catch (err) {
+        await telegramSendMessage(
+          chatId,
+          `❌ Fichier : ${err instanceof Error ? err.message : "illisible"}\nEnvoie un .txt ou un .rtf, ou colle le texte.`,
+        );
+        return;
+      }
+    }
     const readyDrop =
       !fileId &&
-      (looksLikeReadyArticle(text) ||
-        (message.document && isTelegramPromptDocument(message.document)));
+      (looksLikeReadyArticle(text) || (textDoc !== null && (!claudeJob || looksLikeReadyArticle(docText))));
     if (claudeJob && !readyDrop) {
-      await handleClaudeJob(chatId, text, claudeJob, { fileId, caption: manualCaption });
+      const note = textDoc
+        ? [manualCaption, `Fichier joint « ${textDoc.file_name || "sans nom"} » :`, docText]
+            .filter(Boolean)
+            .join("\n\n")
+        : text;
+      await handleClaudeJob(chatId, note, claudeJob, { fileId, caption: manualCaption });
       return;
     }
 
