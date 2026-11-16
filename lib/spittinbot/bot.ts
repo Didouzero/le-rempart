@@ -1,6 +1,6 @@
 /**
  * @spittinbot : on envoie une vidéo au bot, il demande le titre, puis la
- * publie sur YouTube Shorts, TikTok, Instagram et Facebook via Upload-Post.
+ * publie sur YouTube Shorts, TikTok et Instagram via Upload-Post (Facebook désactivé).
  *
  * La vidéo en attente de titre est gardée dans AppSetting
  * (clé spittinbot:pending:<chatId>). Le message de suivi est envoyé en réponse
@@ -157,7 +157,7 @@ export async function handleUpdate(update: TgUpdate): Promise<void> {
         "",
         "1) Envoie-moi la vidéo (en fichier 📎 → Fichier, pour garder la qualité)",
         "2) Je te demande le titre, tu l'envoies",
-        "3) Elle part sur YouTube, TikTok, Instagram et Facebook",
+        "3) Elle part sur YouTube, TikTok et Instagram",
         "",
         "/annuler — oublier la vidéo en attente de titre",
       ].join("\n"),

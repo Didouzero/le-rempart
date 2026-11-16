@@ -13,7 +13,9 @@ export const PLATFORMS = [
 ] as const;
 
 export type PlatformKey = (typeof PLATFORMS)[number]["key"];
-export const ALL_MASK = PLATFORMS.reduce((m, p) => m | p.bit, 0);
+// Facebook désactivé : on ne publie plus que sur YouTube, TikTok et Instagram.
+// Pour le remettre, retirer le filtre ci-dessous.
+export const ALL_MASK = PLATFORMS.filter((p) => p.key !== "facebook").reduce((m, p) => m | p.bit, 0);
 
 export function maskToPlatforms(mask: number): PlatformKey[] {
   return PLATFORMS.filter((p) => mask & p.bit).map((p) => p.key);
