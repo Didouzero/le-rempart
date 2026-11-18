@@ -216,8 +216,22 @@ export function newsArticleJsonLd(input: {
     articleSection: input.section,
     inLanguage: "fr-FR",
     isAccessibleForFree: input.accessibleForFree ?? true,
+    // Balisage « contenu payant » de Google : la partie réservée est repérée par sa classe,
+    // pour que le texte servi à Googlebot ne passe pas pour du cloaking.
+    ...(input.accessibleForFree === false
+      ? {
+          hasPart: {
+            "@type": "WebPageElement",
+            isAccessibleForFree: false,
+            cssSelector: `.${PAYWALL_CLASS}`,
+          },
+        }
+      : {}),
   };
 }
+
+/** Classe du bloc réservé aux abonnés Rempart+, citée par le balisage hasPart. */
+export const PAYWALL_CLASS = "rempart-paywall";
 
 /** Dernier maillon du fil d'Ariane : titre raccourci. */
 export function breadcrumbTitle(title: string): string {

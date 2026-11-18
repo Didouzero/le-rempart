@@ -11,6 +11,7 @@ import { PublishedAt } from "@/components/PublishedAt";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
 import { getDossierCoverAlt } from "@/lib/investigation-draft";
+import { isVerifiedGooglebot } from "@/lib/googlebot";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import {
@@ -20,10 +21,11 @@ import {
   buildPageMetadata,
   dossierPath,
   newsArticleJsonLd,
+  PAYWALL_CLASS,
   SITE_LOGO_SQUARE,
   SITE_NAME,
 } from "@/lib/seo";
-import { teaserMarkdown } from "@/lib/teaser";
+import { splitTeaser } from "@/lib/teaser";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -43,7 +45,9 @@ type DossierRow = {
 
 /** Numéro court (/dossiers/12) ou ancienne adresse longue tirée du titre. */
 async function findPublishedDossier(param: string): Promise<DossierRow | null> {
-  const where = /^\d+$/.test(param) ? { publicId: Number(param) } : { slug: param };
+  const where = /^\d+$/.test(param)
+    ? { publicId: Number(param) }
+    : { slug: param };
   return withDbTimeout(
     prisma.specialDossier.findFirst({
       where: { ...where, publishedAt: { not: null } },
@@ -124,7 +128,11 @@ export default async function DossierPage({ params }: Props) {
 
   const coverAlt = await getDossierCoverAlt(dossier.id).catch(() => null);
   const locked = dossier.membersOnly && !plus;
-  const body = locked ? teaserMarkdown(dossier.content) : dossier.content;
+  // Googlebot vérifié lit la suite, balisée payante ; les visiteurs n'en reçoivent rien.
+  const crawler = locked && (await isVerifiedGooglebot());
+  const { teaser, rest } = locked
+    ? splitTeaser(dossier.content)
+    : { teaser: dossier.content, rest: "" };
 
   return (
     <article className="animate-fade-up mx-auto max-w-3xl">
@@ -222,35 +230,49 @@ export default async function DossierPage({ params }: Props) {
 
       {locked ? (
         <div>
-          {/* Aperçu : seul ce début est envoyé au navigateur, il s'estompe vers l'appel à s'abonner. */}
-          <div className="relative max-h-[30rem] overflow-hidden">
-            <ArticleBody content={body} showNewsletterCta={false} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-paper" />
-          </div>
-          <div className="relative z-10 -mt-6 rounded-lg border border-accent/45 bg-ink px-5 py-8 text-center text-paper shadow-[0_14px_40px_rgba(0,0,0,0.28)] sm:px-10">
-            <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
-              La suite est réservée aux abonnés
-            </p>
-            <p className="font-display mx-auto mt-3 max-w-lg text-2xl leading-tight tracking-[0.06em] sm:text-3xl">
-              Lisez l&apos;enquête en entier avec le Rempart+
-            </p>
-            <p className="mx-auto mt-3 max-w-md text-sm text-white/75">
-              4,90&nbsp;€ par mois, sans engagement. Toutes nos enquêtes, le Brief
-              approfondi chaque matin et le site sans publicité.
-            </p>
-            <div className="mt-6 flex justify-center">
-              <PlusSubscribeButton />
+          {crawler ? (
+            <ArticleBody content={teaser} showNewsletterCta={false} />
+          ) : (
+            /* Aperçu : seul ce début est envoyé au navigateur, il s'estompe vers l'appel à s'abonner. */
+            <div className="relative max-h-[30rem] overflow-hidden">
+              <ArticleBody content={teaser} showNewsletterCta={false} />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-paper" />
             </div>
-            <p className="mt-5 text-sm text-white/70">
-              Déjà abonné ?{" "}
-              <Link href="/connexion" className="text-accent underline decoration-accent/60">
-                Connectez-vous avec votre e-mail
-              </Link>
-            </p>
+          )}
+          <div className={PAYWALL_CLASS}>
+            {crawler && rest ? (
+              <ArticleBody content={rest} showNewsletterCta={false} />
+            ) : null}
+            <div
+              className={`relative z-10 ${crawler ? "mt-10" : "-mt-6"} rounded-lg border border-accent/45 bg-ink px-5 py-8 text-center text-paper shadow-[0_14px_40px_rgba(0,0,0,0.28)] sm:px-10`}
+            >
+              <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
+                La suite est réservée aux abonnés
+              </p>
+              <p className="font-display mx-auto mt-3 max-w-lg text-2xl leading-tight tracking-[0.06em] sm:text-3xl">
+                Lisez l&apos;enquête en entier avec le Rempart+
+              </p>
+              <p className="mx-auto mt-3 max-w-md text-sm text-white/75">
+                4,90&nbsp;€ par mois, sans engagement. Toutes nos enquêtes, le
+                Brief approfondi chaque matin et le site sans publicité.
+              </p>
+              <div className="mt-6 flex justify-center">
+                <PlusSubscribeButton />
+              </div>
+              <p className="mt-5 text-sm text-white/70">
+                Déjà abonné ?{" "}
+                <Link
+                  href="/connexion"
+                  className="text-accent underline decoration-accent/60"
+                >
+                  Connectez-vous avec votre e-mail
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       ) : (
-        <ArticleBody content={body} showNewsletterCta={false} />
+        <ArticleBody content={teaser} showNewsletterCta={false} />
       )}
     </article>
   );
