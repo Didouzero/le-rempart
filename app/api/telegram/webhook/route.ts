@@ -1233,13 +1233,45 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     const draft = await getActivePublishDraft(chatId);
     const url = text ? extractHttpUrl(text) : null;
 
+    // Un fichier texte (.txt, .md, .rtf) avec sa légende vaut un sujet tapé :
+    // la légende sert de consigne, le fichier suit en entier.
+    const subjectDoc =
+      draft && !fileId && message.document && isTelegramPromptDocument(message.document)
+        ? message.document
+        : null;
+    let subjectDocText = "";
+    if (subjectDoc) {
+      try {
+        subjectDocText = await telegramDownloadUtf8Text({
+          fileId: subjectDoc.file_id,
+          fileSize: subjectDoc.file_size,
+        });
+      } catch (err) {
+        await telegramSendMessage(
+          chatId,
+          `❌ Fichier : ${err instanceof Error ? err.message : "illisible"}\nEnvoie un .txt ou un .rtf, ou colle le texte.`,
+        );
+        return;
+      }
+    }
+    const subjectText = subjectDoc
+      ? [
+          manualCaption,
+          subjectDocText.trim()
+            ? `Fichier joint « ${subjectDoc.file_name || "sans nom"} » :\n\n${subjectDocText.trim()}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : text;
+
     if (draft && isFacebookOnlyDraft(draft)) {
       if (!draft.imageData.length) {
         await telegramSendMessage(chatId, "J’attends la créative (PNG/JPG).\n/cancel pour annuler.");
-      } else if (text.length < 10 || text.startsWith("/")) {
+      } else if (subjectText.length < 10 || subjectText.startsWith("/")) {
         await telegramSendMessage(chatId, "Sur quel sujet doit porter le flash ?\n/cancel pour annuler.");
       } else {
-        await routeFlashSubject(chatId, draft, text);
+        await routeFlashSubject(chatId, draft, subjectText);
       }
       return;
     }
@@ -1290,16 +1322,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     }
 
     if (draft) {
-      const readyDoc =
-        message.document && isTelegramPromptDocument(message.document)
-          ? message.document
-          : null;
-      const readyText = readyDoc
-        ? await telegramDownloadUtf8Text({
-            fileId: readyDoc.file_id,
-            fileSize: readyDoc.file_size,
-          })
-        : text;
+      const readyText = subjectDoc ? subjectDocText : text;
       if (looksLikeReadyArticle(readyText)) {
         const ready = parseReadyArticle(readyText);
         await telegramSendMessage(chatId, "Texte prêt reçu. Je publie sans passer par Kimi.");
@@ -1314,7 +1337,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
         return;
       }
 
-      const brief = text.startsWith("/") ? "" : text;
+      const brief = subjectText.startsWith("/") ? "" : subjectText;
       if (brief.length < 10) {
         await telegramSendMessage(chatId, SUBJECT_QUESTION);
         return;

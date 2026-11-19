@@ -477,6 +477,37 @@ const tests: [string, () => Promise<void>][] = [
     assert.equal(jobNow(), null);
     assert.equal(draft, null);
   }],
+  ["/facebook : sujet en fichier .rtf avec légende, transmis en entier", async () => {
+    macOn();
+    draft = null;
+    await text("/facebook");
+    Object.assign(draft!, { imageMime: "image/png", imageData: Buffer.from("x") });
+    fileBody = "{\\rtf1\\ansi\\f0 Script de la vid\\'e9o : \\'ab des millions \\'bb\\par}";
+    await say({
+      caption: "Flash sur Glucksmann, reprends la citation mot pour mot",
+      document: { file_id: "r", file_name: "script.rtf", mime_type: "application/rtf", file_size: 200 },
+    });
+    assert.equal(jobNow().kind, "flash");
+    const msg = settings.get(inbox()[0]!)!.value;
+    assert.match(msg, /reprends la citation mot pour mot/);
+    assert.match(msg, /Fichier joint « script\.rtf »/);
+    assert.match(msg, /Script de la vidéo : « des millions »/);
+    assert.doesNotMatch(sent.at(-1)!, /Sur quel sujet/);
+  }],
+  ["article : sujet en fichier avec légende, part chez Claude", async () => {
+    macOn();
+    freshDraft();
+    fileBody = "Les faits : la mairie a voté la subvention le 3 novembre.";
+    await say({
+      caption: "Article sur la subvention",
+      document: { file_id: "t", file_name: "sujet.txt", mime_type: "text/plain", file_size: 60 },
+    });
+    assert.equal(published.length, 0);
+    assert.notEqual(jobNow(), null);
+    const msg = inbox().map((k) => settings.get(k)!.value).join("\n");
+    assert.match(msg, /Article sur la subvention/);
+    assert.match(msg, /voté la subvention le 3 novembre/);
+  }],
   ["/facebook sans VPS : rien en file, pas de Kimi", async () => {
     macOff();
     draft = null;
