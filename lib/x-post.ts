@@ -1,4 +1,6 @@
-const UPLOAD_POST_URL = "https://api.upload-post.com/api/upload_photos";
+import { prepareStoryImage } from "@/lib/creative/story";
+
+const UPLOAD_POST_URL ="https://api.upload-post.com/api/upload_photos";
 
 type Image = { buffer: Buffer; mime: string };
 type Notify = (text: string) => Promise<void>;
@@ -133,5 +135,7 @@ export async function publishXForPost(input: {
   await attempt("Post X", input.notify, () => publishX(input.text, image));
   if (!isInstagramEnabled()) return;
   await attempt("Post Instagram", input.notify, () => publishInstagram("IMAGE", input.text, image));
-  await attempt("Story Instagram", input.notify, () => publishInstagram("STORIES", input.text, image));
+  await attempt("Story Instagram", input.notify, async () =>
+    publishInstagram("STORIES", input.text, await prepareStoryImage(image)),
+  );
 }
