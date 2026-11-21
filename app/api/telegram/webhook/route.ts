@@ -148,7 +148,7 @@ async function saveCoverAndAskSubject(
 const SUBJECT_QUESTION = [
   "🧭 Sur quel sujet doit porter ce flash ?",
   "",
-  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Claude cherche, rédige et publie depuis le Mac.",
+  "Donne-moi l’événement, le lieu, la date, l’angle à prendre, des noms ou des sources si tu en as. Claude cherche, rédige et publie depuis le VPS.",
   "",
   "/cancel pour annuler.",
 ].join("\n");
@@ -162,8 +162,8 @@ function commandsHelpText(): string {
     "2) Envoie l’illustration du site en fichier (JPG, PNG, WebP), 1 200 px de large minimum",
     "3) Choisis la rubrique avec les boutons",
     "4) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
-    "→ Claude cherche, rédige et publie (site + Facebook) depuis le Mac",
-    "Mac indisponible : le bot te propose Kimi, réponds « kimi » pour confirmer",
+    "→ Claude cherche, rédige et publie (site + Facebook) depuis le VPS",
+    "VPS indisponible : le bot te propose Kimi, réponds « kimi » pour confirmer",
     "Texte déjà prêt : envoie le fichier .txt à la place du sujet",
     "/cancel — annuler la créative ou l’article en cours",
     "",
@@ -247,7 +247,7 @@ async function publishWithKimi(
   }
 }
 
-/** Mac disponible : le sujet part dans la file. Sinon le bot le garde et propose Kimi. */
+/** VPS disponible : le sujet part dans la file. Sinon le bot le garde et propose Kimi. */
 async function routeSubject(
   chatId: number,
   draft: PublishDraftRecord,
@@ -268,14 +268,14 @@ async function routeSubject(
     await startClaudeJob(job, newArticleMessage(job, label, siteOnly));
     await telegramSendMessage(
       chatId,
-      "Sujet reçu. Claude cherche et rédige sur le Mac, puis publie directement.\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
+      "Sujet reçu. Claude cherche et rédige sur le VPS, puis publie directement.\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
     );
     return;
   }
   await saveClaudeJob(newClaudeJob({ ...fields, state: "kimi-offer" }));
   await telegramSendMessage(
     chatId,
-    "Le Mac n’est pas disponible : Claude ne peut pas rédiger pour l’instant.\n\nRéponds « kimi » pour que Kimi rédige et publie sans relecture, ou renvoie le sujet quand le Mac est rallumé. /cancel pour abandonner.",
+    "La session Claude du VPS ne répond pas : Claude ne peut pas rédiger pour l’instant.\n\nRéponds « kimi » pour que Kimi rédige et publie sans relecture, ou renvoie le sujet quand la session est relancée. /cancel pour abandonner.",
   );
 }
 
@@ -309,7 +309,7 @@ async function routeFlashSubject(
 
 const CLAUDE_JOB_STATUS = {
   "kimi-offer":
-    "Sujet en attente, le Mac n’était pas disponible. Réponds « kimi » pour que Kimi rédige, renvoie le sujet pour réessayer Claude, ou /cancel.",
+    "Sujet en attente, la session Claude du VPS ne répondait pas. Réponds « kimi » pour que Kimi rédige, renvoie le sujet pour réessayer Claude, ou /cancel.",
   writing:
     "Claude rédige. Le texte arrivera ici. « kimi » pour lui confier le sujet, /cancel pour abandonner.",
   ready:
@@ -520,7 +520,7 @@ async function handleClaudeJob(
         chatId,
         enquete
           ? "Le VPS n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, /cancel abandonne."
-          : "Le Mac n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, « kimi » fait tout réécrire et publier sans relecture, /cancel abandonne.",
+          : "La session Claude du VPS ne répond plus : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, « kimi » fait tout réécrire et publier sans relecture, /cancel abandonne.",
       );
       return;
     }
@@ -528,7 +528,7 @@ async function handleClaudeJob(
       chatId,
       enquete
         ? "Le VPS n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est revenu. /cancel pour abandonner."
-        : "Le Mac n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est rallumé, ou réponds « kimi » pour que Kimi rédige et publie sans relecture. /cancel pour abandonner.",
+        : "La session Claude du VPS ne répond pas : ton message n’a pas été transmis. Renvoie-le quand elle est relancée, ou réponds « kimi » pour que Kimi rédige et publie sans relecture. /cancel pour abandonner.",
     );
     return;
   }
@@ -627,9 +627,9 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "2) Envoie l’illustration de l’article en fichier (JPG, PNG, WebP)",
           "3) Choisis la rubrique avec les boutons",
           "4) Décris le sujet : événement, angle, noms, liens si tu en as",
-          "5) Claude cherche, rédige et publie sur le site et Facebook depuis le Mac",
+          "5) Claude cherche, rédige et publie sur le site et Facebook depuis le VPS",
           "",
-          "Si le Mac n’est pas disponible, je te propose Kimi : réponds « kimi » pour confirmer.",
+          "Si la session Claude du VPS ne répond pas, je te propose Kimi : réponds « kimi » pour confirmer.",
           "Texte déjà prêt : envoie le fichier .txt à la place du sujet.",
           "",
           "/cancel pour abandonner une créative ou un article en cours.",

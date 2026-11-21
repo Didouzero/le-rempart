@@ -1,5 +1,5 @@
 /**
- * Article confié à la session Claude Code du Mac : le bot dépose le sujet dans une file,
+ * Article confié à la session Claude Code du VPS : le bot dépose le sujet dans une file,
  * le canal (tools/claude-channel/server.mjs) le pousse dans la session et y dépose le texte.
  * Tout passe par AppSetting, sans route publique ni clé API.
  */
@@ -36,7 +36,7 @@ export type ClaudeJob = {
   dossierId?: string;
   /** Dernier texte soumis par Claude : c'est lui que publie le « ok ». */
   text?: string;
-  /** Fichier sur le Mac, repris pour les retouches. */
+  /** Fichier sur le VPS, repris pour les retouches. */
   file?: string;
 };
 
@@ -70,7 +70,7 @@ export function claudeJobAction(
 ): ClaudeJobAction {
   if (state === "awaiting-media") return "media";
   if (!text.trim() || text.trim().startsWith("/")) return "status";
-  // Accepté même Mac allumé : le battement ne dit pas si la session répond encore.
+  // Accepté même VPS disponible : le battement ne dit pas si la session répond encore.
   if (asksKimi(text)) return "kimi";
   if (state === "kimi-offer") return "new-subject";
   if (state === "ready" && isApproval(text)) return "publish";
