@@ -37,9 +37,9 @@ type Item = {
   category: string;
 };
 
-const LATEST_COUNT = 8;
-/** Assez pour accompagner la une sans laisser de vide sous les secondaires. */
+/** La une, 3 secondaires, puis le fil « En continu ». */
 const LIVE_COUNT = 8;
+const LATEST_COUNT = 4 + LIVE_COUNT;
 const PER_CATEGORY = 4;
 
 function coverOf(item: Item): string | null {
@@ -123,7 +123,7 @@ function SmallCard({ item, showExcerpt = false }: { item: Item; showExcerpt?: bo
   );
 }
 
-function LiveColumn({ items, shown }: { items: Item[]; shown: Set<string> }) {
+function LiveColumn({ items }: { items: Item[] }) {
   return (
     <aside aria-labelledby="en-continu" className="lg:sticky lg:top-24 lg:self-start">
       <div className="flex items-center gap-2 border-b-2 border-accent pb-2">
@@ -134,10 +134,7 @@ function LiveColumn({ items, shown }: { items: Item[]; shown: Set<string> }) {
       </div>
       <ol className="divide-y divide-rule">
         {items.map((item) => (
-          <li
-            key={item.id}
-            className={`${shown.has(item.id) ? "hidden lg:grid" : "grid"} grid-cols-[3.25rem_minmax(0,1fr)] gap-3 py-3`}
-          >
+<li key={item.id} className="grid grid-cols-[3.25rem_minmax(0,1fr)] gap-3 py-3">
             <span className="pt-[0.15rem] text-[0.8rem] font-semibold tabular-nums text-gold">
               {liveStamp(item.publishedAt)}
             </span>
@@ -194,7 +191,8 @@ export async function FrontPage() {
 
   const lead = latest[0];
   const secondary = latest.slice(1, 4);
-  const shown = new Set([lead, ...secondary].filter(Boolean).map((a) => a.id));
+  // Les blocs rubriques ne reprennent rien de ce qui est déjà en haut de page.
+  const shown = new Set(latest.map((a) => a.id));
 
   const sections = await Promise.all(
     ARTICLE_CATEGORIES.map(async (category) => {
@@ -230,7 +228,7 @@ export async function FrontPage() {
               </div>
             ) : null}
           </div>
-          <LiveColumn items={latest.slice(0, LIVE_COUNT)} shown={shown} />
+          <LiveColumn items={latest.slice(4, 4 + LIVE_COUNT)} />
         </div>
       )}
 
