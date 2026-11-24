@@ -313,10 +313,12 @@ export async function FrontPage() {
     <div>
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Le Rempart : l&apos;actualité à la une</h1>
-      <p className="font-display mb-5 flex items-center gap-3 border-b border-rule pb-3 text-[0.8rem] tracking-[0.12em] text-muted">
-        <time dateTime={new Date().toISOString().slice(0, 10)}>{todayLabel()}</time>
-        <span aria-hidden className="h-3 w-px bg-rule" />
-        <span>Édition du jour</span>
+      <p className="font-display mb-6 flex items-center gap-3 border-b border-rule pb-3 text-[0.9rem] tracking-[0.1em] sm:text-[0.95rem]">
+        <time dateTime={new Date().toISOString().slice(0, 10)} className="text-ink">
+          {todayLabel()}
+        </time>
+        <span aria-hidden className="h-3.5 w-px bg-accent/60" />
+        <span className="text-gold">Édition du jour</span>
       </p>
       <AdSlot slot="home-below-header" />
 

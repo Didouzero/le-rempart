@@ -36,15 +36,16 @@ export function SiteFooter() {
       />
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-white/70 sm:px-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+          {/* Logo et slogan de même largeur, centrés l'un sous l'autre (comme dans l'en-tête). */}
+          <div className="inline-flex w-fit flex-col items-center">
             <Image
               src="/logo-wordmark.png"
               alt="Le Rempart"
               width={791}
               height={127}
-              className="h-auto w-[11rem] sm:w-[13rem]"
+              className="h-auto w-[10.5rem] sm:w-[12.2rem]"
             />
-            <p className="font-tagline mt-2 text-sm text-white">
+            <p className="font-tagline mt-2 pl-[0.2em] text-[0.6rem] tracking-[0.2em] text-white/80 sm:text-[0.7rem]">
               Le média de droite assumé
             </p>
           </div>
