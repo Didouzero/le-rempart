@@ -137,7 +137,11 @@ export function organizationJsonLd() {
       height: 512,
     },
     image: absoluteUrl(SITE_LOGO_WORDMARK),
-    sameAs: [FACEBOOK_PAGE].filter(Boolean),
+    sameAs: [
+      FACEBOOK_PAGE,
+      "https://www.instagram.com/le_rempart_media/",
+      "https://x.com/rempart_media",
+    ].filter(Boolean),
     foundingDate: "2025",
     description: SITE_DESCRIPTION,
     founder: { "@id": AUTHOR_ID },
