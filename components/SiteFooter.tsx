@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FooterLinks } from "@/components/FooterLinks";
 import { HideForPlus } from "@/components/PlusProvider";
 import { CrownCircleIcon } from "@/components/BrandIcons";
-import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { FooterNewsletter } from "@/components/FooterNewsletter";
 
 const FACEBOOK_PAGE_URL =
   process.env.NEXT_PUBLIC_FACEBOOK_PAGE_URL?.trim() ||
@@ -29,7 +29,7 @@ export function SiteFooter() {
         className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"
         aria-hidden
       />
-      <NewsletterSignup source="footer-bar" variant="footer" />
+      <FooterNewsletter />
       <div
         className="h-px w-full bg-gradient-to-r from-transparent via-accent/65 to-transparent"
         aria-hidden

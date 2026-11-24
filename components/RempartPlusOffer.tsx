@@ -51,11 +51,11 @@ export function RempartPlusOffer({
         <div className="pointer-events-none absolute inset-0 bg-black/76" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-black/35" />
         <div className="relative z-10">
-          <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
+          <p className="font-display text-[0.95rem] tracking-[0.16em] text-accent">
             Le Rempart+
           </p>
-          <Title className="font-display mt-3 max-w-3xl text-[2.2rem] leading-[0.95] uppercase sm:text-5xl md:text-6xl">
-            Découvrez l&apos;info que les autres n&apos;ont pas.
+          <Title className="font-headline mt-3 max-w-3xl text-[2.1rem] leading-[1.08] sm:text-5xl md:text-[3.4rem]">
+            L&apos;information que les autres n&apos;ont pas.
           </Title>
           <p className="mt-5 max-w-2xl text-base text-white/80 sm:text-lg">
             Pour le prix d’un café, levez le rideau sur nos enquêtes, nos
@@ -108,7 +108,7 @@ export function RempartPlusOffer({
             <p className="font-display text-xs tracking-[0.18em] text-gold">
               0{i + 1} · {perk.kicker}
             </p>
-            <h3 className="font-display mt-3 text-2xl tracking-[0.06em]">
+            <h3 className="font-headline mt-2 text-[1.4rem] leading-tight">
               {perk.title}
             </h3>
             <p className="mt-3 text-[0.95rem] text-muted">{perk.text}</p>
@@ -118,14 +118,10 @@ export function RempartPlusOffer({
 
       <section className="mt-12 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div>
-          <p className="section-kicker">
-            <span className="live-dot" aria-hidden />
-            Pourquoi c’est rentable
-          </p>
-          <h3 className="font-display mt-2 text-3xl tracking-[0.08em] sm:text-4xl">
+          <p className="section-kicker">Pourquoi s’abonner</p>
+          <h3 className="font-headline mt-2 text-3xl leading-tight sm:text-4xl">
             Financez un média qui pense comme vous.
           </h3>
-          <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
           <div className="mt-6 space-y-4 text-ink">
             <p>
               La newsletter gratuite donne les gros titres du jour. La
@@ -135,8 +131,8 @@ export function RempartPlusOffer({
             <p>
               Un nouveau dossier exclusif est disponible chaque mercredi et
               samedi : subventions cachées, fraudes politiques, scandales
-              migratoires : plongez au cœur de nos enquêtes et découvrez les
-              révélations de notre équipe.
+              migratoires. Des enquêtes documentées, que vous ne lirez pas
+              ailleurs.
             </p>
           </div>
           <p className="mt-6 text-sm text-muted">
@@ -168,7 +164,7 @@ export function RempartPlusOffer({
       {showHowItWorks ? (
         <>
           <section className="mt-14 border-t border-ink/15 pt-10">
-            <h3 className="font-display text-2xl tracking-[0.1em]">
+            <h3 className="font-headline text-2xl leading-tight">
               Que se passe-t-il après mon abonnement ?
             </h3>
             <ol className="mt-5 list-none space-y-4 p-0">
@@ -205,7 +201,7 @@ export function RempartPlusOffer({
           </section>
 
           <section className="mt-10 border-t border-ink/15 pt-10">
-            <h3 className="font-display text-2xl tracking-[0.1em]">
+            <h3 className="font-headline text-2xl leading-tight">
               Que se passe-t-il si je veux résilier ?
             </h3>
             <p className="mt-5 text-ink">

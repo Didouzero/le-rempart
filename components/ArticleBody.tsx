@@ -229,20 +229,9 @@ function splitAfterNthParagraph(
   return [blocks.slice(0, cut).join("\n\n"), blocks.slice(cut).join("\n\n")];
 }
 
-function splitMarkdownBeforeLast(markdown: string): [string, string] {
-  const blocks = markdown
-    .split(/\n{2,}/)
-    .map((b) => b.trim())
-    .filter(Boolean);
-  if (blocks.length < 2) {
-    return [markdown, ""];
-  }
-  return [blocks.slice(0, -1).join("\n\n"), blocks[blocks.length - 1] ?? ""];
-}
-
 /**
  * Sépare la fin de l'article (section « Sources », crédit d'illustration) du texte :
- * la newsletter se place avant le dernier paragraphe du texte, jamais dans ces annexes.
+ * la newsletter se place juste après le texte, avant ces annexes.
  */
 function splitTrailingNotes(markdown: string): [string, string] {
   const m = markdown.match(/\n(## Sources\n|\*Illustration :)/);
@@ -280,19 +269,13 @@ export function ArticleBody({
     }
   }
 
-  const [beforeLast, last] = showNewsletterCta
-    ? splitMarkdownBeforeLast(remaining)
-    : [remaining, ""];
-
+  // La newsletter vient après le texte : elle ne coupe plus la fin de l'article.
   return (
     <>
       {insertAd ? <ProseBlock source={lead} /> : null}
       {insertAd ? <MgidInArticle /> : null}
-      <ProseBlock source={beforeLast} />
-      {showNewsletterCta ? (
-        <NewsletterSignup source="article-before-last" />
-      ) : null}
-      {last ? <ProseBlock source={last} /> : null}
+      <ProseBlock source={remaining} />
+      {showNewsletterCta ? <NewsletterSignup source="article-end" /> : null}
       {notes ? <ProseBlock source={notes} /> : null}
     </>
   );
