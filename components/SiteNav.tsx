@@ -62,20 +62,20 @@ function DesktopBar() {
   const links = [{ ...homeLink, premium: false as const }, ...rubriqueLinks];
 
   return (
-    <div className="mx-auto hidden h-16 w-full max-w-6xl items-center gap-8 px-6 lg:flex">
+    <div className="mx-auto hidden h-16 w-full max-w-6xl items-center gap-5 px-5 lg:flex xl:gap-8 xl:px-6">
       <Link
         href="/"
-        className="flex shrink-0 flex-col items-start no-underline hover:no-underline"
+        className="flex shrink-0 flex-col items-center no-underline hover:no-underline"
         aria-label="Le Rempart, accueil"
       >
-        <BrandWordmark className="w-[8.75rem]" />
-        <span className="font-tagline mt-1 text-[0.56rem] tracking-[0.2em] text-white/55">
+        <BrandWordmark className="w-[10.25rem]" />
+        <span className="font-tagline mt-1 pl-[0.2em] text-[0.56rem] tracking-[0.2em] text-white/55">
           Le média de droite radicale
         </span>
       </Link>
 
       <nav className="flex min-w-0 flex-1 items-center justify-center" aria-label="Navigation principale">
-        <ul className="flex items-center gap-6">
+        <ul className="flex items-center gap-4 xl:gap-6">
           {links.map((link) => {
             const active = isActive(pathname, link.href);
             const home = link.href === "/";
@@ -84,7 +84,7 @@ function DesktopBar() {
                 <Link
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`font-display relative inline-flex h-16 items-center gap-1.5 whitespace-nowrap text-[0.95rem] tracking-[0.07em] no-underline transition-colors hover:text-accent hover:no-underline ${
+                  className={`font-display relative inline-flex h-16 items-center gap-1.5 whitespace-nowrap text-[0.85rem] tracking-[0.05em] xl:text-[0.95rem] xl:tracking-[0.07em] no-underline transition-colors hover:text-accent hover:no-underline ${
                     active ? "text-accent" : "text-white/85"
                   }`}
                 >
@@ -101,12 +101,12 @@ function DesktopBar() {
         </ul>
       </nav>
 
-      <div className="flex shrink-0 items-center gap-4">
+      <div className="flex shrink-0 items-center gap-3 xl:gap-4">
         <ThemeToggle />
         <HideForPlus>
           <Link
             href="/connexion"
-            className="font-display text-[0.88rem] tracking-[0.07em] text-white/75 no-underline transition-colors hover:text-accent hover:no-underline"
+            className="font-display whitespace-nowrap text-[0.8rem] tracking-[0.05em] text-white/75 xl:text-[0.88rem] xl:tracking-[0.07em] no-underline transition-colors hover:text-accent hover:no-underline"
           >
             Se connecter
           </Link>
