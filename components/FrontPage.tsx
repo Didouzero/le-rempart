@@ -106,7 +106,7 @@ function Lead({ item }: { item: Item }) {
   );
 }
 
-function SmallCard({ item, showExcerpt = false }: { item: Item; showExcerpt?: boolean }) {
+function SmallCard({ item }: { item: Item }) {
   return (
     <article className="group grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-3 sm:block">
       <Media item={item} sizes="(min-width: 1024px) 15rem, (min-width: 640px) 33vw, 8rem" />
@@ -117,7 +117,6 @@ function SmallCard({ item, showExcerpt = false }: { item: Item; showExcerpt?: bo
             {item.title}
           </Link>
         </h3>
-        {showExcerpt ? <p className="mt-2 hidden line-clamp-3 sm:block text-[0.95rem] leading-snug text-muted">{item.excerpt}</p> : null}
       </div>
     </article>
   );
@@ -176,6 +175,57 @@ function SectionHead({ title, href }: { title: string; href: string }) {
     </div>
   );
 }
+
+/** Rubrique : un article en avant (image, titre, chapô), puis des titres seuls avec vignette. */
+function SectionFeature({ items }: { items: Item[] }) {
+  const [lead, ...rest] = items;
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-10">
+      <article className="group">
+        <Media item={lead} sizes="(min-width: 1024px) 36rem, 100vw" />
+        <h3 className="font-headline mt-3 text-[1.35rem] leading-[1.2] sm:text-[1.5rem]">
+          <Link href={articlePublicPath(lead.publicId)} className="no-underline hover:text-gold hover:no-underline">
+            {lead.title}
+          </Link>
+        </h3>
+        <p className="mt-2 line-clamp-2 text-[0.98rem] leading-snug text-muted">{lead.excerpt}</p>
+      </article>
+      <ul className="divide-y divide-rule border-t border-rule lg:border-t-0">
+        {rest.map((item) => (
+          <li key={item.id} className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-3 py-3 first:lg:pt-0">
+            <Media item={item} sizes="6rem" ratio="aspect-[4/3]" />
+            <h3 className="font-headline text-[1rem] leading-[1.28]">
+              <Link href={articlePublicPath(item.publicId)} className="no-underline hover:text-gold hover:no-underline">
+                {item.title}
+              </Link>
+            </h3>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Rubrique en simple liste de titres : casse la répétition des blocs illustrés. */
+function SectionList({ items }: { items: Item[] }) {
+  return (
+    <ul className="grid gap-x-10 sm:grid-cols-2">
+      {items.map((item) => (
+        <li key={item.id} className="border-b border-rule py-3">
+          <span className="text-[0.78rem] font-semibold tabular-nums text-gold">{liveStamp(item.publishedAt)}</span>
+          <h3 className="font-headline mt-0.5 text-[1.05rem] leading-[1.28]">
+            <Link href={articlePublicPath(item.publicId)} className="no-underline hover:text-gold hover:no-underline">
+              {item.title}
+            </Link>
+          </h3>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Rubriques présentées en liste de titres plutôt qu'en bloc illustré. */
+const LIST_SECTIONS = new Set<ArticleCategory>(["insolite"]);
 
 /** Accueil en grille de journal : manchette, secondaires, fil « En continu », puis un bloc par rubrique. */
 export async function FrontPage() {
@@ -253,11 +303,7 @@ export async function FrontPage() {
         .map(({ category, items }) => (
           <section key={category} className="mt-12" aria-label={CATEGORY_META[category].label}>
             <SectionHead title={CATEGORY_META[category].label} href={categoryPath(category)} />
-            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-              {items.map((item) => (
-                <SmallCard key={item.id} item={item} showExcerpt />
-              ))}
-            </div>
+            {LIST_SECTIONS.has(category) ? <SectionList items={items} /> : <SectionFeature items={items} />}
           </section>
         ))}
 
