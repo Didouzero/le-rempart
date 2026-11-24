@@ -50,7 +50,7 @@ type AuthorArticle = {
 const FACTS = [
   ["Rôle", "Fondateur, rédacteur en chef"],
   ["Depuis", "2025"],
-  ["Carte de presse", "Aucune"],
+  ["Statut", "Média indépendant"],
   ["Méthode", "Assistée par l'IA"],
   ["Ligne", "Droite, assumée"],
 ] as const;
@@ -185,10 +185,9 @@ export async function AuthorProfile({ requested }: { requested: number }) {
           </p>
 
           <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mt-[0.08em] first-letter:mr-[0.08em] first-letter:font-headline first-letter:text-[2.95em] first-letter:font-bold first-letter:leading-[0.8] first-letter:text-ink">
-            Je ne suis pas journaliste, et je ne prétends pas l&apos;être : je
-            n&apos;ai pas de carte de presse. J&apos;ai fondé Le Rempart parce
-            que je refusais de laisser le récit de l&apos;actualité à un seul
-            camp.
+            J&apos;ai fondé Le Rempart en 2025 et j&apos;en suis le rédacteur en
+            chef. Je l&apos;ai lancé parce que je refusais de laisser le récit
+            de l&apos;actualité à un seul camp.
           </p>
 
           <div className="mt-10 lg:hidden">
@@ -224,6 +223,15 @@ export async function AuthorProfile({ requested }: { requested: number }) {
               chaque sujet, je fixe la ligne éditoriale et j&apos;écris
               moi-même une bonne partie des articles. Les choix et les partis
               pris sont les miens, et j&apos;en réponds.
+            </p>
+            <p>
+              Le Rempart n&apos;appartient à aucun groupe : ni actionnaire, ni
+              carte de presse. Ma seule caution, c&apos;est la méthode, publiée
+              dans la{" "}
+              <Link href="/charte-editoriale" className="underline decoration-accent">
+                charte éditoriale
+              </Link>
+              .
             </p>
           </div>
 

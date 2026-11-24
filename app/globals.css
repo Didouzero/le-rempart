@@ -294,14 +294,16 @@ body {
 .article-standfirst {
   font-family: var(--font-headline);
   font-weight: 600;
-  font-size: 1.2rem;
-  line-height: 1.5;
+  /* Plus léger sur téléphone : la photo remonte dans le premier écran. */
+  font-size: 1.05rem;
+  line-height: 1.45;
   color: var(--ink);
   opacity: 0.92;
 }
 @media (min-width: 640px) {
   .article-standfirst {
     font-size: 1.32rem;
+    line-height: 1.5;
   }
 }
 
