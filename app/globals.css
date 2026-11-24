@@ -20,7 +20,7 @@
   --font-display: var(--font-condensed), "Arial Narrow", sans-serif;
   --font-headline: var(--font-serif), Georgia, serif;
   --font-body: var(--font-source), "Segoe UI", sans-serif;
-  --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
+  --font-tagline: var(--font-body);
   --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.12);
   --radius: 0.55rem;
   color-scheme: light;
@@ -92,7 +92,7 @@
   --font-display: var(--font-condensed), "Arial Narrow", sans-serif;
   --font-headline: var(--font-serif), Georgia, serif;
   --font-body: var(--font-source), sans-serif;
-  --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
+  --font-tagline: var(--font-body);
 }
 
 * {

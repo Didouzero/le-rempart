@@ -1,4 +1,4 @@
-import { Barlow_Condensed, Open_Sans, Source_Sans_3, Source_Serif_4 } from "next/font/google";
+import { Barlow_Condensed, Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import type { Metadata } from "next";
 import Script from "next/script";
 import {
@@ -18,13 +18,6 @@ import "./globals.css";
 
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "G-KBPQRRFPDC";
-
-const openSans = Open_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-open-sans",
-  display: "swap",
-});
 
 // Libellés, navigation, rubriques : condensée en capitales, chargée par le site
 // (Impact n'existe pas sur Android).
@@ -118,7 +111,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${openSans.variable} ${sourceSans.variable} ${barlowCondensed.variable} ${sourceSerif.variable}`}
+      className={`${sourceSans.variable} ${barlowCondensed.variable} ${sourceSerif.variable}`}
       // Mode nuit par défaut, sur tous les appareils ; THEME_INIT_SCRIPT applique
       // le choix mémorisé avant l'hydratation.
       data-theme="dark"
