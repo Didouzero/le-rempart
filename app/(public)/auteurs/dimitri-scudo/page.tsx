@@ -227,7 +227,7 @@ function IdentityCard() {
       </dl>
       <a
         href="mailto:contact@le-rempart.org"
-        className="font-display mt-6 block rounded-lg border border-accent/50 bg-ink px-4 py-3 text-center tracking-[0.14em] text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
+        className="btn-ink font-display mt-6 block rounded-lg border border-accent/50 bg-ink px-4 py-3 text-center tracking-[0.14em] text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
       >
         M&apos;écrire
       </a>

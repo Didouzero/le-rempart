@@ -141,7 +141,7 @@ function SearchPanel({ open, onClose }: { open: boolean; onClose: () => void }) 
               type="submit"
               aria-label="Lancer la recherche"
               title="Rechercher"
-              className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-ink transition duration-300 hover:bg-accent-deep"
+              className="group h-10 w-10 inline-flex shrink-0 items-center justify-center rounded-lg border border-accent/60 bg-ink text-accent transition duration-300 hover:border-accent hover:text-gold"
             >
               <ArrowRightIcon className="h-[1.1rem] w-[1.1rem] transition-transform duration-300 group-hover:translate-x-0.5" />
             </button>
@@ -161,7 +161,8 @@ function SubscribeButton({ small = false }: { small?: boolean }) {
       }`}
     >
       <CrownIcon className={small ? "h-3.5 w-3.5" : "h-4 w-4"} />
-      S&apos;abonner
+      {/* Sur les plus petits écrans, la couronne seule : la place va aux icônes de la barre. */}
+      <span className={small ? "max-[389px]:sr-only" : undefined}>S&apos;abonner</span>
     </Link>
   );
 }
@@ -318,10 +319,6 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
         </nav>
 
         <div className="mt-auto flex flex-col gap-3 pt-8">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <span className="font-display text-[0.9rem] tracking-[0.07em] text-white/60">Mode clair / sombre</span>
-            <ThemeToggle />
-          </div>
           <HideForPlus>
             <Link
               href="/s-abonner"
@@ -381,18 +378,21 @@ export function SiteNav() {
     <>
       <DesktopBar searchOpen={searchOpen} onToggleSearch={() => setSearchOpen((v) => !v)} />
 
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 lg:hidden">
-        <Link href="/" className="inline-flex items-center no-underline hover:no-underline" aria-label="Le Rempart, accueil">
-          <BrandWordmark className="w-[8rem]" />
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-3 min-[400px]:px-4 lg:hidden">
+        <Link href="/" className="inline-flex shrink-0 items-center no-underline hover:no-underline" aria-label="Le Rempart, accueil">
+          <BrandWordmark className="w-[6.6rem] min-[400px]:w-[7.25rem]" />
         </Link>
-        <div className="flex items-center gap-1.5">
+        {/* Recherche, mode jour/nuit et compte dans la barre : icônes de 32 px pour tenir dès 360 px. */}
+        <div className="flex items-center gap-0.5 [&_.icon-bare]:h-8 [&_.icon-bare]:w-8">
           <HideForPlus>
             <SubscribeButton small />
           </HideForPlus>
           <SearchButton open={searchOpen} onToggle={() => setSearchOpen((v) => !v)} />
+          <ThemeToggle />
+          <AccountLink />
           <button
             type="button"
-            className="icon-bare inline-flex items-center justify-center p-2 text-white transition-colors hover:text-accent"
+            className="icon-bare inline-flex items-center justify-center p-1.5 text-white transition-colors hover:text-accent"
             aria-expanded={open}
             aria-controls="mobile-nav-drawer"
             aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}

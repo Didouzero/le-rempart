@@ -60,7 +60,7 @@ export function PlusCancelForm({ email, token }: Props) {
   ) : null;
 
   const buttonClass =
-    "font-display rounded-lg bg-ink px-5 py-3 text-sm tracking-[0.14em] text-paper transition hover:bg-accent hover:text-ink disabled:opacity-60";
+    "btn-ink font-display rounded-lg bg-ink px-5 py-3 text-sm tracking-[0.14em] text-paper transition hover:bg-accent hover:text-ink disabled:opacity-60";
 
   if (email) {
     return (

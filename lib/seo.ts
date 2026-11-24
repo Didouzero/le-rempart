@@ -11,8 +11,7 @@ export const SITE_DOMAIN = "le-rempart.org";
 export const SITE_URL = "https://www.le-rempart.org";
 export const SITE_DESCRIPTION =
   "Actualité, enquêtes exclusives et analyses sans filtre : immigration, justice, économie, politique. Le Rempart, le média de droite assumé et indépendant.";
-export const SITE_DEFAULT_TITLE =
-  "Le Rempart — Le média de droite assumé : actualité et enquêtes";
+export const SITE_DEFAULT_TITLE = "Le Rempart — Le média de droite assumé";
 /** Image de partage par défaut (accueil, rubriques, pages sans illustration). */
 export const SITE_OG_IMAGE = "/og-image.png";
 export const SITE_OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;

@@ -713,3 +713,28 @@ a:hover .media-frame::after {
     bottom: 5rem !important;
   }
 }
+
+/* Boutons noirs (envoyer le lien, m'écrire, résilier…) : en mode nuit, un noir sur la
+   page sombre ne se voit plus. Ils prennent alors le style doré des autres boutons. */
+:root[data-theme="dark"] .btn-ink {
+  background-color: #ffbd59;
+  border-color: #ffbd59;
+  color: #0a0a0a;
+  box-shadow: 0 8px 24px rgba(255, 189, 89, 0.18);
+}
+:root[data-theme="dark"] .btn-ink:hover {
+  background-color: #e8a63f;
+  border-color: #e8a63f;
+  color: #0a0a0a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn-ink {
+    background-color: #ffbd59;
+    border-color: #ffbd59;
+    color: #0a0a0a;
+  }
+  :root:not([data-theme="light"]) .btn-ink:hover {
+    background-color: #e8a63f;
+    border-color: #e8a63f;
+  }
+}

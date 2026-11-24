@@ -109,7 +109,7 @@ export function ListPageHeader({
               tabIndex={open ? 0 : -1}
               aria-label="Lancer la recherche"
               title="Rechercher"
-              className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-ink transition duration-300 hover:bg-accent-deep sm:self-auto"
+              className="group h-11 w-11 inline-flex shrink-0 items-center justify-center rounded-lg border border-accent/60 bg-ink text-accent transition duration-300 hover:border-accent hover:text-gold"
             >
               <ArrowRightIcon className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
             </button>
