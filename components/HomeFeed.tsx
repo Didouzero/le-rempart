@@ -2,6 +2,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { ArticleCard } from "@/components/ArticleCard";
 import { ListPageHeader } from "@/components/ArticleSearch";
 import { CategoryTiles } from "@/components/CategoryTiles";
+import { FrontPage } from "@/components/FrontPage";
 import { JsonLd } from "@/components/JsonLd";
 import { Pagination } from "@/components/Pagination";
 import { RempartPlusOffer } from "@/components/RempartPlusOffer";
@@ -17,6 +18,9 @@ export async function HomeFeed({
   requested: number;
   q: string;
 }) {
+  // Page 1 sans recherche : la une en grille de journal.
+  if (requested <= 1 && !q) return <FrontPage />;
+
   const where = publishedArticleWhere({ q });
 
   let total = 0;
