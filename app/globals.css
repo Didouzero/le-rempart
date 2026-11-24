@@ -17,7 +17,8 @@
   --accent-soft: rgba(160, 109, 22, 0.14);
   --color-marble: #0a0a0a;
   --color-accent-deep: #e8a63f;
-  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  --font-display: var(--font-condensed), "Arial Narrow", sans-serif;
+  --font-headline: var(--font-serif), Georgia, serif;
   --font-body: var(--font-source), "Segoe UI", sans-serif;
   --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
   --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.12);
@@ -88,7 +89,8 @@
   --color-marble: #0a0a0a;
   --color-accent: var(--accent);
   --color-accent-deep: #e8a63f;
-  --font-display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  --font-display: var(--font-condensed), "Arial Narrow", sans-serif;
+  --font-headline: var(--font-serif), Georgia, serif;
   --font-body: var(--font-source), sans-serif;
   --font-tagline: var(--font-open-sans), "Open Sans", sans-serif;
 }
@@ -174,8 +176,17 @@ body {
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Titres d'articles : serif de presse, casse normale. */
+.font-headline {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  text-transform: none;
 }
 
 .font-tagline {
@@ -204,6 +215,8 @@ body {
 
 .prose-article {
   max-width: 42rem;
+  font-size: 1.125rem;
+  line-height: 1.7;
 }
 
 /* Articles: the text fills the centred reading column. */
@@ -228,7 +241,8 @@ body {
 .article-dropcap > .prose-article:first-child > p:first-of-type::first-letter {
   float: left;
   margin: 0.08em 0.08em 0 0;
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
+  font-weight: 700;
   font-size: 2.95em;
   line-height: 0.8;
   color: var(--ink);
@@ -251,12 +265,12 @@ body {
 
 .prose-article h2,
 .prose-article h3 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin: 2.25rem 0 0.85rem;
-  line-height: 1.15;
-  font-size: 1.35rem;
+  font-family: var(--font-headline);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 2.5rem 0 0.9rem;
+  line-height: 1.2;
+  font-size: 1.5rem;
   border-left: 3px solid var(--accent);
   padding-left: 0.75rem;
 }
@@ -564,17 +578,19 @@ a:hover .media-frame::after {
   }
 }
 
+/* En-tête collant : barre nette, filet doré discret en bas. */
+.site-header {
+  border-bottom: 1px solid rgba(255, 189, 89, 0.22);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+}
+
 /* Mode nuit : le bas de l'en-tête se fond dans la couleur de la page au lieu
    de s'arrêter net, et le grain du fond (pensé pour le papier clair) disparaît.
    --paper est lu sur <html> : l'en-tête redéfinit ce jeton pour son contenu. */
 :root[data-theme="dark"] .site-header {
   --page: #13120f;
-  background-image:
-    linear-gradient(180deg, transparent 35%, var(--page) 100%),
-    linear-gradient(90deg, transparent, rgba(255, 189, 89, 0.08), transparent),
-    radial-gradient(ellipse at 15% 0%, rgba(255, 189, 89, 0.18), transparent 42%),
-    radial-gradient(ellipse at 85% 100%, rgba(255, 255, 255, 0.04), transparent 40%),
-    linear-gradient(160deg, #141414 0%, #0a0a0a 55%, #111 100%);
+  background-image: none;
+  background-color: #0e0d0b;
 }
 
 :root[data-theme="dark"] .site-shell::before {
@@ -584,12 +600,8 @@ a:hover .media-frame::after {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .site-header {
     --page: #13120f;
-    background-image:
-      linear-gradient(180deg, transparent 35%, var(--page) 100%),
-      linear-gradient(90deg, transparent, rgba(255, 189, 89, 0.08), transparent),
-      radial-gradient(ellipse at 15% 0%, rgba(255, 189, 89, 0.18), transparent 42%),
-      radial-gradient(ellipse at 85% 100%, rgba(255, 255, 255, 0.04), transparent 40%),
-      linear-gradient(160deg, #141414 0%, #0a0a0a 55%, #111 100%);
+    background-image: none;
+    background-color: #0e0d0b;
   }
 
   :root:not([data-theme="light"]) .site-shell::before {

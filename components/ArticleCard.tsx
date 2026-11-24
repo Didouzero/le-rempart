@@ -78,7 +78,7 @@ export function ArticleCard({
             <span aria-hidden>•</span>
             <PublishedAt value={publishedAt} />
           </div>
-          <h2 className="font-display mt-3 text-2xl leading-[1.05] sm:text-3xl md:text-4xl">
+          <h2 className="font-headline mt-3 text-2xl leading-[1.12] sm:text-3xl md:text-4xl">
             <Link href={href} className="no-underline hover:text-gold hover:no-underline">
               {title}
             </Link>
@@ -118,7 +118,7 @@ export function ArticleCard({
           {cat && catLabel ? <span aria-hidden>•</span> : null}
           <PublishedAt value={publishedAt} />
         </div>
-        <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
+        <h2 className="font-headline mt-2 text-xl leading-[1.15] sm:text-2xl">
           <Link href={href} className="no-underline hover:text-gold hover:no-underline">
             {title}
           </Link>

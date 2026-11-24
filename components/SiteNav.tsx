@@ -4,10 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ARTICLE_CATEGORIES, CATEGORY_META, PREMIUM_CATEGORY } from "@/lib/categories";
-import { CrownIcon, HeartIcon } from "@/components/BrandIcons";
+import { CrownIcon } from "@/components/BrandIcons";
+import { HideForPlus } from "@/components/PlusProvider";
 
 const homeLink = { href: "/", label: "Dernières news" } as const;
 
@@ -24,13 +25,9 @@ const rubriqueLinks = [
   },
 ];
 
-const utilityLinks = [
-  { href: "/contact", label: "Contact", icon: null },
-] as const;
-
-function UtilityIcon({ icon }: { icon: "heart" | null }) {
-  if (icon === "heart") return <HeartIcon className="h-[1.2rem] w-[1.2rem] shrink-0" />;
-  return null;
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function BrandWordmark({ className = "" }: { className?: string }) {
@@ -40,99 +37,83 @@ function BrandWordmark({ className = "" }: { className?: string }) {
       alt="Le Rempart"
       width={791}
       height={127}
-      className={`h-auto w-[9.5rem] ${className}`}
+      className={`h-auto ${className}`}
       priority
     />
   );
 }
 
-function DesktopNav({ ariaLabel }: { ariaLabel: string }) {
+function SubscribeButton({ small = false }: { small?: boolean }) {
+  return (
+    <Link
+      href="/s-abonner"
+      className={`font-display inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent text-ink no-underline transition hover:bg-accent-deep hover:no-underline ${
+        small ? "px-2.5 py-1.5 text-[0.8rem] tracking-[0.06em]" : "px-3.5 py-2 text-[0.92rem] tracking-[0.07em]"
+      }`}
+    >
+      <CrownIcon className={small ? "h-3.5 w-3.5" : "h-4 w-4"} />
+      S&apos;abonner
+    </Link>
+  );
+}
+
+function DesktopBar() {
   const pathname = usePathname() || "/";
+  const links = [{ ...homeLink, premium: false as const }, ...rubriqueLinks];
 
   return (
-    <nav
-      className="mx-auto hidden w-full max-w-6xl items-center justify-center gap-x-5 px-4 py-4 lg:flex lg:px-6"
-      aria-label={ariaLabel}
-    >
-      {/* Accueil — encadré comme Contact + live-dot */}
+    <div className="mx-auto hidden h-16 w-full max-w-6xl items-center gap-8 px-6 lg:flex">
       <Link
-        href={homeLink.href}
-        aria-current={pathname === "/" ? "page" : undefined}
-        className="group font-display inline-flex shrink-0 items-center gap-2.5 rounded-lg border border-accent/45 px-3 py-1.5 text-[1.05rem] tracking-[0.12em] text-accent no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
+        href="/"
+        className="flex shrink-0 flex-col items-start no-underline hover:no-underline"
+        aria-label="Le Rempart, accueil"
       >
-        <span
-          className="live-dot shrink-0 group-hover:!bg-ink group-hover:!shadow-none"
-          aria-hidden
-        />
-        {homeLink.label}
+        <BrandWordmark className="w-[8.75rem]" />
+        <span className="font-tagline mt-1 text-[0.56rem] tracking-[0.2em] text-white/55">
+          Le média de droite radicale
+        </span>
       </Link>
 
-      <span
-        className="h-5 w-px shrink-0 bg-gradient-to-b from-transparent via-accent/70 to-transparent"
-        aria-hidden
-      />
+      <nav className="flex min-w-0 flex-1 items-center justify-center" aria-label="Navigation principale">
+        <ul className="flex items-center gap-6">
+          {links.map((link) => {
+            const active = isActive(pathname, link.href);
+            const home = link.href === "/";
+            return (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`font-display relative inline-flex h-16 items-center gap-1.5 whitespace-nowrap text-[0.95rem] tracking-[0.07em] no-underline transition-colors hover:text-accent hover:no-underline ${
+                    active ? "text-accent" : "text-white/85"
+                  }`}
+                >
+                  {home ? <span className="live-dot shrink-0" aria-hidden /> : null}
+                  {link.label}
+                  {link.premium ? <CrownIcon className="h-3.5 w-3.5 text-accent" /> : null}
+                  {active ? (
+                    <span className="absolute inset-x-0 bottom-0 h-[2px] bg-accent" aria-hidden />
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
-      {/* Rubriques — 3 + 3 */}
-      <div
-        className="grid grid-cols-3 gap-x-5 gap-y-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2"
-        role="group"
-        aria-label="Rubriques"
-      >
-        {rubriqueLinks.map((link) => {
-          const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={active ? "page" : undefined}
-              className={`font-display inline-flex items-center justify-center gap-1.5 text-[1.05rem] tracking-[0.12em] transition-colors hover:text-accent ${
-                active
-                  ? "text-white underline decoration-accent decoration-2 underline-offset-4"
-                  : "text-white/90 no-underline hover:no-underline"
-              }`}
-            >
-              {link.label}
-              {link.premium ? (
-                <CrownIcon className="h-4 w-4 text-accent" />
-              ) : null}
-            </Link>
-          );
-        })}
-      </div>
-
-      <span
-        className="h-5 w-px shrink-0 bg-gradient-to-b from-transparent via-white/25 to-transparent"
-        aria-hidden
-      />
-
-      {/* Pages utilitaires — style distinct */}
-      <div
-        className="flex items-center gap-3"
-        role="group"
-        aria-label="Contact et soutien"
-      >
-        {utilityLinks.map((link) => {
-          const active =
-            pathname === link.href || pathname.startsWith(`${link.href}/`);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={active ? "page" : undefined}
-              className={`font-display inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-accent/45 px-3.5 py-2 text-[0.92rem] tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink hover:no-underline ${
-                active
-                  ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
-                  : "text-accent"
-              }`}
-            >
-              <UtilityIcon icon={link.icon} />
-              {link.label}
-            </Link>
-          );
-        })}
+      <div className="flex shrink-0 items-center gap-4">
         <ThemeToggle />
+        <HideForPlus>
+          <Link
+            href="/connexion"
+            className="font-display text-[0.88rem] tracking-[0.07em] text-white/75 no-underline transition-colors hover:text-accent hover:no-underline"
+          >
+            Se connecter
+          </Link>
+          <SubscribeButton />
+        </HideForPlus>
       </div>
-    </nav>
+    </div>
   );
 }
 
@@ -158,35 +139,106 @@ function HamburgerIcon({ open }: { open: boolean }) {
   );
 }
 
-function MenuButton({
-  open,
-  onToggle,
-  className = "",
-}: {
-  open: boolean;
-  onToggle: () => void;
-  className?: string;
-}) {
+function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const pathname = usePathname() || "/";
+  const links = [{ ...homeLink, premium: false as const }, ...rubriqueLinks];
+
   return (
-    <button
-      type="button"
-      className={`icon-bare inline-flex items-center justify-center p-2 text-white transition-colors duration-300 hover:text-accent ${className}`}
-      aria-expanded={open}
-      aria-controls="mobile-nav-drawer"
-      aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-      onClick={onToggle}
+    <div
+      id="mobile-nav-drawer"
+      style={{ zIndex: 10060 }}
+      className={`fixed inset-0 lg:hidden ${open ? "pointer-events-auto" : "pointer-events-none"}`}
+      role="dialog"
+      aria-modal={open}
+      aria-hidden={!open}
+      aria-label="Menu"
     >
-      <HamburgerIcon open={open} />
-    </button>
+      <button
+        type="button"
+        tabIndex={open ? 0 : -1}
+        aria-label="Fermer le menu"
+        className={`absolute inset-0 bg-ink/92 transition-opacity duration-300 ease-out ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={onClose}
+      />
+      <div
+        className={`absolute inset-y-0 right-0 flex w-[min(100%,22rem)] flex-col bg-ink px-6 py-7 shadow-[-12px_0_40px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-out ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="mb-8 flex items-center justify-between gap-3">
+          <BrandWordmark className="w-[9rem]" />
+          <button
+            type="button"
+            tabIndex={open ? 0 : -1}
+            className="font-display shrink-0 text-sm tracking-[0.1em] text-white/70 transition-colors hover:text-accent"
+            onClick={onClose}
+          >
+            Fermer
+          </button>
+        </div>
+
+        <nav className="flex flex-col" aria-label="Navigation mobile">
+          {links.map((link) => {
+            const active = isActive(pathname, link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                tabIndex={open ? 0 : -1}
+                aria-current={active ? "page" : undefined}
+                className={`font-display flex items-center gap-2 border-b border-white/10 py-3.5 text-[1.15rem] tracking-[0.07em] no-underline hover:text-accent hover:no-underline ${
+                  active ? "text-accent" : "text-white"
+                }`}
+                style={{ color: active ? undefined : "#fff" }}
+                onClick={onClose}
+              >
+                {link.href === "/" ? <span className="live-dot shrink-0" aria-hidden /> : null}
+                {link.label}
+                {link.premium ? <CrownIcon className="h-4 w-4 text-accent" /> : null}
+              </Link>
+            );
+          })}
+          <Link
+            href="/contact"
+            tabIndex={open ? 0 : -1}
+            className="font-display border-b border-white/10 py-3.5 text-[1rem] tracking-[0.07em] text-white/60 no-underline hover:text-accent hover:no-underline"
+            onClick={onClose}
+          >
+            Contact
+          </Link>
+        </nav>
+
+        <HideForPlus>
+          <div className="mt-auto flex flex-col gap-3 pt-8">
+            <Link
+              href="/s-abonner"
+              tabIndex={open ? 0 : -1}
+              className="font-display flex items-center justify-center gap-2 rounded-md bg-accent py-3 text-[1rem] tracking-[0.07em] text-ink no-underline hover:no-underline"
+              onClick={onClose}
+            >
+              <CrownIcon className="h-4 w-4" />
+              S&apos;abonner au Rempart+
+            </Link>
+            <Link
+              href="/connexion"
+              tabIndex={open ? 0 : -1}
+              className="font-display flex items-center justify-center rounded-md border border-white/20 py-3 text-[0.95rem] tracking-[0.07em] text-white/85 no-underline hover:border-accent hover:text-accent hover:no-underline"
+              onClick={onClose}
+            >
+              Se connecter
+            </Link>
+          </div>
+        </HideForPlus>
+      </div>
+    </div>
   );
 }
 
 export function SiteNav() {
-  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
-  const [stickyVisible, setStickyVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const lastY = useRef(0);
 
   useEffect(() => {
     setMounted(true);
@@ -206,223 +258,33 @@ export function SiteNav() {
     };
   }, [open]);
 
-  useEffect(() => {
-    lastY.current = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      const delta = y - lastY.current;
-      const pastHero = y > 140;
-
-      if (!pastHero) {
-        setStickyVisible(false);
-      } else if (delta < -8) {
-        setStickyVisible(true);
-      } else if (delta > 8) {
-        setStickyVisible(false);
-      }
-
-      lastY.current = y;
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const toggle = () => setOpen((v) => !v);
-  const close = () => setOpen(false);
-
-  const chrome =
-    mounted &&
-    createPortal(
-      <>
-        <div
-          style={{ zIndex: 10040 }}
-          className={`fixed inset-x-0 top-0 hidden border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out lg:block ${
-            stickyVisible && !open
-              ? "translate-y-0"
-              : "pointer-events-none -translate-y-full"
-          }`}
-        >
-          <div className="marble-band text-paper">
-            <DesktopNav ariaLabel="Navigation sticky" />
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
-          </div>
-        </div>
-
-        <div
-          id="mobile-nav-drawer"
-          style={{ zIndex: 10060 }}
-          className={`fixed inset-0 lg:hidden ${
-            open ? "pointer-events-auto" : "pointer-events-none"
-          }`}
-          role="dialog"
-          aria-modal={open}
-          aria-hidden={!open}
-          aria-label="Menu"
-        >
-          <button
-            type="button"
-            tabIndex={open ? 0 : -1}
-            aria-label="Fermer le menu"
-            className={`absolute inset-0 bg-ink/92 transition-opacity duration-300 ease-out ${
-              open ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={close}
-          />
-          <div
-            className={`absolute inset-y-0 right-0 flex w-[min(100%,22rem)] flex-col bg-ink px-6 py-8 shadow-[-12px_0_40px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-out ${
-              open ? "translate-x-0" : "translate-x-full"
-            }`}
-          >
-            <div className="mb-10 flex items-center justify-between gap-3">
-              <BrandWordmark className="w-[10rem]" />
-              <button
-                type="button"
-                tabIndex={open ? 0 : -1}
-                className="font-display shrink-0 text-sm tracking-[0.14em] text-white/80 transition-colors hover:text-accent"
-                onClick={close}
-              >
-                Fermer
-              </button>
-            </div>
-            <nav
-              className="flex flex-col gap-6 text-white"
-              aria-label="Navigation mobile"
-              style={{ color: "#fff" }}
-            >
-              <Link
-                href={homeLink.href}
-                tabIndex={open ? 0 : -1}
-                className="font-display inline-flex w-fit items-center gap-2.5 rounded-lg border border-accent/50 px-3 py-2 text-lg tracking-[0.12em] text-accent no-underline transition-all duration-300 hover:border-accent hover:bg-accent hover:text-ink"
-                style={{
-                  transitionDelay: open ? "80ms" : "0ms",
-                  opacity: open ? 1 : 0,
-                  transform: open ? "translateX(0)" : "translateX(0.75rem)",
-                }}
-                onClick={close}
-              >
-                <span className="live-dot shrink-0" aria-hidden />
-                {homeLink.label}
-              </Link>
-
-              <div className="border-t border-white/15 pt-5">
-                <p className="font-display mb-3 text-[0.7rem] tracking-[0.16em] text-white/45">
-                  Rubriques
-                </p>
-                <div className="flex flex-col gap-4">
-                  {rubriqueLinks.map((link, i) => {
-                    const active =
-                      pathname === link.href ||
-                      pathname.startsWith(`${link.href}/`);
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        tabIndex={open ? 0 : -1}
-                        aria-current={active ? "page" : undefined}
-                        className={`font-display inline-flex items-center gap-2 text-xl tracking-[0.12em] no-underline transition-all duration-300 hover:text-accent ${
-                          active
-                            ? "text-white underline decoration-accent decoration-2 underline-offset-4"
-                            : "text-white"
-                        }`}
-                        style={{
-                          color: "#fff",
-                          transitionDelay: open ? `${120 + i * 35}ms` : "0ms",
-                          opacity: open ? 1 : 0,
-                          transform: open
-                            ? "translateX(0)"
-                            : "translateX(0.75rem)",
-                        }}
-                        onClick={close}
-                      >
-                        {link.label}
-                        {link.premium ? (
-                          <CrownIcon className="h-4 w-4 text-accent" />
-                        ) : null}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="border-t border-white/15 pt-5">
-                <div className="flex flex-col gap-3">
-                  {utilityLinks.map((link, i) => {
-                    const active =
-                      pathname === link.href ||
-                      pathname.startsWith(`${link.href}/`);
-                    return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      tabIndex={open ? 0 : -1}
-                      aria-current={active ? "page" : undefined}
-                      className={`font-display inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-lg border border-accent/50 px-3.5 py-2.5 text-base tracking-[0.14em] no-underline transition hover:border-accent hover:bg-accent hover:text-ink ${
-                        active
-                          ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
-                          : "text-accent"
-                      }`}
-                      style={{
-                        transitionDelay: open ? `${280 + i * 40}ms` : "0ms",
-                        opacity: open ? 1 : 0,
-                        transform: open
-                          ? "translateX(0)"
-                          : "translateX(0.75rem)",
-                      }}
-                      onClick={close}
-                    >
-                      <UtilityIcon icon={link.icon} />
-                      {link.label}
-                    </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </nav>
-          </div>
-        </div>
-      </>,
-      document.body,
-    );
-
   return (
     <>
-      <DesktopNav ariaLabel="Navigation principale" />
+      <DesktopBar />
 
-      <div
-        className="fixed inset-x-0 top-0 z-[10040] lg:hidden"
-        style={{
-          zIndex: 10040,
-          paddingTop: "env(safe-area-inset-top, 0px)",
-        }}
-      >
-        <div className="marble-band text-paper">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5">
-            <Link
-              href="/"
-              className="inline-flex items-center no-underline hover:no-underline"
-              aria-label="Le Rempart"
-            >
-              <BrandWordmark className="w-[8.5rem]" />
-            </Link>
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <MenuButton open={open} onToggle={toggle} />
-            </div>
-          </div>
-          <div
-            className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent"
-            aria-hidden
-          />
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 lg:hidden">
+        <Link href="/" className="inline-flex items-center no-underline hover:no-underline" aria-label="Le Rempart, accueil">
+          <BrandWordmark className="w-[8rem]" />
+        </Link>
+        <div className="flex items-center gap-1.5">
+          <HideForPlus>
+            <SubscribeButton small />
+          </HideForPlus>
+          <ThemeToggle />
+          <button
+            type="button"
+            className="icon-bare inline-flex items-center justify-center p-2 text-white transition-colors hover:text-accent"
+            aria-expanded={open}
+            aria-controls="mobile-nav-drawer"
+            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <HamburgerIcon open={open} />
+          </button>
         </div>
       </div>
-      <div
-        className="lg:hidden"
-        style={{ height: "calc(3.35rem + env(safe-area-inset-top, 0px))" }}
-        aria-hidden
-      />
 
-      {chrome}
+      {mounted && createPortal(<MobileDrawer open={open} onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

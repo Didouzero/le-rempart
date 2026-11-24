@@ -192,7 +192,7 @@ export default async function DossierPage({ params }: Props) {
           value={dossier.publishedAt}
           className="block text-xs uppercase tracking-[0.14em] text-muted"
         />
-        <h1 className="font-display mt-3 text-[1.75rem] leading-[1.05] sm:text-3xl md:text-4xl">
+        <h1 className="font-headline mt-3 text-[1.75rem] leading-[1.12] sm:text-3xl md:text-4xl">
           {dossier.title}
         </h1>
         <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">

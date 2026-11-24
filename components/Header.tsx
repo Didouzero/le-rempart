@@ -1,83 +1,13 @@
-import Image from "next/image";
-import Link from "next/link";
-import { CrownCircleIcon, LoginCircleIcon } from "@/components/BrandIcons";
-import { MobileAccountTiles } from "@/components/MobileAccountTiles";
-import { HideForPlus } from "@/components/PlusProvider";
 import { SiteNav } from "@/components/SiteNav";
 
-type HeaderProps = {
-  compact?: boolean;
-};
-
-export function Header({ compact = false }: HeaderProps) {
+/** En-tête compact et collant : une seule barre, sur ordinateur comme sur mobile. */
+export function Header() {
   return (
-    <header className="site-header marble-band text-paper">
+    <header
+      className="site-header marble-band sticky top-0 text-paper"
+      style={{ zIndex: 10040, paddingTop: "env(safe-area-inset-top, 0px)" }}
+    >
       <SiteNav />
-
-      <div
-        className="hidden h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent lg:block"
-        aria-hidden
-      />
-
-      {!compact && (
-        <div className="relative mx-auto hidden w-full max-w-6xl px-6 pb-8 pt-7 lg:block">
-          <div className="absolute right-6 top-6 z-10 flex w-[13.5rem] flex-col items-stretch gap-1.5">
-            <HideForPlus>
-              <Link
-                href="/s-abonner"
-                className="group inline-flex w-full items-center gap-3 rounded-lg border border-accent/50 bg-accent px-4 py-2.5 text-ink no-underline shadow-[0_8px_24px_rgba(255,189,89,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent-deep hover:no-underline hover:shadow-[0_12px_28px_rgba(255,189,89,0.45)]"
-              >
-                <CrownCircleIcon className="h-8 w-8" />
-                <span className="flex flex-col leading-none text-left">
-                  <span className="font-display text-[1.15rem] tracking-[0.14em]">
-                    S&apos;abonner
-                  </span>
-                  <span className="font-display mt-0.5 text-[1.15rem] tracking-[0.14em]">
-                    au Rempart+
-                  </span>
-                </span>
-              </Link>
-              <Link
-                href="/connexion"
-                className="group inline-flex w-full items-center gap-3 rounded-lg border border-accent/50 bg-ink px-4 py-2.5 text-accent no-underline shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-ink hover:no-underline"
-              >
-                <LoginCircleIcon className="h-8 w-8 group-hover:bg-ink group-hover:text-accent" />
-                <span className="flex flex-col leading-none text-left">
-                  <span className="font-display text-[1.15rem] tracking-[0.14em]">
-                    Se connecter
-                  </span>
-                  <span className="mt-0.5 text-xs tracking-[0.08em] text-white/65 group-hover:text-ink/70">
-                    Déjà abonné
-                  </span>
-                </span>
-              </Link>
-            </HideForPlus>
-          </div>
-
-          <div className="flex flex-col items-center text-center">
-            <Link
-              href="/"
-              className="no-underline hover:no-underline"
-              aria-label="Le Rempart"
-            >
-              <Image
-                src="/logo.png"
-                alt="Le Rempart"
-                width={420}
-                height={160}
-                priority
-                className="mx-auto h-auto w-[180px] md:w-[200px]"
-              />
-            </Link>
-            <div className="animate-line-grow mx-auto mt-3 h-[3px] w-28 bg-accent" />
-            <p className="font-tagline mx-auto mt-3 max-w-xl text-[0.925rem] text-white">
-              Le média de droite radicale
-            </p>
-          </div>
-        </div>
-      )}
-
-      <MobileAccountTiles />
     </header>
   );
 }

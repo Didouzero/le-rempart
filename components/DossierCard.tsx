@@ -88,7 +88,7 @@ export function DossierCard({
         </Link>
         <div className="mt-5 border-l-[3px] border-accent pl-4 sm:pl-5">
           {meta}
-          <h2 className="font-display mt-3 text-2xl leading-[1.05] sm:text-3xl md:text-4xl">
+          <h2 className="font-headline mt-3 text-2xl leading-[1.12] sm:text-3xl md:text-4xl">
             <Link
               href={href}
               className="no-underline hover:text-gold hover:no-underline"
@@ -112,7 +112,7 @@ export function DossierCard({
       <Link href={href} className="block no-underline hover:no-underline">
         <Cover src={dossier.coverImageUrl} title={dossier.title} />
         <div className="mt-3">{meta}</div>
-        <h2 className="font-display mt-2 text-xl leading-[1.08] sm:text-2xl">
+        <h2 className="font-headline mt-2 text-xl leading-[1.15] sm:text-2xl">
           {dossier.title}
         </h2>
         <p className="mt-3 line-clamp-3 text-base italic text-ink">

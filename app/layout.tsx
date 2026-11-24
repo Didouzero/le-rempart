@@ -1,4 +1,4 @@
-import { Open_Sans, Source_Sans_3 } from "next/font/google";
+import { Barlow_Condensed, Open_Sans, Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import type { Metadata } from "next";
 import Script from "next/script";
 import {
@@ -23,6 +23,23 @@ const openSans = Open_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-open-sans",
+  display: "swap",
+});
+
+// Libellés, navigation, rubriques : condensée en capitales, chargée par le site
+// (Impact n'existe pas sur Android).
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-condensed",
+  display: "swap",
+});
+
+// Titres d'articles : serif de presse, en minuscules.
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-serif",
   display: "swap",
 });
 
@@ -112,7 +129,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   return (
     <html
       lang="fr"
-      className={`${openSans.variable} ${sourceSans.variable}`}
+      className={`${openSans.variable} ${sourceSans.variable} ${barlowCondensed.variable} ${sourceSerif.variable}`}
       // Mode nuit par défaut, sur tous les appareils ; THEME_INIT_SCRIPT applique
       // le choix mémorisé avant l'hydratation.
       data-theme="dark"

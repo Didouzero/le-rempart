@@ -29,7 +29,7 @@ export default function PublicLayout({
         >
           {showAds ? (
             <aside
-              className="hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
+              className="hidden xl:sticky xl:top-20 xl:block xl:self-start xl:py-12"
               aria-label="Publicité gauche"
             >
               <AdSlot
@@ -49,7 +49,7 @@ export default function PublicLayout({
 
           {showAds ? (
             <aside
-              className="hidden xl:sticky xl:top-6 xl:block xl:self-start xl:py-12"
+              className="hidden xl:sticky xl:top-20 xl:block xl:self-start xl:py-12"
               aria-label="Publicité droite"
             >
               <AdSlot
