@@ -11,7 +11,7 @@ import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
 import { ArticleViewBeacon } from "@/components/ArticleViewBeacon";
 import { ShareButtons } from "@/components/ShareButtons";
-import { PublishedAt } from "@/components/PublishedAt";
+import { AuthorBox, Byline, readingMinutesOf, TagChips, wasUpdated } from "@/components/ArticleMeta";
 import { articleAuthorName, SITE_AUTHOR } from "@/lib/authors";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
 import {
@@ -201,11 +201,8 @@ export default async function ArticlePage({ params }: Props) {
   const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
   // Temps de lecture (230 mots par minute) et date de mise à jour, affichée
   // seulement pour une vraie correction, au moins une heure après la publication.
-  const words = article.content.split(/\s+/).filter(Boolean).length;
-  const readingMinutes = Math.max(1, Math.round(words / 230));
-  const updated =
-    article.publishedAt &&
-    article.updatedAt.getTime() - article.publishedAt.getTime() > 60 * 60 * 1000;
+  const readingMinutes = readingMinutesOf(article.content);
+  const updated = wasUpdated(article.publishedAt, article.updatedAt);
 
   return (
     <article className="animate-fade-up">
@@ -253,54 +250,14 @@ export default async function ArticlePage({ params }: Props) {
           </h1>
           <p className="article-standfirst mt-5">{article.excerpt}</p>
 
-          {/* Signature : portrait, nom, fonction, dates et temps de lecture. */}
-          <div className="mt-7 flex flex-col gap-4 border-y border-rule py-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              {author === SITE_AUTHOR.name && SITE_AUTHOR.photo ? (
-                <Link href={SITE_AUTHOR.path} rel="author" className="shrink-0" aria-label={author}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={SITE_AUTHOR.photo}
-                    alt=""
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 rounded-full border border-accent/60 object-cover"
-                  />
-                </Link>
-              ) : null}
-              <div className="min-w-0 leading-snug">
-                <p className="text-[0.95rem] text-ink">
-                  Par{" "}
-                  {author === SITE_AUTHOR.name ? (
-                    <Link
-                      href={SITE_AUTHOR.path}
-                      rel="author"
-                      className="font-semibold text-ink no-underline hover:text-gold hover:underline"
-                    >
-                      {author}
-                    </Link>
-                  ) : (
-                    <span className="font-semibold">{author}</span>
-                  )}
-                  {author === SITE_AUTHOR.name ? (
-                    <span className="text-muted">, {SITE_AUTHOR.jobTitle.toLowerCase()}</span>
-                  ) : null}
-                </p>
-                <p className="mt-0.5 text-[0.8rem] text-muted">
-                  Publié le{" "}
-                  <PublishedAt value={article.publishedAt} />
-                  {updated ? (
-                    <>
-                      {" · "}Mis à jour le <PublishedAt value={article.updatedAt} />
-                    </>
-                  ) : null}
-                  {" · "}
-                  {readingMinutes} min de lecture
-                </p>
-              </div>
-            </div>
-            <ShareButtons url={url} title={article.title} compact />
-          </div>
+          <Byline
+            author={author}
+            publishedAt={article.publishedAt}
+            updatedAt={updated ? article.updatedAt : null}
+            readingMinutes={readingMinutes}
+            shareUrl={url}
+            shareTitle={article.title}
+          />
         </header>
 
         {article.coverImageUrl ? (
@@ -336,57 +293,11 @@ export default async function ArticlePage({ params }: Props) {
           />
         </div>
         <footer className="mt-12 space-y-8">
-          {tags.length > 0 ? (
-            <nav aria-label="Sujets de l'article">
-              <p className="section-kicker mb-3">Sujets</p>
-              <ul className="flex list-none flex-wrap gap-2 p-0">
-                {tags.map((t) => (
-                  <li key={t.slug}>
-                    <Link
-                      href={tagPath(t.slug)}
-                      className="inline-flex items-center rounded-lg border border-rule bg-card/60 px-3 py-1.5 text-[0.9rem] text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
-                    >
-                      {t.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ) : null}
+          <TagChips tags={tags} label="Sujets de l'article" />
 
           <ShareButtons url={url} title={article.title} />
 
-          {author === SITE_AUTHOR.name ? (
-            <aside
-              aria-label="L'auteur"
-              className="flex gap-4 rounded-lg border border-rule bg-card/60 p-5 sm:p-6"
-            >
-              {SITE_AUTHOR.photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={SITE_AUTHOR.photo}
-                  alt={SITE_AUTHOR.name}
-                  width={72}
-                  height={72}
-                  className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-full border border-accent/60 object-cover"
-                />
-              ) : null}
-              <div className="min-w-0">
-                <p className="font-display text-[0.8rem] tracking-[0.16em] text-gold">
-                  L&apos;auteur
-                </p>
-                <p className="font-headline mt-1 text-xl text-ink">{SITE_AUTHOR.name}</p>
-                <p className="mt-2 text-[0.95rem] leading-relaxed text-muted">{SITE_AUTHOR.bio}</p>
-                <Link
-                  href={SITE_AUTHOR.path}
-                  rel="author"
-                  className="font-display mt-3 inline-flex items-center gap-1.5 text-[0.85rem] tracking-[0.12em] text-gold no-underline hover:underline"
-                >
-                  Tous ses articles <span aria-hidden>→</span>
-                </Link>
-              </div>
-            </aside>
-          ) : null}
+          {author === SITE_AUTHOR.name ? <AuthorBox /> : null}
         </footer>
         <ArticleViewBeacon publicId={article.publicId} />
       </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import Link from "next/link";
+import { TAG_CHIP } from "@/components/ArticleMeta";
 import { notFound } from "next/navigation";
 import type { TagKind } from "@prisma/client";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -273,7 +274,7 @@ export default async function SujetPage({ params }: Props) {
               <li key={t.slug}>
                 <Link
                   href={tagPath(t.slug)}
-                  className="inline-block rounded-full border border-ink/20 px-3 py-1 text-sm text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
+                  className={TAG_CHIP}
                 >
                   {t.name}
                 </Link>

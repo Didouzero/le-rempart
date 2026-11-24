@@ -75,7 +75,7 @@ export function SiteFooter() {
                       rel="noopener noreferrer"
                       aria-label={link.title}
                       title={link.title}
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition duration-300 hover:bg-white/10 hover:text-accent"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition duration-300 hover:bg-white/10 hover:text-accent"
                     >
                       <SocialIcon path={link.path} />
                     </a>

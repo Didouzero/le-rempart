@@ -16,7 +16,7 @@ export function PremiumBanner({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent-deep via-accent to-accent-deep" />
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/60 bg-accent/15 text-accent">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-accent/60 bg-accent/15 text-accent">
             <CrownIcon className="h-5 w-5" />
           </span>
           <span className="flex flex-col leading-tight">
@@ -29,14 +29,14 @@ export function PremiumBanner({
           </span>
         </div>
         {subscribed ? (
-          <span className="inline-flex items-center gap-2 rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-accent">
+          <span className="inline-flex items-center gap-2 rounded-lg border border-accent/50 bg-accent/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-accent">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
             Accès abonné
           </span>
         ) : (
           <Link
             href="/s-abonner"
-            className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 font-display text-xs tracking-[0.16em] text-ink no-underline transition hover:bg-accent-deep hover:no-underline"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 font-display text-xs tracking-[0.16em] text-ink no-underline transition hover:bg-accent-deep hover:no-underline"
           >
             Réservé aux abonnés · S&apos;abonner
           </Link>

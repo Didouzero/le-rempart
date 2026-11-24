@@ -96,7 +96,7 @@ export default function QuiSommesNousPage() {
               <li key={key}>
                 <Link
                   href={`/rubriques/${CATEGORY_META[key].slug}`}
-                  className="font-display inline-block rounded-full border border-ink px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-ink hover:text-gold hover:no-underline"
+                  className="font-display inline-block rounded-lg border border-ink px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-ink hover:text-gold hover:no-underline"
                 >
                   {CATEGORY_META[key].label}
                 </Link>
@@ -105,7 +105,7 @@ export default function QuiSommesNousPage() {
             <li>
               <Link
                 href="/rubriques/enquetes"
-                className="font-display inline-block rounded-full border border-accent bg-accent px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-accent-deep hover:no-underline"
+                className="font-display inline-block rounded-lg border border-accent bg-accent px-4 py-1.5 text-sm tracking-[0.12em] text-ink no-underline transition hover:bg-accent-deep hover:no-underline"
               >
                 Enquêtes Rempart+
               </Link>
@@ -124,11 +124,11 @@ export default function QuiSommesNousPage() {
               >
                 <span
                   aria-hidden
-                  className="font-display pointer-events-none absolute -top-3 right-3 text-8xl leading-none text-ink/[0.06]"
+                  className="font-headline pointer-events-none absolute -top-3 right-3 text-8xl font-bold leading-none text-ink/[0.06]"
                 >
                   {i + 1}
                 </span>
-                <h3 className="font-display text-xl tracking-[0.06em]">{title}</h3>
+                <h3 className="font-headline text-xl font-bold">{title}</h3>
                 <p className="mt-1 text-muted">{text}</p>
               </li>
             ))}
@@ -147,7 +147,7 @@ export default function QuiSommesNousPage() {
           ["Qui nous finance ?", "L'abonnement Rempart+ et, selon les périodes, la publicité. Rien d'autre."],
         ].map(([title, text]) => (
           <div key={title} className="bg-ink p-6">
-            <h3 className="font-display text-2xl tracking-[0.06em] text-accent">{title}</h3>
+            <h3 className="font-headline text-2xl font-bold text-gold">{title}</h3>
             <p className="mt-2 text-white/75">{text}</p>
           </div>
         ))}

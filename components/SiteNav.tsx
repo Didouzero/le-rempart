@@ -156,7 +156,7 @@ function SubscribeButton({ small = false }: { small?: boolean }) {
   return (
     <Link
       href="/s-abonner"
-      className={`font-display inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent text-ink no-underline transition hover:bg-accent-deep hover:no-underline ${
+      className={`font-display inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-accent text-ink no-underline transition hover:bg-accent-deep hover:no-underline ${
         small ? "px-2.5 py-1.5 text-[0.8rem] tracking-[0.06em]" : "px-3.5 py-2 text-[0.92rem] tracking-[0.07em]"
       }`}
     >
@@ -323,7 +323,7 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
             <Link
               href="/s-abonner"
               tabIndex={open ? 0 : -1}
-              className="font-display flex items-center justify-center gap-2 rounded-md bg-accent py-3 text-[1rem] tracking-[0.07em] text-ink no-underline hover:no-underline"
+              className="font-display flex items-center justify-center gap-2 rounded-lg bg-accent py-3 text-[1rem] tracking-[0.07em] text-ink no-underline hover:no-underline"
               onClick={onClose}
             >
               <CrownIcon className="h-4 w-4" />
@@ -333,7 +333,7 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           <Link
             href="/connexion"
             tabIndex={open ? 0 : -1}
-            className="font-display flex items-center justify-center gap-2 rounded-md border border-white/20 py-3 text-[0.95rem] tracking-[0.07em] text-white/85 no-underline hover:border-accent hover:text-accent hover:no-underline"
+            className="font-display flex items-center justify-center gap-2 rounded-lg border border-white/20 py-3 text-[0.95rem] tracking-[0.07em] text-white/85 no-underline hover:border-accent hover:text-accent hover:no-underline"
             onClick={onClose}
           >
             <UserIcon className="h-4 w-4" />

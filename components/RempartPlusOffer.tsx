@@ -74,7 +74,7 @@ export function RempartPlusOffer({
             <HideForPlus>
             <a
               href="#rejoindre"
-              className="font-display mt-7 inline-flex items-center rounded-md bg-accent px-6 py-3 text-[1rem] tracking-[0.07em] text-ink no-underline hover:bg-accent-deep hover:no-underline"
+              className="font-display mt-7 inline-flex items-center rounded-lg bg-accent px-6 py-3 text-[1rem] tracking-[0.07em] text-ink no-underline hover:bg-accent-deep hover:no-underline"
             >
               Je m&apos;abonne
             </a>

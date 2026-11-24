@@ -7,7 +7,8 @@ import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
 import { PlusSubscribeButton } from "@/components/PlusSubscribeButton";
 import { PremiumBanner } from "@/components/PremiumBanner";
-import { PublishedAt } from "@/components/PublishedAt";
+import { AuthorBox, Byline, readingMinutesOf, TagChips, wasUpdated } from "@/components/ArticleMeta";
+import { ShareButtons } from "@/components/ShareButtons";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
 import { getDossierCoverAlt } from "@/lib/investigation-draft";
@@ -163,52 +164,28 @@ export default async function DossierPage({ params }: Props) {
         ])}
       />
 
-      <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
-        <ol className="flex flex-wrap items-center gap-2">
-          <li>
-            <Link
-              href="/"
-              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-gold hover:underline"
-            >
-              Dernières news
-            </Link>
-          </li>
-          <li aria-hidden className="text-accent">
-            /
-          </li>
-          <li>
-            <Link
-              href={PREMIUM_CATEGORY.path}
-              className="font-display tracking-[0.1em] text-ink no-underline underline-offset-4 hover:text-gold hover:underline"
-            >
-              {PREMIUM_CATEGORY.short}
-            </Link>
-          </li>
-        </ol>
-      </nav>
-
       <PremiumBanner label="Enquête exclusive" subscribed={plus} />
 
-      <header className="mb-5">
-        <PublishedAt
-          value={dossier.publishedAt}
-          className="block text-xs uppercase tracking-[0.14em] text-muted"
-        />
-        <h1 className="font-headline mt-3 text-[1.75rem] leading-[1.12] sm:text-3xl md:text-4xl">
-          {dossier.title}
-        </h1>
-        <p className="mt-3 text-xs uppercase tracking-[0.14em] text-muted">
-          Par{" "}
-          <Link
-            href={SITE_AUTHOR.path}
-            rel="author"
-            className="text-ink no-underline underline-offset-4 hover:text-gold hover:underline"
-          >
-            {SITE_AUTHOR.name}
+      <header className="mb-8">
+        {/* Même en-tête que les articles : surtitre, titre, chapô, signature. */}
+        <p className="section-kicker">
+          <span className="live-dot" aria-hidden />
+          <Link href={PREMIUM_CATEGORY.path} className="text-inherit no-underline hover:underline">
+            {PREMIUM_CATEGORY.short}
           </Link>
         </p>
-        <div className="gold-rule animate-line-grow mt-5 max-w-md" />
-        <p className="mt-5 text-lg italic text-ink">{dossier.excerpt}</p>
+        <h1 className="font-headline mt-4 text-[1.9rem] leading-[1.1] sm:text-[2.35rem] md:text-[2.75rem]">
+          {dossier.title}
+        </h1>
+        <p className="article-standfirst mt-5">{dossier.excerpt}</p>
+        <Byline
+          author={SITE_AUTHOR.name}
+          publishedAt={dossier.publishedAt}
+          updatedAt={wasUpdated(dossier.publishedAt, dossier.updatedAt) ? dossier.updatedAt : null}
+          readingMinutes={readingMinutesOf(dossier.content)}
+          shareUrl={absoluteUrl(dossierPath(dossier.publicId))}
+          shareTitle={dossier.title}
+        />
       </header>
 
       {dossier.coverImageUrl ? (
@@ -246,12 +223,12 @@ export default async function DossierPage({ params }: Props) {
               <ArticleBody content={rest} showNewsletterCta={false} />
             ) : null}
             <div
-              className={`relative z-10 ${crawler ? "mt-10" : "-mt-6"} rounded-lg border border-accent/45 bg-ink px-5 py-8 text-center text-paper shadow-[0_14px_40px_rgba(0,0,0,0.28)] sm:px-10`}
+              className={`relative z-10 ${crawler ? "mt-10" : "-mt-6"} rounded-lg border border-accent/45 bg-ink px-5 py-8 text-center text-paper shadow-[var(--shadow-soft)] sm:px-10`}
             >
-              <p className="font-display text-[1.05rem] tracking-[0.22em] text-accent">
+              <p className="section-kicker justify-center text-accent">
                 La suite est réservée aux abonnés
               </p>
-              <p className="font-display mx-auto mt-3 max-w-lg text-2xl leading-tight tracking-[0.06em] sm:text-3xl">
+              <p className="font-headline mx-auto mt-3 max-w-lg text-2xl leading-tight font-bold sm:text-3xl">
                 Lisez l&apos;enquête en entier avec le Rempart+
               </p>
               <p className="mx-auto mt-3 max-w-md text-sm text-white/75">
@@ -277,22 +254,11 @@ export default async function DossierPage({ params }: Props) {
         <ArticleBody content={teaser} showNewsletterCta={false} />
       )}
 
-      {tags.length > 0 ? (
-        <nav aria-label="Sujets de l'enquête" className="mt-10 flex flex-wrap items-center gap-2">
-          <span className="font-display mr-1 text-[0.8rem] tracking-[0.16em] text-muted">
-            Sujets
-          </span>
-          {tags.map((t) => (
-            <Link
-              key={t.slug}
-              href={tagPath(t.slug)}
-              className="inline-block rounded-full border border-ink/20 px-3 py-1 text-sm text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
-            >
-              {t.name}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
+      <footer className="mt-12 space-y-8">
+        <TagChips tags={tags} label="Sujets de l'enquête" />
+        <ShareButtons url={absoluteUrl(dossierPath(dossier.publicId))} title={dossier.title} />
+        <AuthorBox />
+      </footer>
     </article>
   );
 }

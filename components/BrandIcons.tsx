@@ -44,7 +44,7 @@ export function CrownIcon({ className }: { className?: string }) {
 export function CrownCircleIcon({ className }: { className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink text-accent leading-none ${className ?? "h-8 w-8"}`}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-ink text-accent leading-none ${className ?? "h-8 w-8"}`}
       aria-hidden
     >
       <CrownIcon className="h-[62%] w-[62%]" />

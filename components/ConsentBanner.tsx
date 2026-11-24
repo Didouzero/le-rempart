@@ -23,7 +23,7 @@ export function useConsentGranted(): boolean {
 }
 
 const BUTTON =
-  "font-display rounded-md px-4 py-2 text-[0.85rem] tracking-[0.08em] transition duration-200";
+  "font-display rounded-lg px-4 py-2 text-[0.85rem] tracking-[0.08em] transition duration-200";
 
 /**
  * Petit bandeau de consentement en bas d'écran. « Refuser » et « Accepter »

@@ -24,7 +24,7 @@ export default function ContactPage() {
       {/* À gauche : l'adresse, en grand, sur fond sombre. */}
       <section className="night-panel flex flex-col rounded-lg border border-transparent bg-ink p-8 text-paper sm:p-10">
         <div>
-          <p className="font-display text-sm tracking-[0.24em] text-accent uppercase">Contact</p>
+          <p className="section-kicker">Contact</p>
           <h1 className="font-headline mt-4 text-5xl leading-[1.05] sm:text-6xl">
             Écrivez à la rédaction
           </h1>
@@ -38,7 +38,7 @@ export default function ContactPage() {
         <div className="flex flex-1 items-center py-10 lg:py-0">
           <a
             href={`mailto:${EMAIL}`}
-            className="font-display block text-[1.35rem] tracking-[0.03em] text-accent underline decoration-accent/40 decoration-2 underline-offset-8 transition hover:decoration-accent sm:text-2xl"
+            className="font-headline block text-[1.35rem] font-semibold text-gold underline decoration-accent/40 decoration-2 underline-offset-8 transition hover:decoration-accent sm:text-2xl"
           >
             {/* Coupure permise seulement après l'arobase, jamais au milieu du domaine. */}
             contact@
@@ -62,7 +62,7 @@ export default function ContactPage() {
                 className="group flex items-center justify-between gap-6 py-6 text-ink no-underline hover:no-underline"
               >
                 <span>
-                  <span className="font-display block text-2xl tracking-[0.05em] transition-colors group-hover:text-gold sm:text-3xl">
+                  <span className="font-headline block text-2xl font-bold transition-colors group-hover:text-gold sm:text-3xl">
                     {title}
                   </span>
                   <span className="mt-1 block text-muted">{text}</span>

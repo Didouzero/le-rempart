@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TAG_CHIP } from "@/components/ArticleMeta";
 import type { TagKind } from "@prisma/client";
 import { JsonLd } from "@/components/JsonLd";
 import { buildPageMetadata, collectionPageJsonLd } from "@/lib/seo";
@@ -65,7 +66,7 @@ export default async function SujetsPage() {
                   <li key={t.slug}>
                     <Link
                       href={tagPath(t.slug)}
-                      className="inline-flex items-center gap-2 rounded-full border border-ink/20 px-3 py-1 text-sm text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
+                      className={TAG_CHIP}
                     >
                       {t.name}
                       <span className="text-xs text-muted">{t.count}</span>
