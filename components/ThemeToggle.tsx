@@ -42,8 +42,9 @@ function SunIcon() {
       strokeLinecap="round"
       className="h-5 w-5"
     >
-      <circle cx="12" cy="12" r="4.5" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      {/* Même poids visuel que la loupe et le compte : disque plus grand, rayons plus longs. */}
+      <circle cx="12" cy="12" r="5" />
+      <path d="M12 1.5v3M12 19.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1.5 12h3M19.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
     </svg>
   );
 }

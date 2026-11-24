@@ -14,6 +14,10 @@ export const metadata: Metadata = buildPageMetadata({
 export default function SuppressionDonneesPage() {
   return (
     <article className="prose-article max-w-3xl animate-fade-up">
+      <p className="section-kicker !mb-3">
+        <span className="live-dot" aria-hidden />
+        Informations légales
+      </p>
       <h1 className="font-headline text-3xl sm:text-4xl">
         Suppression des données
       </h1>

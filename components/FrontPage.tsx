@@ -113,7 +113,7 @@ function Lead({ item, related = [] }: { item: Item; related?: Related[] }) {
     <article className="group">
       <Media item={item} sizes="(min-width: 1024px) 46rem, 100vw" priority />
       <div className="mt-4 flex flex-wrap items-center gap-2.5 text-xs uppercase tracking-[0.12em] text-muted">
-        <span className="font-display text-[0.78rem] tracking-[0.1em] text-accent">À la une</span>
+        <span className="font-display text-[0.78rem] tracking-[0.1em] text-gold">À la une</span>
         <span aria-hidden>·</span>
         <Kicker category={item.category} />
         <span aria-hidden>·</span>

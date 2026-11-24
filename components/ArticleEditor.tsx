@@ -1,11 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ARTICLE_CATEGORIES,
   CATEGORY_META,
-  classifyArticleCategory,
   type ArticleCategory,
 } from "@/lib/categories";
 
@@ -41,7 +40,6 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
   const [status, setStatus] = useState<"draft" | "published">(
     initial?.status ?? "draft",
   );
-  const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingCover, setSavingCover] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -49,40 +47,6 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
   const [coverCaption, setCoverCaption] = useState(initial?.coverCaption ?? "");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-
-  async function onGenerate(event: FormEvent) {
-    event.preventDefault();
-    setGenerating(true);
-    setError("");
-    setMessage("");
-
-    try {
-      const response = await fetch("/api/admin/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, sourceText, sourceUrl }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Génération impossible");
-      }
-      setTitle(data.title);
-      setExcerpt(data.excerpt);
-      setContent(data.content);
-      setCategory(
-        classifyArticleCategory({
-          title: data.title,
-          excerpt: data.excerpt,
-          content: data.content,
-        }),
-      );
-      setMessage("Article généré — relisez et éditez avant publication.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur de génération");
-    } finally {
-      setGenerating(false);
-    }
-  }
 
   async function onSave(nextStatus: "draft" | "published") {
     setSaving(true);
@@ -199,7 +163,7 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
 
   return (
     <div className="space-y-8">
-      <form onSubmit={onGenerate} className="space-y-4 rounded-lg border border-rule bg-white p-5">
+      <div className="space-y-4 rounded-lg border border-rule bg-white p-5">
         <h2 className="font-display text-xl">Source</h2>
         <label className="block text-sm font-semibold">
           Titre
@@ -226,17 +190,10 @@ export function ArticleEditor({ mode, articleId, initial }: ArticleEditorProps) 
             className="admin-input mt-2 min-h-36"
             value={sourceText}
             onChange={(e) => setSourceText(e.target.value)}
-            placeholder="Collez ici le texte ou les notes à partir desquels Kimi rédigera l'article."
+            placeholder="Collez ici le texte ou les notes source de l'article."
           />
         </label>
-        <button
-          type="submit"
-          className="admin-btn"
-          disabled={generating || !title.trim() || (!sourceText.trim() && !sourceUrl.trim())}
-        >
-          {generating ? "Génération…" : "Générer avec Kimi"}
-        </button>
-      </form>
+      </div>
 
       <div className="space-y-4 rounded-lg border border-rule bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
