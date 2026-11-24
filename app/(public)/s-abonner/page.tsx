@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = buildPageMetadata({
   title: "S'abonner au Rempart+",
   description:
-    "Rempart+ à 4,90 €/mois : le brief approfondi chaque matin, les dossiers exclusifs, et un site sans publicité.",
+    "Rempart+ à 4,90 €/mois : le brief approfondi chaque matin et les dossiers exclusifs.",
   path: "/s-abonner",
 });
 

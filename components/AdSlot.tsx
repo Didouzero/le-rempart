@@ -1,4 +1,5 @@
 import { HideForPlus } from "@/components/PlusProvider";
+import { ADS_PAUSED } from "@/lib/mgid";
 
 type AdSlotProps = {
   slot: string;
@@ -7,6 +8,7 @@ type AdSlotProps = {
 
 /** Pubs visibles seulement quand AdSense est explicitement activé. */
 export function adsEnabled(): boolean {
+  if (ADS_PAUSED) return false;
   return process.env.NEXT_PUBLIC_ADSENSE_ENABLED === "true";
 }
 

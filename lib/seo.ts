@@ -5,7 +5,7 @@ import type { ArticleCategory } from "@/lib/categories";
 import { rssAlternateTypes } from "@/lib/rss-links";
 
 export const SITE_NAME = "Le Rempart";
-export const SITE_TAGLINE = "Le média de droite radicale";
+export const SITE_TAGLINE = "Le média de droite assumé";
 export const SITE_DOMAIN = "le-rempart.org";
 export const SITE_URL = "https://www.le-rempart.org";
 export const SITE_DESCRIPTION =

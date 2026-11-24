@@ -43,6 +43,79 @@ function BrandWordmark({ className = "" }: { className?: string }) {
   );
 }
 
+function UserIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" className={className} aria-hidden>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1.4-4 4.5-6 8-6s6.6 2 8 6" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={className} aria-hidden>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M16.2 16.2 21 21" />
+    </svg>
+  );
+}
+
+const ICON_BUTTON =
+  "icon-bare inline-flex h-9 w-9 items-center justify-center text-white/80 transition-colors hover:text-accent";
+
+function AccountLink() {
+  return (
+    <Link href="/connexion" className={`${ICON_BUTTON} no-underline hover:no-underline`} aria-label="Mon compte" title="Mon compte">
+      <UserIcon />
+    </Link>
+  );
+}
+
+function SearchButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={ICON_BUTTON}
+      aria-label={open ? "Fermer la recherche" : "Rechercher"}
+      title="Rechercher"
+      aria-expanded={open}
+      aria-controls="header-search"
+      onClick={onToggle}
+    >
+      <SearchIcon />
+    </button>
+  );
+}
+
+/** Barre de recherche dépliée sous l'en-tête : envoie vers les résultats de l'accueil. */
+function SearchPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div id="header-search" className="border-t border-white/10">
+      <form action="/" method="get" role="search" className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-3 sm:px-6">
+        <label htmlFor="header-search-input" className="sr-only">
+          Rechercher un article
+        </label>
+        <SearchIcon className="h-5 w-5 shrink-0 text-white/50" />
+        <input
+          id="header-search-input"
+          name="q"
+          type="search"
+          autoFocus
+          placeholder="Rechercher un article, un nom, une ville…"
+          className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-[1rem] text-white placeholder:text-white/40 focus:outline-none"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onClose();
+          }}
+        />
+        <button type="submit" className="font-display rounded-md bg-accent px-3.5 py-1.5 text-[0.85rem] tracking-[0.07em] text-ink">
+          OK
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function SubscribeButton({ small = false }: { small?: boolean }) {
   return (
     <Link
@@ -57,7 +130,7 @@ function SubscribeButton({ small = false }: { small?: boolean }) {
   );
 }
 
-function DesktopBar() {
+function DesktopBar({ searchOpen, onToggleSearch }: { searchOpen: boolean; onToggleSearch: () => void }) {
   const pathname = usePathname() || "/";
   const links = [{ ...homeLink, premium: false as const }, ...rubriqueLinks];
 
@@ -70,7 +143,7 @@ function DesktopBar() {
       >
         <BrandWordmark className="w-[10.25rem]" />
         <span className="font-tagline mt-1 pl-[0.2em] text-[0.56rem] tracking-[0.2em] text-white/55">
-          Le média de droite radicale
+          Le média de droite assumé
         </span>
       </Link>
 
@@ -101,16 +174,14 @@ function DesktopBar() {
         </ul>
       </nav>
 
-      <div className="flex shrink-0 items-center gap-3 xl:gap-4">
+      <div className="flex shrink-0 items-center gap-1 xl:gap-2">
+        <SearchButton open={searchOpen} onToggle={onToggleSearch} />
         <ThemeToggle />
+        <AccountLink />
         <HideForPlus>
-          <Link
-            href="/connexion"
-            className="font-display whitespace-nowrap text-[0.8rem] tracking-[0.05em] text-white/75 xl:text-[0.88rem] xl:tracking-[0.07em] no-underline transition-colors hover:text-accent hover:no-underline"
-          >
-            Se connecter
-          </Link>
-          <SubscribeButton />
+          <span className="ml-2">
+            <SubscribeButton />
+          </span>
         </HideForPlus>
       </div>
     </div>
@@ -210,8 +281,12 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           </Link>
         </nav>
 
-        <HideForPlus>
-          <div className="mt-auto flex flex-col gap-3 pt-8">
+        <div className="mt-auto flex flex-col gap-3 pt-8">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <span className="font-display text-[0.9rem] tracking-[0.07em] text-white/60">Mode clair / sombre</span>
+            <ThemeToggle />
+          </div>
+          <HideForPlus>
             <Link
               href="/s-abonner"
               tabIndex={open ? 0 : -1}
@@ -221,24 +296,32 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
               <CrownIcon className="h-4 w-4" />
               S&apos;abonner au Rempart+
             </Link>
-            <Link
-              href="/connexion"
-              tabIndex={open ? 0 : -1}
-              className="font-display flex items-center justify-center rounded-md border border-white/20 py-3 text-[0.95rem] tracking-[0.07em] text-white/85 no-underline hover:border-accent hover:text-accent hover:no-underline"
-              onClick={onClose}
-            >
-              Se connecter
-            </Link>
-          </div>
-        </HideForPlus>
+          </HideForPlus>
+          <Link
+            href="/connexion"
+            tabIndex={open ? 0 : -1}
+            className="font-display flex items-center justify-center gap-2 rounded-md border border-white/20 py-3 text-[0.95rem] tracking-[0.07em] text-white/85 no-underline hover:border-accent hover:text-accent hover:no-underline"
+            onClick={onClose}
+          >
+            <UserIcon className="h-4 w-4" />
+            Mon compte
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
 
 export function SiteNav() {
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Une recherche lancée ou une nouvelle page referme la barre de recherche.
+  useEffect(() => {
+    setSearchOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     setMounted(true);
@@ -260,7 +343,7 @@ export function SiteNav() {
 
   return (
     <>
-      <DesktopBar />
+      <DesktopBar searchOpen={searchOpen} onToggleSearch={() => setSearchOpen((v) => !v)} />
 
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 lg:hidden">
         <Link href="/" className="inline-flex items-center no-underline hover:no-underline" aria-label="Le Rempart, accueil">
@@ -270,7 +353,7 @@ export function SiteNav() {
           <HideForPlus>
             <SubscribeButton small />
           </HideForPlus>
-          <ThemeToggle />
+          <SearchButton open={searchOpen} onToggle={() => setSearchOpen((v) => !v)} />
           <button
             type="button"
             className="icon-bare inline-flex items-center justify-center p-2 text-white transition-colors hover:text-accent"
@@ -283,6 +366,8 @@ export function SiteNav() {
           </button>
         </div>
       </div>
+
+      {searchOpen ? <SearchPanel onClose={() => setSearchOpen(false)} /> : null}
 
       {mounted && createPortal(<MobileDrawer open={open} onClose={() => setOpen(false)} />, document.body)}
     </>

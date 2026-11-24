@@ -4,7 +4,7 @@ import Script from "next/script";
 import { MgidSiteScript, MgidWidget } from "@/components/MgidLoader";
 import { useConsentGranted } from "@/components/ConsentBanner";
 import { usePlus } from "@/components/PlusProvider";
-import { mgidEnabled, mgidUnderArticleWidgetId } from "@/lib/mgid";
+import { ADS_PAUSED, mgidEnabled, mgidUnderArticleWidgetId } from "@/lib/mgid";
 
 /**
  * Native ads — MGID en priorité, Taboola en repli.
@@ -15,7 +15,7 @@ export function NativeAdsRail() {
   const consented = useConsentGranted();
   const mgidWidget = mgidUnderArticleWidgetId();
 
-  if (plus) return null;
+  if (plus || ADS_PAUSED) return null;
 
   if (mgidEnabled() && mgidWidget) {
     return (

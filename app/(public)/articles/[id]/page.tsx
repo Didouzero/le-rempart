@@ -9,6 +9,7 @@ import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
 import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
+import { ArticleViewBeacon } from "@/components/ArticleViewBeacon";
 import { ShareButtons } from "@/components/ShareButtons";
 import { PublishedAt } from "@/components/PublishedAt";
 import { articleAuthorName, SITE_AUTHOR } from "@/lib/authors";
@@ -305,6 +306,7 @@ export default async function ArticlePage({ params }: Props) {
           />
         </div>
         <ShareButtons url={url} title={article.title} />
+        <ArticleViewBeacon publicId={article.publicId} />
       </div>
 
       {/* Nos articles d'abord, les contenus sponsorisés ensuite. */}

@@ -14,6 +14,7 @@ import {
   type ArticleCategory,
 } from "@/lib/categories";
 import { formatPublishedAtTime } from "@/lib/format-published-at";
+import { mostReadPublicIds } from "@/lib/article-views";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { websiteJsonLd } from "@/lib/seo";
 
@@ -55,6 +56,18 @@ function liveStamp(value: Date | null): string {
   if (!value) return "";
   if (parisDay(value) === parisDay(new Date())) return formatPublishedAtTime(value) || "";
   return value.toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "Europe/Paris" });
+}
+
+/** « Mardi 24 novembre 2026 », à l'heure de Paris. */
+function todayLabel(): string {
+  const s = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Paris",
+  });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function Kicker({ category }: { category: string }) {
@@ -122,9 +135,9 @@ function SmallCard({ item }: { item: Item }) {
   );
 }
 
-function LiveColumn({ items }: { items: Item[] }) {
+function LiveColumn({ items, mostRead }: { items: Item[]; mostRead: Item[] }) {
   return (
-    <aside aria-labelledby="en-continu" className="lg:sticky lg:top-24 lg:self-start">
+    <aside aria-labelledby="en-continu" className="lg:self-start">
       <div className="flex items-center gap-2 border-b-2 border-accent pb-2">
         <span className="live-dot" aria-hidden />
         <h2 id="en-continu" className="font-display text-[1.05rem] tracking-[0.1em]">
@@ -154,6 +167,27 @@ function LiveColumn({ items }: { items: Item[] }) {
       <Link href="/?page=2" className="read-link mt-4">
         Toutes les actualités →
       </Link>
+
+      {mostRead.length >= 3 ? (
+        <section aria-labelledby="plus-lus" className="mt-10">
+          <h2 id="plus-lus" className="font-display border-b-2 border-accent pb-2 text-[1.05rem] tracking-[0.1em]">
+            Les plus lus
+          </h2>
+          <ol className="divide-y divide-rule">
+            {mostRead.map((item, i) => (
+              <li key={item.id} className="grid grid-cols-[2rem_minmax(0,1fr)] items-baseline gap-2 py-3">
+                <span className="font-headline text-[1.6rem] leading-none text-accent">{i + 1}</span>
+                <Link
+                  href={articlePublicPath(item.publicId)}
+                  className="font-headline text-[1rem] leading-[1.28] text-ink no-underline hover:text-gold hover:no-underline"
+                >
+                  {item.title}
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
     </aside>
   );
 }
@@ -244,6 +278,23 @@ export async function FrontPage() {
   // Les blocs rubriques ne reprennent rien de ce qui est déjà en haut de page.
   const shown = new Set(latest.map((a) => a.id));
 
+  // « Les plus lus » : 48 dernières heures. Une panne du compteur ne casse pas l'accueil.
+  let mostRead: Item[] = [];
+  try {
+    const ids = await withDbTimeout(mostReadPublicIds(2, 5));
+    if (ids.length) {
+      const rows: Item[] = await withDbTimeout(
+        prisma.article.findMany({
+          where: { ...publishedArticleWhere({}), publicId: { in: ids } },
+          select,
+        }),
+      );
+      mostRead = ids.map((id) => rows.find((r) => r.publicId === id)).filter((r): r is Item => Boolean(r));
+    }
+  } catch (err) {
+    console.error("plus lus", err);
+  }
+
   const sections = await Promise.all(
     ARTICLE_CATEGORIES.map(async (category) => {
       const items: Item[] = await withDbTimeout(
@@ -262,6 +313,11 @@ export async function FrontPage() {
     <div>
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Le Rempart : l&apos;actualité à la une</h1>
+      <p className="font-display mb-5 flex items-center gap-3 border-b border-rule pb-3 text-[0.8rem] tracking-[0.12em] text-muted">
+        <time dateTime={new Date().toISOString().slice(0, 10)}>{todayLabel()}</time>
+        <span aria-hidden className="h-3 w-px bg-rule" />
+        <span>Édition du jour</span>
+      </p>
       <AdSlot slot="home-below-header" />
 
       {!lead ? (
@@ -278,7 +334,7 @@ export async function FrontPage() {
               </div>
             ) : null}
           </div>
-          <LiveColumn items={latest.slice(4, 4 + LIVE_COUNT)} />
+          <LiveColumn items={latest.slice(4, 4 + LIVE_COUNT)} mostRead={mostRead} />
         </div>
       )}
 

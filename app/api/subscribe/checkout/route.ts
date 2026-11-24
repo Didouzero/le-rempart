@@ -45,7 +45,7 @@ export async function POST(req: Request) {
                 product_data: {
                   name: "Rempart+",
                   description:
-                    "Brief approfondi, dossiers exclusifs, site sans publicité",
+                    "Brief approfondi et dossiers exclusifs",
                 },
               },
             },

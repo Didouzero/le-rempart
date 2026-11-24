@@ -45,7 +45,7 @@ export function SiteFooter() {
               className="h-auto w-[11rem] sm:w-[13rem]"
             />
             <p className="font-tagline mt-2 text-sm text-white">
-              Le média de droite radicale
+              Le média de droite assumé
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch">
@@ -78,7 +78,7 @@ export function SiteFooter() {
                     S&apos;abonner au Rempart+
                   </span>
                   <span className="text-[0.6rem] text-ink/70">
-                    Enquêtes, brief, site sans pub
+                    Enquêtes et brief du matin
                   </span>
                 </span>
               </Link>

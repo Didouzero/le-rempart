@@ -248,8 +248,8 @@ export default async function DossierPage({ params }: Props) {
                 Lisez l&apos;enquête en entier avec le Rempart+
               </p>
               <p className="mx-auto mt-3 max-w-md text-sm text-white/75">
-                4,90&nbsp;€ par mois, sans engagement. Toutes nos enquêtes, le
-                Brief approfondi chaque matin et le site sans publicité.
+                4,90&nbsp;€ par mois, sans engagement. Toutes nos enquêtes et le
+                Brief approfondi chaque matin.
               </p>
               <div className="mt-6 flex justify-center">
                 <PlusSubscribeButton />

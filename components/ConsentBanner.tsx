@@ -66,8 +66,8 @@ export function ConsentBanner() {
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-6">
       <p className="m-0 flex-1 text-[0.8rem] leading-snug text-white/80 sm:text-[0.85rem]">
-        Cookies de mesure d&apos;audience (Google Analytics) et publicitaires
-        (MGID, sauf abonnés Rempart+).{" "}
+        Nous utilisons des cookies de mesure d&apos;audience (Google
+        Analytics).{" "}
         <Link
           href="/confidentialite#cookies"
           className="text-accent underline decoration-accent/60 underline-offset-2"

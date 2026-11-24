@@ -1,4 +1,8 @@
+/** Pubs retirées du site le 24/11/2026, sur décision de l'éditeur. Remettre à false pour les rétablir. */
+export const ADS_PAUSED = true;
+
 export function mgidEnabled(): boolean {
+  if (ADS_PAUSED) return false;
   return (
     process.env.NEXT_PUBLIC_MGID_ENABLED === "true" &&
     Boolean(process.env.NEXT_PUBLIC_MGID_SITE_ID?.trim())

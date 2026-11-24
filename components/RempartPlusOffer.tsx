@@ -16,9 +16,9 @@ const PERKS = [
     text: "Chaque mercredi et samedi, des enquêtes et révélations privées. Des dossiers exclusifs à garder, à envoyer, à relire.",
   },
   {
-    kicker: "Confort",
-    title: "Site sans publicité",
-    text: "Plus aucune publicité sur Le Rempart. L'information, claire, et sur tout le site.",
+    kicker: "Soutien",
+    title: "Un média indépendant",
+    text: "Ni actionnaire ni subvention : votre abonnement finance directement Le Rempart et sa liberté de ton.",
   },
 ] as const;
 
