@@ -61,8 +61,9 @@ function LinkIcon() {
   );
 }
 
+/** Logo doré nu, sans case : la zone de clic reste de 36 px pour le doigt. */
 const BUTTON =
-  "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-accent/50 bg-ink text-accent no-underline shadow-[0_6px_18px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-accent hover:text-ink hover:no-underline";
+  "inline-flex h-9 w-9 items-center justify-center text-gold no-underline transition-colors duration-200 hover:text-ink hover:no-underline focus-visible:text-ink";
 
 type ShareButtonsProps = {
   url: string;
@@ -135,7 +136,7 @@ export function ShareButtons({ url, title, compact = false }: ShareButtonsProps)
       aria-label="Partager l'article"
     >
       {compact ? null : <p className="section-kicker mb-3">Partager cet article</p>}
-      <div className={`flex flex-wrap items-center ${compact ? "gap-1.5 [&>*]:h-9 [&>*]:w-9" : "gap-2"}`}>
+      <div className={`flex flex-wrap items-center ${compact ? "-mx-2 gap-0.5" : "-mx-2 gap-1"}`}>
         {links.map((l) => (
           <a
             key={l.label}

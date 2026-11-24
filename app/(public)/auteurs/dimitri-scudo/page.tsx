@@ -96,11 +96,11 @@ export default async function AuthorPage() {
           <h1 className="font-headline mt-2 text-5xl leading-[1.02] sm:text-7xl">
             {SITE_AUTHOR.name}
           </h1>
-          <p className="font-tagline mt-3 text-lg text-muted">
+          <p className="article-standfirst mt-3 text-muted">
             {SITE_AUTHOR.jobTitle} du Rempart
           </p>
 
-          <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-[2.95em] first-letter:leading-[0.8] first-letter:text-gold">
+          <p className="mt-10 text-xl leading-relaxed text-ink first-letter:float-left first-letter:mt-[0.08em] first-letter:mr-[0.08em] first-letter:font-headline first-letter:text-[2.95em] first-letter:font-bold first-letter:leading-[0.8] first-letter:text-ink">
             Je ne suis pas journaliste, et je ne prétends pas l&apos;être : je
             n&apos;ai pas de carte de presse. J&apos;ai fondé Le Rempart parce
             que je refusais de laisser le récit de l&apos;actualité à un seul
@@ -144,7 +144,7 @@ export default async function AuthorPage() {
           </div>
 
           <blockquote className="my-10 border-y-2 border-ink py-6">
-            <p className="font-display text-2xl leading-tight tracking-[0.03em] sm:text-3xl">
+            <p className="font-headline text-2xl leading-snug italic sm:text-3xl">
               « Un article du Rempart peut prendre parti.{" "}
               <span className="text-gold">Il ne doit jamais arranger les faits.</span> »
             </p>
@@ -154,11 +154,11 @@ export default async function AuthorPage() {
           <ul className="mt-6 list-none space-y-0 p-0">
             {CONVICTIONS.map(([title, text], i) => (
               <li key={title} className="grid grid-cols-[3.5rem_1fr] gap-4 border-t border-ink/15 py-5">
-                <span className="font-display text-4xl leading-none text-accent">
+                <span className="font-headline text-4xl leading-none font-bold text-accent">
                   {i + 1}
                 </span>
                 <div>
-                  <h3 className="font-display text-xl tracking-[0.05em]">{title}</h3>
+                  <h3 className="font-headline text-xl font-semibold">{title}</h3>
                   <p className="mt-1 text-muted">{text}</p>
                 </div>
               </li>
