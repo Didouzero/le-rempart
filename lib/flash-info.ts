@@ -1,4 +1,4 @@
-import { moonshotChat, isKimiContentFilter } from "@/lib/moonshot";
+import { moonshotChat, isKimiContentFilter, kimiApiKey } from "@/lib/moonshot";
 import { scrubBoilerplate, scrubFlashOutput } from "@/lib/fetch-source";
 import {
   assertFlashDoesNotNegateThesis,
@@ -401,7 +401,7 @@ export async function buildFlashInfoText(input: {
   researchNotes?: string;
   onRetry?: (attempt: number, reason: string) => void | Promise<void>;
 }): Promise<string> {
-  if (!process.env.MOONSHOT_API_KEY) {
+  if (!kimiApiKey()) {
     throw new Error("MOONSHOT_API_KEY manquante — flash Facebook impossible");
   }
 

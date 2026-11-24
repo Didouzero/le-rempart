@@ -35,6 +35,7 @@ import {
 import {
   isKimiQuotaError,
   KIMI_QUOTA_USER_MESSAGE,
+  KIMI_RETIRED_MESSAGE,
 } from "@/lib/moonshot";
 import { publishReadyInvestigation } from "@/lib/investigation";
 import { prisma } from "@/lib/prisma";
@@ -59,7 +60,6 @@ import {
   upsertPublishDraft,
 } from "@/lib/publish-draft";
 import {
-  publishBriefPipeline,
   publishFacebookOnlyPipeline,
   publishReadyArticlePipeline,
   telegramNotifier,
@@ -163,7 +163,7 @@ function commandsHelpText(): string {
     "3) Choisis la rubrique avec les boutons",
     "4) Décris le sujet en texte libre (angle, noms, liens si tu en as)",
     "→ Claude cherche, rédige et publie (site + Facebook) depuis le VPS",
-    "VPS indisponible : le bot te propose Kimi, réponds « kimi » pour confirmer",
+    "VPS indisponible : renvoie le sujet quand la session est relancée",
     "Texte déjà prêt : envoie le fichier .txt à la place du sujet",
     "/cancel — annuler la créative ou l’article en cours",
     "",
@@ -227,34 +227,14 @@ function draftMedia(chatId: number, draft: PublishDraftRecord) {
   };
 }
 
-async function publishWithKimi(
-  chatId: number,
-  draft: PublishDraftRecord,
-  brief: string,
-): Promise<void> {
-  await telegramSendMessage(
-    chatId,
-    "Sujet reçu. Kimi cherche, rédige et publie (2 à 5 min).",
-  );
-  // Supprimé d'abord : un second message pendant la rédaction ne relance pas une publication.
-  await deletePublishDraft(chatId);
-  try {
-    await publishBriefPipeline({ ...draftMedia(chatId, draft), brief });
-  } catch (err) {
-    // Échec avant publication : on remet le brouillon pour pouvoir renvoyer le sujet.
-    await restorePublishDraft(draft);
-    throw err;
-  }
-}
-
-/** VPS disponible : le sujet part dans la file. Sinon le bot le garde et propose Kimi. */
+/** VPS disponible : le sujet part dans la file. Sinon le bot le garde jusqu’au prochain envoi. */
 async function routeSubject(
   chatId: number,
   draft: PublishDraftRecord,
   subject: string,
 ): Promise<void> {
   const siteOnly = isSiteOnlyDraft(draft);
-  // La consigne se suffit : le sujet tient lieu de titre pour Kimi en secours.
+  // La consigne se suffit : le sujet tient lieu de titre.
   await setPublishDraftHeadline(chatId, subject);
   const fields = {
     chatId,
@@ -268,14 +248,14 @@ async function routeSubject(
     await startClaudeJob(job, newArticleMessage(job, label, siteOnly));
     await telegramSendMessage(
       chatId,
-      "Sujet reçu. Claude cherche et rédige sur le VPS, puis publie directement.\n\nS’il ne répond pas, envoie « kimi » pour lui confier le sujet, ou /cancel pour abandonner.",
+      "Sujet reçu. Claude cherche et rédige sur le VPS, puis publie directement.\n\n/cancel pour abandonner.",
     );
     return;
   }
   await saveClaudeJob(newClaudeJob({ ...fields, state: "kimi-offer" }));
   await telegramSendMessage(
     chatId,
-    "La session Claude du VPS ne répond pas : Claude ne peut pas rédiger pour l’instant.\n\nRéponds « kimi » pour que Kimi rédige et publie sans relecture, ou renvoie le sujet quand la session est relancée. /cancel pour abandonner.",
+    "La session Claude du VPS ne répond pas : Claude ne peut pas rédiger pour l’instant.\n\nRenvoie le sujet quand la session est relancée. /cancel pour abandonner.",
   );
 }
 
@@ -309,9 +289,9 @@ async function routeFlashSubject(
 
 const CLAUDE_JOB_STATUS = {
   "kimi-offer":
-    "Sujet en attente, la session Claude du VPS ne répondait pas. Réponds « kimi » pour que Kimi rédige, renvoie le sujet pour réessayer Claude, ou /cancel.",
+    "Sujet en attente, la session Claude du VPS ne répondait pas. Renvoie le sujet pour réessayer, ou /cancel.",
   writing:
-    "Claude rédige. Le texte arrivera ici. « kimi » pour lui confier le sujet, /cancel pour abandonner.",
+    "Claude rédige. Le texte arrivera ici. /cancel pour abandonner.",
   ready:
     "Un texte attend ta réponse : « ok » pour continuer, « texte » pour le lire en entier, ou dis ce qu’il faut changer. /cancel pour abandonner.",
   "awaiting-media": "",
@@ -336,18 +316,11 @@ async function handleClaudeJob(
   const action = claudeJobAction(job.state, text, online);
   const enquete = job.kind === "enquete";
 
-  if (enquete && action === "kimi") {
+  // Kimi est retiré : la demande reçoit une réponse, rien n'est confié à un autre modèle.
+  if (action === "kimi") {
     await telegramSendMessage(
       chatId,
-      "Les enquêtes ne passent plus par Kimi. /cancel pour abandonner celle-ci.",
-    );
-    return;
-  }
-
-  if (job.kind === "flash" && action === "kimi") {
-    await telegramSendMessage(
-      chatId,
-      "Le post pour Facebook seul ne passe pas par Kimi. /cancel pour l’abandonner.",
+      `${KIMI_RETIRED_MESSAGE} /cancel pour abandonner.`,
     );
     return;
   }
@@ -478,12 +451,6 @@ async function handleClaudeJob(
     return;
   }
 
-  if (action === "kimi" && draft) {
-    await abandonClaudeJob(stored);
-    await publishWithKimi(chatId, draft, job.subject);
-    return;
-  }
-
   if (action === "new-subject" && draft) {
     if (text.trim().length < 10) {
       await telegramSendMessage(chatId, CLAUDE_JOB_STATUS["kimi-offer"]);
@@ -520,7 +487,7 @@ async function handleClaudeJob(
         chatId,
         enquete
           ? "Le VPS n’est plus disponible : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, /cancel abandonne."
-          : "La session Claude du VPS ne répond plus : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, « kimi » fait tout réécrire et publier sans relecture, /cancel abandonne.",
+          : "La session Claude du VPS ne répond plus : la retouche n’a pas été faite.\n\n« ok » publie la dernière version reçue telle quelle, /cancel abandonne.",
       );
       return;
     }
@@ -528,7 +495,7 @@ async function handleClaudeJob(
       chatId,
       enquete
         ? "Le VPS n’est pas disponible : ton message n’a pas été transmis. Renvoie-le quand il est revenu. /cancel pour abandonner."
-        : "La session Claude du VPS ne répond pas : ton message n’a pas été transmis. Renvoie-le quand elle est relancée, ou réponds « kimi » pour que Kimi rédige et publie sans relecture. /cancel pour abandonner.",
+        : "La session Claude du VPS ne répond pas : ton message n’a pas été transmis. Renvoie-le quand elle est relancée. /cancel pour abandonner.",
     );
     return;
   }
@@ -629,7 +596,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
           "4) Décris le sujet : événement, angle, noms, liens si tu en as",
           "5) Claude cherche, rédige et publie sur le site et Facebook depuis le VPS",
           "",
-          "Si la session Claude du VPS ne répond pas, je te propose Kimi : réponds « kimi » pour confirmer.",
+          "Si la session Claude du VPS ne répond pas, renvoie le sujet quand elle est relancée.",
           "Texte déjà prêt : envoie le fichier .txt à la place du sujet.",
           "",
           "/cancel pour abandonner une créative ou un article en cours.",

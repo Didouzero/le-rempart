@@ -6,6 +6,17 @@
 import { claudeText, isClaudeConfigured } from "@/lib/claude-fallback";
 import { recordTokenUsage } from "@/lib/eval/token-meter";
 
+/**
+ * Kimi est retiré du Rempart depuis le 24/11/2026 : tout le contenu passe par Claude sur
+ * le VPS. La clé n'est plus jamais lue, même si elle reste dans l'environnement : chaque
+ * appel échoue, et chaque fonction qui avait un repli sans modèle le prend.
+ */
+export const KIMI_RETIRED_MESSAGE = "Kimi n'est plus utilisé au Rempart : seul Claude rédige.";
+
+export function kimiApiKey(): string | undefined {
+  return undefined;
+}
+
 export type MoonshotMessage =
   | { role: "system" | "user" | "assistant"; content: string }
   | {
@@ -69,8 +80,8 @@ async function moonshotOnce(input: {
   timeoutMs?: number;
   reasoningEffort?: "low" | "high" | "max";
 }): Promise<MoonshotChatResult> {
-  const apiKey = process.env.MOONSHOT_API_KEY;
-  if (!apiKey) throw new Error("MOONSHOT_API_KEY is not set");
+  const apiKey = kimiApiKey();
+  if (!apiKey) throw new Error(KIMI_RETIRED_MESSAGE);
 
   const timeoutMs = input.timeoutMs ?? 20_000;
   const model = input.model;

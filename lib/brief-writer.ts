@@ -25,6 +25,7 @@ import {
   type LinkPolicy,
 } from "@/lib/article-links";
 import { italicizeCitations } from "@/lib/italicize-citations";
+import { kimiApiKey } from "@/lib/moonshot";
 
 const BASE = "https://api.moonshot.ai/v1";
 const MODEL = process.env.KIMI_MODEL || "kimi-k3";
@@ -719,7 +720,7 @@ async function chat(
   mode: Mode,
   opts: { timeoutMs: number },
 ): Promise<ChatMessage> {
-  const apiKey = process.env.MOONSHOT_API_KEY;
+  const apiKey = kimiApiKey();
   if (!apiKey) throw new Error("MOONSHOT_API_KEY is not set");
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
@@ -766,7 +767,7 @@ async function search(query: string): Promise<SearchHit[]> {
     const res = await fetch(`${BASE}/tools/search`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.MOONSHOT_API_KEY}`,
+        Authorization: `Bearer ${kimiApiKey()}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

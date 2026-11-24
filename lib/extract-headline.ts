@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { moonshotChat, type MoonshotMessage } from "@/lib/moonshot";
+import { moonshotChat, type MoonshotMessage, kimiApiKey } from "@/lib/moonshot";
 
 /** k2.6 thinking-off sur un JPEG léger : quelques secondes, pas 28. */
 const VISION_MODEL = "kimi-k2.6";
@@ -34,7 +34,7 @@ export async function extractHeadlineFromCreative(input: {
   buffer: Buffer;
   mime: string;
 }): Promise<string> {
-  if (!process.env.MOONSHOT_API_KEY) {
+  if (!kimiApiKey()) {
     throw new Error("MOONSHOT_API_KEY is not set");
   }
 

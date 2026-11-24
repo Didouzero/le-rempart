@@ -3,7 +3,7 @@
  * Objectif : scènes spécifiques, chocs, paysage — pas le même stock police/feu en boucle.
  */
 
-import { moonshotChat } from "@/lib/moonshot";
+import { moonshotChat, kimiApiKey } from "@/lib/moonshot";
 
 export function isCrimeOrArrestTopic(title: string): boolean {
   const t = title
@@ -468,7 +468,7 @@ export async function suggestVisualSearchQueries(input: {
   const excerpt = (input.excerpt || "").trim();
   const fallbacks = fallbackVisualQueries(`${title} ${excerpt}`);
 
-  if (!process.env.MOONSHOT_API_KEY || title.length < 8) {
+  if (!kimiApiKey() || title.length < 8) {
     return fallbacks;
   }
 

@@ -7,6 +7,8 @@
  * 3. Fallbacks gratuits : Bing HTML, Google News RSS, DuckDuckGo
  */
 
+import { kimiApiKey } from "@/lib/moonshot";
+
 export type WebSearchHit = {
   title: string;
   url: string;
@@ -465,7 +467,7 @@ async function searchMoonshotWeb(
   subject: string,
   opts?: { fast?: boolean; queries?: string[] },
 ): Promise<WebSearchHit[]> {
-  const apiKey = process.env.MOONSHOT_API_KEY?.trim();
+  const apiKey = kimiApiKey()?.trim();
   if (!apiKey) return [];
 
   const model =

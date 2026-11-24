@@ -1,5 +1,5 @@
 import { getKimiTextModel } from "@/lib/kimi-legacy";
-import { moonshotChat } from "@/lib/moonshot";
+import { moonshotChat, kimiApiKey } from "@/lib/moonshot";
 import {
   emptyResearchDossier,
   type ConfidenceLevel,
@@ -196,7 +196,7 @@ export async function buildDossierFromDocuments(input: {
       type: s.type,
     }));
 
-  if (!process.env.MOONSHOT_API_KEY) {
+  if (!kimiApiKey()) {
     base.missingInformation.push("MOONSHOT_API_KEY absent — dossier non structuré.");
     return base;
   }

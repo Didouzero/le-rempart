@@ -1,5 +1,5 @@
 import { italicizeCitations } from "@/lib/italicize-citations";
-import { moonshotChat } from "@/lib/moonshot";
+import { moonshotChat, kimiApiKey } from "@/lib/moonshot";
 import { fetchNewsContextBriefing } from "@/lib/news-context";
 import { withTimeout } from "@/lib/with-timeout";
 
@@ -347,7 +347,7 @@ export async function generateArticleLegacy(input: {
 }): Promise<GeneratedArticle> {
   const headline = titleCaseNews(input.title);
 
-  if (!process.env.MOONSHOT_API_KEY) {
+  if (!kimiApiKey()) {
     return fallbackArticle(headline);
   }
 

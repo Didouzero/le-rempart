@@ -18,6 +18,15 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  // Newsletter du matin que Claude n'aurait pas rendue : elle part avec les chapôs du site.
+  try {
+    const { sendLateNewsletter } = await import("@/lib/newsletter-job");
+    const late = await sendLateNewsletter();
+    if (late) console.info("veille cron: newsletter de repli", late);
+  } catch (err) {
+    console.error("veille cron: newsletter de repli", err);
+  }
+
   try {
     const { maybeRemindInvestigation } = await import(
       "@/lib/investigation-reminder"

@@ -14,7 +14,7 @@ const JOB_KEY = "claude-article-job";
 
 export const HEARTBEAT_MAX_AGE_MS = 2 * 60 * 1000;
 
-/** Le canal écrit à ce seul compte : les autres passent par Kimi. */
+/** Le canal écrit à ce seul compte. */
 const CLAUDE_EDITOR_CHAT = 788499709;
 
 export type ClaudeJobState = "kimi-offer" | "writing" | "ready" | "awaiting-media";

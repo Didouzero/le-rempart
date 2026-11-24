@@ -1,5 +1,5 @@
 import { sanitizeCreativeTitle } from "@/lib/creative/title-fix";
-import { moonshotChat } from "@/lib/moonshot";
+import { kimiApiKey, moonshotChat } from "@/lib/moonshot";
 import { getKimiTextModel } from "@/lib/kimi";
 import type { VeilleHit } from "@/lib/veille/scrape";
 import {
@@ -52,7 +52,7 @@ export async function scoreAndPickStory(
     })
     .join("\n");
 
-  if (!process.env.MOONSHOT_API_KEY) {
+  if (!kimiApiKey()) {
     const h = filtered[0];
     return {
       sourceTitle: h.title,
@@ -64,7 +64,7 @@ export async function scoreAndPickStory(
         .filter((w) => w.length >= 6)
         .slice(0, 5),
       visualQuery: "french police night street arrest",
-      reason: "fallback sans Kimi",
+      reason: "sans modèle",
     };
   }
 

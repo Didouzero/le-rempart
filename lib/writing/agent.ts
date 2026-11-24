@@ -1,5 +1,5 @@
 import { getKimiTextModel } from "@/lib/kimi-legacy";
-import { moonshotChat } from "@/lib/moonshot";
+import { moonshotChat, kimiApiKey } from "@/lib/moonshot";
 import type { ResearchDossier } from "@/lib/research/types";
 import {
   ARTICLE_LENGTH,
@@ -233,7 +233,7 @@ function namedMaterialBlock(dossier: ResearchDossier): string | null {
 export async function runWritingAgent(
   input: WritingAgentInput,
 ): Promise<WritingAgentResult> {
-  if (!process.env.MOONSHOT_API_KEY) {
+  if (!kimiApiKey()) {
     throw new Error("Writing Agent : MOONSHOT_API_KEY manquant");
   }
 
