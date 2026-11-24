@@ -11,6 +11,7 @@ import { NativeAdsRail } from "@/components/NativeAdsRail";
 import { RelatedArticles } from "@/components/RelatedArticles";
 import { ArticleViewBeacon } from "@/components/ArticleViewBeacon";
 import { ShareButtons } from "@/components/ShareButtons";
+import { GooglePreferredSource } from "@/components/GooglePreferredSource";
 import { AuthorBox, Byline, readingMinutesOf, TagChips, wasUpdated } from "@/components/ArticleMeta";
 import { articleAuthorName, SITE_AUTHOR } from "@/lib/authors";
 import { articlePublicPath, articlePublicUrl } from "@/lib/article-url";
@@ -295,7 +296,10 @@ export default async function ArticlePage({ params }: Props) {
         <footer className="mt-12 space-y-8">
           <TagChips tags={tags} label="Sujets de l'article" />
 
-          <ShareButtons url={url} title={article.title} />
+          <div className="space-y-4">
+            <ShareButtons url={url} title={article.title} />
+            <GooglePreferredSource />
+          </div>
 
           {author === SITE_AUTHOR.name ? <AuthorBox /> : null}
         </footer>

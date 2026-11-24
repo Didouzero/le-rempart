@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FooterLinks } from "@/components/FooterLinks";
 import { HideForPlus } from "@/components/PlusProvider";
 import { CrownCircleIcon } from "@/components/BrandIcons";
+import { GooglePreferredSource } from "@/components/GooglePreferredSource";
 import { FooterNewsletter } from "@/components/FooterNewsletter";
 
 /** Tracés Simple Icons (CC0), les mêmes que les boutons de partage. */
@@ -62,6 +63,7 @@ export function SiteFooter() {
             </p>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+            <GooglePreferredSource onDark />
             <div className="flex items-center gap-3">
               <span className="font-display text-[0.76rem] tracking-[0.12em] text-white">
                 Suivez-nous

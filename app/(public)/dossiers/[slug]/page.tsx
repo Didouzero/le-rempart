@@ -9,6 +9,7 @@ import { PlusSubscribeButton } from "@/components/PlusSubscribeButton";
 import { PremiumBanner } from "@/components/PremiumBanner";
 import { AuthorBox, Byline, readingMinutesOf, TagChips, wasUpdated } from "@/components/ArticleMeta";
 import { ShareButtons } from "@/components/ShareButtons";
+import { GooglePreferredSource } from "@/components/GooglePreferredSource";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
 import { getDossierCoverAlt } from "@/lib/investigation-draft";
@@ -256,7 +257,10 @@ export default async function DossierPage({ params }: Props) {
 
       <footer className="mt-12 space-y-8">
         <TagChips tags={tags} label="Sujets de l'enquête" />
-        <ShareButtons url={absoluteUrl(dossierPath(dossier.publicId))} title={dossier.title} />
+        <div className="space-y-4">
+          <ShareButtons url={absoluteUrl(dossierPath(dossier.publicId))} title={dossier.title} />
+          <GooglePreferredSource />
+        </div>
         <AuthorBox />
       </footer>
     </article>
