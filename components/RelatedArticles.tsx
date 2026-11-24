@@ -17,54 +17,42 @@ type RelatedArticlesProps = {
 
 export function RelatedArticles({
   articles,
-  kicker = "Suite",
   title = "Dans l'actualité également",
 }: RelatedArticlesProps) {
   if (articles.length === 0) return null;
 
   return (
-    <section className="mt-14 border-t border-ink pt-10" aria-labelledby="related-heading">
-      <p className="section-kicker">
-        <span className="live-dot" aria-hidden />
-        {kicker}
-      </p>
-      <h2
-        id="related-heading"
-        className="font-display mt-2 text-2xl tracking-[0.08em] sm:text-3xl"
-      >
+    <section className="mt-14 border-t border-rule pt-8" aria-labelledby="related-heading">
+      <h2 id="related-heading" className="font-display text-[1.15rem] tracking-[0.08em]">
         {title}
       </h2>
-      <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
 
-      <ul className="mt-8 grid list-none gap-6 p-0 sm:grid-cols-3">
+      {/* Titres entiers : sur mobile vignette à gauche, sur grand écran trois colonnes. */}
+      <ul className="mt-4 grid list-none gap-0 p-0 sm:grid-cols-3 sm:gap-6">
         {articles.map((item) => {
           const href = articlePublicPath(item.publicId);
-          const shortTitle =
-            item.title.length > 72 ? `${item.title.slice(0, 69).trim()}…` : item.title;
-
           return (
-            <li key={item.publicId}>
+            <li
+              key={item.publicId}
+              className="border-b border-rule py-4 first:pt-0 sm:border-b-0 sm:py-0"
+            >
               <Link
                 href={href}
-                className="group block no-underline hover:no-underline"
+                className="group grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-3 no-underline hover:no-underline sm:block"
               >
                 {item.coverImageUrl ? (
                   <div className="media-frame aspect-[16/9] w-full">
                     <CoverImg
                       url={item.coverImageUrl}
-                      alt={item.title}
-                      sizes="(min-width: 640px) 33vw, 100vw"
+                      alt=""
+                      sizes="(min-width: 640px) 33vw, 8rem"
                     />
                   </div>
                 ) : (
-                  <div className="flex aspect-[16/9] w-full items-end rounded-lg bg-ink p-3">
-                    <span className="font-display text-sm tracking-[0.12em] text-accent">
-                      Le Rempart
-                    </span>
-                  </div>
+                  <div className="aspect-[16/9] w-full rounded-[var(--radius)] bg-ink/10" />
                 )}
-                <h3 className="font-headline mt-3 text-lg leading-[1.2] text-ink transition-colors group-hover:text-gold">
-                  {shortTitle}
+                <h3 className="font-headline text-[1rem] leading-[1.28] text-ink transition-colors group-hover:text-gold sm:mt-3 sm:text-[1.1rem]">
+                  {item.title}
                 </h3>
               </Link>
             </li>

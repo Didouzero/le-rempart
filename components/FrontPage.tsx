@@ -290,7 +290,7 @@ export async function FrontPage() {
           id="home-search"
           name="q"
           type="search"
-          placeholder="Rechercher un sujet, un nom, une ville…"
+          placeholder="Rechercher un article…"
           className="min-w-0 flex-1 border border-rule bg-transparent px-3 py-2 text-[0.98rem]"
         />
         <button type="submit" className="font-display bg-accent px-4 text-[0.9rem] tracking-[0.08em] text-ink">

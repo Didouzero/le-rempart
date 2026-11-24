@@ -17,7 +17,6 @@ import { prisma, withDbTimeout } from "@/lib/prisma";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
-  breadcrumbTitle,
   buildPageMetadata,
   dossierPath,
   newsArticleJsonLd,
@@ -178,10 +177,6 @@ export default async function DossierPage({ params }: Props) {
               {PREMIUM_CATEGORY.short}
             </Link>
           </li>
-          <li aria-hidden className="text-accent">
-            /
-          </li>
-          <li className="text-muted">{breadcrumbTitle(dossier.title)}</li>
         </ol>
       </nav>
 

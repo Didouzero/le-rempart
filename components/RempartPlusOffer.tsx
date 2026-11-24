@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ShowForPlus } from "@/components/PlusProvider";
+import { HideForPlus, ShowForPlus } from "@/components/PlusProvider";
 import { RempartPlusCheckout } from "@/components/RempartPlusCheckout";
 import { getStripePublishableKey, isStripeConfigured } from "@/lib/stripe";
 
@@ -70,6 +70,16 @@ export function RempartPlusOffer({
               / mois · sans engagement · résiliable en ligne à tout moment
             </p>
           </div>
+          {alreadyPlus ? null : (
+            <HideForPlus>
+            <a
+              href="#rejoindre"
+              className="font-display mt-7 inline-flex items-center rounded-md bg-accent px-6 py-3 text-[1rem] tracking-[0.07em] text-ink no-underline hover:bg-accent-deep hover:no-underline"
+            >
+              Je m&apos;abonne
+            </a>
+            </HideForPlus>
+          )}
         </div>
       </section>
 
@@ -144,7 +154,10 @@ export function RempartPlusOffer({
           </p>
         </div>
 
-        <div className="night-panel rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8">
+        <div
+          id="rejoindre"
+          className="night-panel scroll-mt-24 rounded-lg border border-ink bg-ink p-6 text-paper sm:p-8"
+        >
           <p className="font-display text-[1.05rem] tracking-[0.18em] text-accent">
             Rejoindre le Rempart+
           </p>

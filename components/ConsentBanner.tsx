@@ -45,6 +45,16 @@ export function ConsentBanner() {
     setOpen(false);
   }
 
+  // Le bouton « remonter » se place au-dessus du bandeau tant qu'il est ouvert.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (open) root.dataset.consentOpen = "1";
+    else delete root.dataset.consentOpen;
+    return () => {
+      delete root.dataset.consentOpen;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (

@@ -23,7 +23,6 @@ import { findRelatedArticles } from "@/lib/related-articles";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
-  breadcrumbTitle,
   buildPageMetadata,
   newsArticleJsonLd,
   SITE_LOGO_SQUARE,
@@ -235,10 +234,6 @@ export default async function ArticlePage({ params }: Props) {
                 {section}
               </Link>
             </li>
-            <li aria-hidden className="text-accent">
-              /
-            </li>
-            <li className="text-muted">{breadcrumbTitle(article.title)}</li>
           </ol>
         </nav>
 

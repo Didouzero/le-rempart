@@ -703,3 +703,13 @@ a:hover .media-frame::after {
     animation: none;
   }
 }
+
+/* Bandeau cookies ouvert : le bouton « remonter » passe au-dessus au lieu de couvrir « Accepter ». */
+:root[data-consent-open] .back-to-top {
+  bottom: 8.25rem !important;
+}
+@media (min-width: 640px) {
+  :root[data-consent-open] .back-to-top {
+    bottom: 5rem !important;
+  }
+}

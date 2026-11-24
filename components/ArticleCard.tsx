@@ -83,10 +83,7 @@ export function ArticleCard({
               {title}
             </Link>
           </h2>
-          <p className="mt-4 max-w-3xl text-base italic text-ink sm:text-lg">{excerpt}</p>
-          <Link href={href} className="read-link mt-5">
-            Lire l&apos;article →
-          </Link>
+          <p className="mt-3 line-clamp-3 max-w-3xl text-base leading-relaxed text-muted sm:text-[1.05rem]">{excerpt}</p>
         </div>
       </article>
     );
@@ -94,19 +91,19 @@ export function ArticleCard({
 
   return (
     <article
-      className={`group animate-fade-up grid gap-5 border-b border-rule py-8 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)] sm:items-center ${delayClass}`}
+      className={`group grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-4 border-b border-rule py-5 sm:grid-cols-[15rem_minmax(0,1fr)] sm:gap-6 sm:py-6 ${delayClass}`}
     >
       {src ? (
         <Link href={href} className="block no-underline hover:no-underline">
           <div className="media-frame aspect-[16/9] w-full">
-            <CoverImg url={src} alt={title} sizes="(min-width: 640px) 40vw, 100vw" />
+            <CoverImg url={src} alt={title} sizes="(min-width: 640px) 15rem, 8rem" />
           </div>
         </Link>
       ) : (
-        <div className="hidden aspect-[16/9] bg-ink/5 sm:block" />
+        <div className="aspect-[16/9] rounded-[var(--radius)] bg-ink/5" />
       )}
       <div>
-        <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em] text-muted">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.12em] text-muted">
           {cat && catLabel ? (
             <Link
               href={categoryPath(cat)}
@@ -115,18 +112,17 @@ export function ArticleCard({
               {catLabel}
             </Link>
           ) : null}
-          {cat && catLabel ? <span aria-hidden>•</span> : null}
+          {cat && catLabel ? <span aria-hidden className="hidden sm:inline">•</span> : null}
           <PublishedAt value={publishedAt} />
         </div>
-        <h2 className="font-headline mt-2 text-xl leading-[1.15] sm:text-2xl">
+        <h2 className="font-headline mt-1 text-[1.05rem] leading-[1.25] sm:mt-2 sm:text-[1.4rem] sm:leading-[1.2]">
           <Link href={href} className="no-underline hover:text-gold hover:no-underline">
             {title}
           </Link>
         </h2>
-        <p className="mt-3 max-w-2xl text-base italic text-ink">{excerpt}</p>
-        <Link href={href} className="read-link mt-4">
-          Lire l&apos;article →
-        </Link>
+        <div className="hidden sm:block">
+          <p className="mt-2 line-clamp-2 max-w-2xl text-[0.98rem] leading-snug text-muted">{excerpt}</p>
+        </div>
       </div>
     </article>
   );
