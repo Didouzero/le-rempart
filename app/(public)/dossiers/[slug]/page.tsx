@@ -155,6 +155,7 @@ export default async function DossierPage({ params }: Props) {
             kind: t.kind,
             url: absoluteUrl(tagPath(t.slug)),
           })),
+          imageCaption: coverAlt,
         })}
       />
       <JsonLd

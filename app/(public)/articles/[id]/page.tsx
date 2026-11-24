@@ -223,6 +223,7 @@ export default async function ArticlePage({ params }: Props) {
             kind: t.kind,
             url: absoluteUrl(tagPath(t.slug)),
           })),
+          imageCaption: article.coverCaption,
         })}
       />
       <JsonLd

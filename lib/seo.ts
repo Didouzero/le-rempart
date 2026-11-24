@@ -188,6 +188,45 @@ export function websiteJsonLd() {
   };
 }
 
+const CC_LICENSES: Array<[RegExp, string]> = [
+  [/\bCC0\b|domaine public|public domain/i, "https://creativecommons.org/publicdomain/zero/1.0/"],
+  [/\bCC[ -]BY[ -]SA[ -]?(\d\.\d)\b/i, "https://creativecommons.org/licenses/by-sa/$1/"],
+  [/\bCC[ -]BY[ -]?(\d\.\d)\b/i, "https://creativecommons.org/licenses/by/$1/"],
+];
+
+/**
+ * Crédit de l'illustration tiré de sa légende (« … Photo : Alain Jocard, AFP »), pour que
+ * Google Images l'affiche sous la photo. Sans « Photo : » ni « Crédit : », rien n'est transmis.
+ */
+export function photoCredit(caption?: string | null): Record<string, unknown> | null {
+  if (!caption) return null;
+  const plain = caption.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  const m = plain.match(/(?:^|[\s.])(?:Photos?|Crédits?(?: photo)?|©)\s*:?\s*(.+?)\s*\.?\s*$/i);
+  const credit = m?.[1]?.replace(/\s+/g, " ").trim();
+  if (!credit || credit.length < 2) return null;
+  // « Alain Jocard, AFP » ou « Kremlin.ru / Wikimedia Commons, CC BY 4.0 » : l'auteur
+  // d'abord, puis l'agence ou la plateforme, puis la licence, qui n'est pas un auteur.
+  const parts = credit
+    .split(/\s*[,/]\s*/)
+    .filter((part) => part && !CC_LICENSES.some(([re]) => re.test(part)));
+  const creatorName = parts[0] || credit;
+  const isPerson = parts.length > 1 && !/\.|\b(AFP|SIPA|Reuters|AP|MaxPPP|Wiki\w*)\b/i.test(creatorName);
+  let license: string | undefined;
+  for (const [re, url] of CC_LICENSES) {
+    const found = credit.match(re);
+    if (found) {
+      license = url.replace("$1", found[1] || "");
+      break;
+    }
+  }
+  return {
+    creditText: credit,
+    creator: { "@type": isPerson ? "Person" : "Organization", name: creatorName },
+    copyrightNotice: credit,
+    ...(license ? { license } : {}),
+  };
+}
+
 export function newsArticleJsonLd(input: {
   title: string;
   excerpt: string;
@@ -202,12 +241,15 @@ export function newsArticleJsonLd(input: {
   accessibleForFree?: boolean;
   /** Sujets de l'article (pages /sujets) : keywords et about. */
   tags?: Array<{ name: string; kind: string; url: string }>;
+  /** Légende de l'illustration : son crédit est repris pour Google Images. */
+  imageCaption?: string | null;
 }) {
   const published =
     input.publishedAt?.toISOString() || new Date().toISOString();
   const modified = input.updatedAt?.toISOString() || published;
   const image = input.imageUrl || absoluteUrl(SITE_OG_IMAGE);
   const author = input.authorName?.trim() || SITE_AUTHOR.name;
+  const credit = input.imageUrl ? photoCredit(input.imageCaption) : null;
 
   return {
     "@context": "https://schema.org",
@@ -216,12 +258,13 @@ export function newsArticleJsonLd(input: {
     description: input.excerpt,
     // 16:9, 4:3 et 1:1 : Google choisit le format selon l'emplacement (À la une, Discover).
     image: [
-      input.imageUrl && input.imageSize
-        ? { "@type": "ImageObject", url: image, ...input.imageSize }
+      input.imageUrl && (input.imageSize || credit)
+        ? { "@type": "ImageObject", url: image, ...(input.imageSize || {}), ...(credit || {}) }
         : image,
       ...(input.imageUrl ? illustrationCrops(input.imageUrl) : []).map((crop) => ({
         "@type": "ImageObject",
         ...crop,
+        ...(credit || {}),
       })),
     ],
     datePublished: published,
