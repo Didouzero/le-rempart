@@ -7,7 +7,7 @@ import { PremiumBanner } from "@/components/PremiumBanner";
 import { PREMIUM_CATEGORY } from "@/lib/categories";
 import { hasActiveRempartPlus } from "@/lib/membership";
 import { prisma, withDbTimeout } from "@/lib/prisma";
-import { buildPageMetadata, collectionPageJsonLd } from "@/lib/seo";
+import { absoluteUrl, buildPageMetadata, collectionPageJsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,9 @@ export const metadata: Metadata = buildPageMetadata({
   title: PREMIUM_CATEGORY.seoTitle,
   description: PREMIUM_CATEGORY.description,
   path: PREMIUM_CATEGORY.path,
+  image: absoluteUrl("/rubriques/enquetes.jpg"),
+  imageAlt: "Rubrique Enquêtes — Le Rempart",
+  imageSize: { width: 1200, height: 630 },
 });
 
 const PLACEHOLDERS: DossierTeaser[] = [

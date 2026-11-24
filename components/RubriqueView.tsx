@@ -16,7 +16,11 @@ import {
 } from "@/lib/seo";
 
 const CATEGORY_OG_IMAGE: Partial<Record<ArticleCategory, string>> = {
-  immigration: "/rubriques/immigration.webp",
+  immigration: "/rubriques/immigration.jpg",
+  justice: "/rubriques/justice.jpg",
+  economie: "/rubriques/economie.jpg",
+  politique: "/rubriques/politique.jpg",
+  insolite: "/rubriques/insolite.jpg",
 };
 
 /**
@@ -56,6 +60,7 @@ export function rubriqueMetadata(
     path,
     image,
     imageAlt: `Rubrique ${meta.label} — Le Rempart`,
+    imageSize: image ? { width: 1200, height: 630 } : null,
     feedCategory: category,
     // Les résultats de recherche ne doivent pas entrer dans l'index Google.
     noIndex: Boolean(q),
