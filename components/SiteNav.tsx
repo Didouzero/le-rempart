@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ARTICLE_CATEGORIES, CATEGORY_META, PREMIUM_CATEGORY } from "@/lib/categories";
 import { CrownIcon } from "@/components/BrandIcons";
 import { HideForPlus } from "@/components/PlusProvider";
+import { ArrowRightIcon } from "@/components/ArrowRightIcon";
 
 const homeLink = { href: "/", label: "Dernières news" } as const;
 
@@ -88,30 +89,65 @@ function SearchButton({ open, onToggle }: { open: boolean; onToggle: () => void 
   );
 }
 
-/** Barre de recherche dépliée sous l'en-tête : envoie vers les résultats de l'accueil. */
-function SearchPanel({ onClose }: { onClose: () => void }) {
+/**
+ * Barre de recherche sous l'en-tête : toujours montée, elle se déplie en douceur
+ * (hauteur, fondu et glissé) et envoie vers les résultats de l'accueil.
+ */
+function SearchPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Le curseur se place dans le champ une fois le dépliage lancé.
+  useEffect(() => {
+    if (!open) return;
+    const id = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 120);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
   return (
-    <div id="header-search" className="border-t border-white/10">
-      <form action="/" method="get" role="search" className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-3 sm:px-6">
-        <label htmlFor="header-search-input" className="sr-only">
-          Rechercher un article
-        </label>
-        <SearchIcon className="h-5 w-5 shrink-0 text-white/50" />
-        <input
-          id="header-search-input"
-          name="q"
-          type="search"
-          autoFocus
-          placeholder="Rechercher un article, un nom, une ville…"
-          className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-[1rem] text-white placeholder:text-white/40 focus:outline-none"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") onClose();
-          }}
-        />
-        <button type="submit" className="font-display rounded-md bg-accent px-3.5 py-1.5 text-[0.85rem] tracking-[0.07em] text-ink">
-          OK
-        </button>
-      </form>
+    <div
+      id="header-search"
+      className={`grid transition-[grid-template-rows,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+      }`}
+      aria-hidden={!open}
+      {...(!open ? { inert: true } : {})}
+    >
+      <div className="overflow-hidden">
+        <div className={`border-t transition-colors duration-500 ${open ? "border-white/10" : "border-transparent"}`}>
+          <form
+            action="/"
+            method="get"
+            role="search"
+            className={`mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-3 transition-transform duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none sm:px-6 ${
+              open ? "translate-y-0" : "-translate-y-3"
+            }`}
+          >
+            <label htmlFor="header-search-input" className="sr-only">
+              Rechercher un article
+            </label>
+            <SearchIcon className="h-5 w-5 shrink-0 text-white/50" />
+            <input
+              ref={inputRef}
+              id="header-search-input"
+              name="q"
+              type="search"
+              placeholder="Rechercher un article, un nom, une ville…"
+              className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-[1rem] text-white placeholder:text-white/40 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onClose();
+              }}
+            />
+            <button
+              type="submit"
+              aria-label="Lancer la recherche"
+              title="Rechercher"
+              className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-ink transition duration-300 hover:bg-accent-deep"
+            >
+              <ArrowRightIcon className="h-[1.1rem] w-[1.1rem] transition-transform duration-300 group-hover:translate-x-0.5" />
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
@@ -367,7 +403,7 @@ export function SiteNav() {
         </div>
       </div>
 
-      {searchOpen ? <SearchPanel onClose={() => setSearchOpen(false)} /> : null}
+      <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {mounted && createPortal(<MobileDrawer open={open} onClose={() => setOpen(false)} />, document.body)}
     </>

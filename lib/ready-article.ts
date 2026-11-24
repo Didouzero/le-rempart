@@ -4,6 +4,7 @@
  * TITRE : …
  * CHAPO : …
  * A LIRE AUSSI : 123, 456      (facultatif)
+ * SUJETS : Emmanuel Grégoire (personne), OQTF (sujet)      (facultatif)
  * FLASH :
  * …
  * ARTICLE :
@@ -19,6 +20,7 @@ import {
   newsroomGaps,
   wrongWeekdays,
 } from "@/lib/brief-writer";
+import { parseTagLine, type ProposedTag } from "@/lib/tag-parse";
 import { ARTICLE_LENGTH } from "@/lib/writing/constraints";
 
 export type ReadyArticle = {
@@ -27,6 +29,8 @@ export type ReadyArticle = {
   flash: string;
   content: string;
   readAlsoIds: number[];
+  /** Sujets donnés par le rédacteur (pages /sujets). */
+  tags: ProposedTag[];
 };
 
 export function looksLikeReadyArticle(text: string): boolean {
@@ -36,7 +40,7 @@ export function looksLikeReadyArticle(text: string): boolean {
 /** Lève une erreur explicite : un texte incomplet ne doit jamais partir en sujet chez Kimi. */
 export function parseReadyArticle(text: string): ReadyArticle {
   const m = text.match(
-    /^\s*TITRE\s*:\s*(.+?)\s*\n+\s*CHAP[OÔ]\s*:\s*([\s\S]+?)\s*\n+(?:\s*A LIRE AUSSI\s*:\s*(.*?)\s*\n+)?\s*FLASH\s*:\s*\n([\s\S]+?)\n+\s*ARTICLE\s*:\s*\n([\s\S]+)$/i,
+    /^\s*TITRE\s*:\s*(.+?)\s*\n+\s*CHAP[OÔ]\s*:\s*([\s\S]+?)\s*\n+(?:\s*A LIRE AUSSI\s*:\s*(.*?)\s*\n+)?(?:\s*SUJETS\s*:\s*(.*?)\s*\n+)?\s*FLASH\s*:\s*\n([\s\S]+?)\n+\s*ARTICLE\s*:\s*\n([\s\S]+)$/i,
   );
   if (!m) {
     throw new Error(
@@ -47,8 +51,9 @@ export function parseReadyArticle(text: string): ReadyArticle {
     title: m[1]!.trim(),
     excerpt: m[2]!.trim(),
     readAlsoIds: (m[3] || "").match(/\d+/g)?.map(Number).slice(0, 2) ?? [],
-    flash: m[4]!.trim(),
-    content: m[5]!.trim(),
+    tags: parseTagLine(m[4] || ""),
+    flash: m[5]!.trim(),
+    content: m[6]!.trim(),
   };
 }
 

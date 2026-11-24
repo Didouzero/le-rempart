@@ -96,7 +96,7 @@ const SECTIONS: Section[] = [
     id: "independance",
     title: "Indépendance et financement",
     paragraphs: [
-      "Aucun parti, aucun groupe de presse, aucun actionnaire ne décide de ce que nous publions. Le Rempart vit de la publicité et de l'abonnement Rempart+. Les contenus sponsorisés qui apparaissent sous certains articles sont signalés comme tels et ne sont jamais mêlés à nos articles.",
+      "Aucun parti, aucun groupe de presse, aucun actionnaire ne décide de ce que nous publions. Le Rempart vit de l'abonnement Rempart+ et, selon les périodes, de la publicité. Quand des contenus sponsorisés apparaissent sur le site, ils sont signalés comme tels et ne sont jamais mêlés à nos articles.",
     ],
   },
 ];

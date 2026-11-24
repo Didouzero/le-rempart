@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { articlePublicPath } from "@/lib/article-url";
 import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
 import { notifyIndexNow } from "@/lib/indexnow";
+import { scheduleArticleTagging } from "@/lib/tags";
 
 /** Rafraîchit le cache CDN de l'article, de l'accueil et des rubriques après publication ou correction. */
 export function revalidateArticle(publicId: number | null | undefined) {
@@ -12,7 +13,11 @@ export function revalidateArticle(publicId: number | null | undefined) {
     for (const key of ARTICLE_CATEGORIES) {
       revalidatePath(`/rubriques/${CATEGORY_META[key].slug}`);
     }
-    if (publicId) notifyIndexNow([articlePublicPath(publicId)]);
+    if (publicId) {
+      notifyIndexNow([articlePublicPath(publicId)]);
+      // Sujets proposés par Kimi pour un article publié qui n'en a pas encore.
+      scheduleArticleTagging(publicId);
+    }
   } catch (err) {
     console.warn("revalidateArticle", err);
   }

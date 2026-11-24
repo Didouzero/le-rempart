@@ -7,6 +7,7 @@ import {
 } from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { dossierPath } from "@/lib/seo";
+import { prismaTagSitemapRows } from "@/lib/tags";
 
 /** Rafraîchit le sitemap au plus toutes les heures. */
 export const revalidate = 3600;
@@ -111,5 +112,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.65,
   });
 
-  return [...staticPages, ...articleEntries, ...dossierEntries];
+  let tagEntries: MetadataRoute.Sitemap = [];
+  try {
+    const tags = await withDbTimeout(prismaTagSitemapRows());
+    tagEntries = [
+      { url: `${base}/sujets`, lastModified: latestIn(), changeFrequency: "daily", priority: 0.5 },
+      ...tags.map((t) => ({
+        url: `${base}/sujets/${t.slug}`,
+        lastModified: t.lastPublishedAt ?? undefined,
+        changeFrequency: "daily" as const,
+        priority: 0.6,
+      })),
+    ];
+  } catch (err) {
+    console.error("sitemap: failed to load tags", err);
+  }
+
+  return [...staticPages, ...articleEntries, ...dossierEntries, ...tagEntries];
 }

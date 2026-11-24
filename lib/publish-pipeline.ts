@@ -17,6 +17,8 @@ import type { ArticleCategory } from "@/lib/categories";
 import { purgeOldCreatives } from "@/lib/creatives-retention";
 import { insertReadAlso, linkedArticleIds } from "@/lib/article-links";
 import { prisma } from "@/lib/prisma";
+import { revalidateArticle } from "@/lib/revalidate-article";
+import { setArticleTags } from "@/lib/tags";
 import {
   finishReadyArticle,
   finishReadyFlash,
@@ -444,6 +446,12 @@ export async function publishReadyArticlePipeline(input: {
     image: input.image,
     notify,
   });
+  // Sujets choisis par le rédacteur : enregistrés tout de suite, la page est rafraîchie.
+  if (ready.tags.length) {
+    await setArticleTags(article.id, ready.tags)
+      .then(() => revalidateArticle(article.publicId))
+      .catch((err) => console.error("sujets", err));
+  }
   await notify(["Article publié.", "", article.title, article.url].join("\n"));
 
   if (!input.image.buffer.length) {

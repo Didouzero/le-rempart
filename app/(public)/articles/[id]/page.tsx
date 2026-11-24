@@ -30,6 +30,7 @@ import {
   SITE_NAME,
 } from "@/lib/seo";
 import { hostedIllustrationSize } from "@/lib/illustration-size";
+import { articleTags, tagPath, type TagWithCount } from "@/lib/tags";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -186,6 +187,13 @@ export default async function ArticlePage({ params }: Props) {
     related = [];
   }
 
+  let tags: TagWithCount[] = [];
+  try {
+    tags = await articleTags(article.id);
+  } catch {
+    tags = [];
+  }
+
   const url = articlePublicUrl(article.publicId);
   const section = categoryLabel(article.category);
   const rubriquePath = categoryPath(article.category);
@@ -205,6 +213,11 @@ export default async function ArticlePage({ params }: Props) {
           section,
           authorName: author,
           imageSize,
+          tags: tags.map((t) => ({
+            name: t.name,
+            kind: t.kind,
+            url: absoluteUrl(tagPath(t.slug)),
+          })),
         })}
       />
       <JsonLd
@@ -308,6 +321,22 @@ export default async function ArticlePage({ params }: Props) {
             showInArticleAd
           />
         </div>
+        {tags.length > 0 ? (
+          <nav aria-label="Sujets de l'article" className="mt-10 flex flex-wrap items-center gap-2">
+            <span className="font-display mr-1 text-[0.8rem] tracking-[0.16em] text-muted">
+              Sujets
+            </span>
+            {tags.map((t) => (
+              <Link
+                key={t.slug}
+                href={tagPath(t.slug)}
+                className="inline-block rounded-full border border-ink/20 px-3 py-1 text-sm text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
+              >
+                {t.name}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <ShareButtons url={url} title={article.title} />
         <ArticleViewBeacon publicId={article.publicId} />
       </div>

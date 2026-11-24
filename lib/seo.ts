@@ -201,6 +201,8 @@ export function newsArticleJsonLd(input: {
   imageSize?: { width: number; height: number } | null;
   /** false pour une enquête Rempart+ : seul un aperçu est servi aux non-abonnés. */
   accessibleForFree?: boolean;
+  /** Sujets de l'article (pages /sujets) : keywords et about. */
+  tags?: Array<{ name: string; kind: string; url: string }>;
 }) {
   const published =
     input.publishedAt?.toISOString() || new Date().toISOString();
@@ -235,6 +237,23 @@ export function newsArticleJsonLd(input: {
         : { "@type": "Person", name: author },
     publisher: publisherRef(),
     articleSection: input.section,
+    ...(input.tags?.length
+      ? {
+          keywords: input.tags.map((t) => t.name).join(", "),
+          about: input.tags.map((t) => ({
+            "@type":
+              t.kind === "personne"
+                ? "Person"
+                : t.kind === "organisation"
+                  ? "Organization"
+                  : t.kind === "lieu"
+                    ? "Place"
+                    : "Thing",
+            name: t.name,
+            url: t.url,
+          })),
+        }
+      : {}),
     inLanguage: "fr-FR",
     isAccessibleForFree: input.accessibleForFree ?? true,
     // Balisage « contenu payant » de Google : la partie réservée est repérée par sa classe,

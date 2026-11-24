@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { ArrowRightIcon } from "@/components/ArrowRightIcon";
 
 type ListPageHeaderProps = {
   kicker: string;
@@ -84,7 +85,7 @@ export function ListPageHeader({
             action={basePath}
             method="get"
             role="search"
-            className={`mt-4 flex w-full max-w-xl flex-col gap-2 transition-transform duration-[550ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none sm:flex-row sm:items-stretch ${
+            className={`mt-4 flex w-full max-w-xl flex-row items-center gap-2 transition-transform duration-[550ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
               open ? "translate-y-0" : "-translate-y-2"
             }`}
             aria-hidden={!open}
@@ -106,9 +107,11 @@ export function ListPageHeader({
             <button
               type="submit"
               tabIndex={open ? 0 : -1}
-              className="font-display shrink-0 rounded-lg bg-ink px-5 py-2.5 text-sm tracking-[0.14em] text-paper no-underline transition hover:bg-accent hover:text-ink"
+              aria-label="Lancer la recherche"
+              title="Rechercher"
+              className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-ink transition duration-300 hover:bg-accent-deep sm:self-auto"
             >
-              Rechercher
+              <ArrowRightIcon className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
             </button>
             {q ? (
               <a

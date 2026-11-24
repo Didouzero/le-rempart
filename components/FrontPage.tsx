@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRightIcon } from "@/components/ArrowRightIcon";
 import { AdSlot } from "@/components/AdSlot";
 import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
@@ -39,8 +40,11 @@ type Item = {
 };
 
 /** La une, 3 secondaires, puis le fil « En continu ». */
-const LIVE_COUNT = 8;
-const LATEST_COUNT = 4 + LIVE_COUNT;
+// Six titres sous la une (deux rangées) et six dans la colonne « En direct » :
+// les deux colonnes de l'accueil gardent la même hauteur, sans trou sous la une.
+const SECONDARY_COUNT = 6;
+const LIVE_COUNT = 6;
+const LATEST_COUNT = 1 + SECONDARY_COUNT + LIVE_COUNT;
 const PER_CATEGORY = 4;
 
 function coverOf(item: Item): string | null {
@@ -274,7 +278,7 @@ export async function FrontPage() {
   );
 
   const lead = latest[0];
-  const secondary = latest.slice(1, 4);
+  const secondary = latest.slice(1, 1 + SECONDARY_COUNT);
   // Les blocs rubriques ne reprennent rien de ce qui est déjà en haut de page.
   const shown = new Set(latest.map((a) => a.id));
 
@@ -329,18 +333,18 @@ export async function FrontPage() {
           <div className="min-w-0">
             <Lead item={lead} />
             {secondary.length ? (
-              <div className="mt-8 grid gap-7 border-t border-rule pt-7 sm:grid-cols-3 sm:gap-6">
+              <div className="mt-8 grid gap-x-6 gap-y-8 border-t border-rule pt-7 sm:grid-cols-3">
                 {secondary.map((item) => (
                   <SmallCard key={item.id} item={item} />
                 ))}
               </div>
             ) : null}
           </div>
-          <LiveColumn items={latest.slice(4, 4 + LIVE_COUNT)} mostRead={mostRead} />
+          <LiveColumn items={latest.slice(1 + SECONDARY_COUNT, 1 + SECONDARY_COUNT + LIVE_COUNT)} mostRead={mostRead} />
         </div>
       )}
 
-      <form action="/" method="get" role="search" className="mt-12 flex gap-2 border-y border-rule py-4">
+      <form action="/" method="get" role="search" className="mt-12 flex items-center gap-2 border-y border-rule py-4">
         <label htmlFor="home-search" className="sr-only">
           Rechercher dans les articles
         </label>
@@ -351,8 +355,13 @@ export async function FrontPage() {
           placeholder="Rechercher un article…"
           className="min-w-0 flex-1 border border-rule bg-transparent px-3 py-2 text-[0.98rem]"
         />
-        <button type="submit" className="font-display bg-accent px-4 text-[0.9rem] tracking-[0.08em] text-ink">
-          Rechercher
+        <button
+          type="submit"
+          aria-label="Lancer la recherche"
+          title="Rechercher"
+          className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-ink transition duration-300 hover:bg-accent-deep"
+        >
+          <ArrowRightIcon className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
         </button>
       </form>
 
