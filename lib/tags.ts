@@ -238,3 +238,64 @@ export async function prismaTagSitemapRows(): Promise<
   `;
   return rows.map((r) => ({ slug: r.slug, lastPublishedAt: r.last }));
 }
+
+/** Enregistre les sujets d'une enquête Rempart+ (remplace les précédents si replace). */
+export async function setDossierTags(
+  dossierId: string,
+  tags: ProposedTag[],
+  options: { replace?: boolean } = {},
+): Promise<void> {
+  if (tags.length === 0 && !options.replace) return;
+  const tagIds: string[] = [];
+  for (const t of tags.slice(0, MAX_TAGS_PER_ARTICLE)) {
+    const slug = slugify(t.name);
+    const tag = await prisma.tag
+      .upsert({
+        where: { slug },
+        create: { slug, name: t.name, kind: t.kind },
+        update: {},
+        select: { id: true },
+      })
+      .catch(async (err) => {
+        const existing = await prisma.tag.findUnique({ where: { slug }, select: { id: true } });
+        if (!existing) throw err;
+        return existing;
+      });
+    tagIds.push(tag.id);
+  }
+  await prisma.$transaction([
+    ...(options.replace ? [prisma.dossierTag.deleteMany({ where: { dossierId } })] : []),
+    prisma.dossierTag.createMany({
+      data: tagIds.map((tagId) => ({ dossierId, tagId })),
+      skipDuplicates: true,
+    }),
+  ]);
+}
+
+/** Sujets d'une enquête, avec le nombre d'articles publiés derrière chacun. */
+export async function dossierTags(dossierId: string): Promise<TagWithCount[]> {
+  const rows = await withDbTimeout(
+    prisma.dossierTag.findMany({
+      where: { dossierId },
+      select: {
+        tag: {
+          select: {
+            slug: true,
+            name: true,
+            kind: true,
+            _count: {
+              select: { articles: { where: { article: { status: "published" } } } },
+            },
+          },
+        },
+      },
+    }),
+  );
+  // Une enquête renvoie vers tous ses sujets : la page du sujet la liste elle aussi.
+  return rows.map((r) => ({
+    slug: r.tag.slug,
+    name: r.tag.name,
+    kind: r.tag.kind,
+    count: r.tag._count.articles,
+  }));
+}

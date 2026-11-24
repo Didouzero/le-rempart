@@ -22,6 +22,7 @@ import { prisma } from "@/lib/prisma";
 import { finishReadyInvestigation, type ReadyArticle } from "@/lib/ready-article";
 import { absoluteUrl, dossierPath } from "@/lib/seo";
 import { notifyIndexNow } from "@/lib/indexnow";
+import { setDossierTags } from "@/lib/tags";
 import { slugify } from "@/lib/slug";
 import { telegramDownloadFile } from "@/lib/telegram";
 import { utf8Text, utf8TextOrNull } from "@/lib/utf8";
@@ -404,6 +405,11 @@ export async function publishReadyInvestigation(input: {
       prompt,
       ...finished,
     });
+    if (ready.tags.length) {
+      await setDossierTags(input.dossierId, ready.tags, { replace: true }).catch((err) =>
+        console.error("sujets enquête", err),
+      );
+    }
     await notify(`Enquête réécrite (même lien).\n${saved.title}\n${saved.url}`);
     return;
   }
@@ -418,6 +424,10 @@ export async function publishReadyInvestigation(input: {
     ...finished,
     cover: { image, alt: input.coverAlt },
   });
+  // Sujets donnés par Claude dans la ligne « SUJETS : » de l'enquête.
+  if (ready.tags.length) {
+    await setDossierTags(saved.id, ready.tags).catch((err) => console.error("sujets enquête", err));
+  }
   await notify(`Enquête publiée (Rempart+).\n${saved.title}\n${saved.url}`);
   await publishInvestigationFacebook({
     ...finished,

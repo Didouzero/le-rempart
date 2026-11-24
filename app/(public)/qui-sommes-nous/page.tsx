@@ -144,7 +144,7 @@ export default function QuiSommesNousPage() {
         {[
           ["Une erreur ?", "Écrivez-nous en indiquant l'adresse de l'article : les erreurs factuelles avérées sont corrigées dans les meilleurs délais."],
           ["Mis en cause ?", "Toute personne nommée ou désignée dans un article peut exercer son droit de réponse, dans les conditions prévues par la loi."],
-          ["Qui nous finance ?", "La publicité et l'abonnement Rempart+. Rien d'autre."],
+          ["Qui nous finance ?", "L'abonnement Rempart+ et, selon les périodes, la publicité. Rien d'autre."],
         ].map(([title, text]) => (
           <div key={title} className="bg-ink p-6">
             <h3 className="font-display text-2xl tracking-[0.06em] text-accent">{title}</h3>

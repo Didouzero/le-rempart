@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { TagKind } from "@prisma/client";
 import { ArticleCard } from "@/components/ArticleCard";
+import { DossierCard } from "@/components/DossierCard";
 import { JsonLd } from "@/components/JsonLd";
 import { articlePublicPath } from "@/lib/article-url";
 import { prisma, withDbTimeout } from "@/lib/prisma";
@@ -52,6 +53,22 @@ const findTag = cache(async function findTag(slug: string) {
         kind: true,
         _count: {
           select: { articles: { where: { article: { status: "published" } } } },
+        },
+        dossiers: {
+          where: { dossier: { publishedAt: { not: null } } },
+          orderBy: { dossier: { publishedAt: "desc" } },
+          take: 20,
+          select: {
+            dossier: {
+              select: {
+                publicId: true,
+                title: true,
+                excerpt: true,
+                publishedAt: true,
+                coverImageUrl: true,
+              },
+            },
+          },
         },
         articles: {
           where: { article: { status: "published" } },
@@ -149,9 +166,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SujetPage({ params }: Props) {
   const { slug } = await params;
   const tag = await findTag(slug);
-  if (!tag || tag._count.articles === 0) notFound();
+  if (!tag || (tag._count.articles === 0 && tag.dossiers.length === 0)) notFound();
 
   const articles = tag.articles.map((a) => a.article);
+  const dossiers = tag.dossiers.map((d) => d.dossier);
   const related = await relatedTags(
     tag.id,
     articles.map((a) => a.id),
@@ -211,6 +229,21 @@ export default async function SujetPage({ params }: Props) {
           {count > 1 ? "s" : ""}, du plus récent au plus ancien.
         </p>
       </header>
+
+      {dossiers.length > 0 ? (
+        <section aria-labelledby="sujet-enquetes" className="mb-12">
+          <h2 id="sujet-enquetes" className="font-display mb-5 text-[0.85rem] tracking-[0.16em] text-gold">
+            Les enquêtes Rempart+
+          </h2>
+          <ul className="grid list-none gap-8 p-0 sm:grid-cols-2">
+            {dossiers.map((d, i) => (
+              <li key={d.publicId}>
+                <DossierCard dossier={d} index={i} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div>
         {articles.map((article, index) => (

@@ -25,6 +25,7 @@ import {
   SITE_NAME,
 } from "@/lib/seo";
 import { splitTeaser } from "@/lib/teaser";
+import { dossierTags, tagPath, type TagWithCount } from "@/lib/tags";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -126,6 +127,7 @@ export default async function DossierPage({ params }: Props) {
   if (!/^\d+$/.test(slug)) permanentRedirect(dossierPath(dossier.publicId));
 
   const coverAlt = await getDossierCoverAlt(dossier.id).catch(() => null);
+  const tags: TagWithCount[] = await dossierTags(dossier.id).catch(() => []);
   const locked = dossier.membersOnly && !plus;
   // Googlebot vérifié lit la suite, balisée payante ; les visiteurs n'en reçoivent rien.
   const crawler = locked && (await isVerifiedGooglebot());
@@ -146,6 +148,11 @@ export default async function DossierPage({ params }: Props) {
           section: PREMIUM_CATEGORY.label,
           authorName: SITE_AUTHOR.name,
           accessibleForFree: !dossier.membersOnly,
+          tags: tags.map((t) => ({
+            name: t.name,
+            kind: t.kind,
+            url: absoluteUrl(tagPath(t.slug)),
+          })),
         })}
       />
       <JsonLd
@@ -269,6 +276,23 @@ export default async function DossierPage({ params }: Props) {
       ) : (
         <ArticleBody content={teaser} showNewsletterCta={false} />
       )}
+
+      {tags.length > 0 ? (
+        <nav aria-label="Sujets de l'enquête" className="mt-10 flex flex-wrap items-center gap-2">
+          <span className="font-display mr-1 text-[0.8rem] tracking-[0.16em] text-muted">
+            Sujets
+          </span>
+          {tags.map((t) => (
+            <Link
+              key={t.slug}
+              href={tagPath(t.slug)}
+              className="inline-block rounded-full border border-ink/20 px-3 py-1 text-sm text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
+            >
+              {t.name}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </article>
   );
 }

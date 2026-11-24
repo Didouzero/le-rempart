@@ -16,7 +16,6 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { rssAlternateTypes } from "@/lib/rss-links";
 import "./globals.css";
 
-const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() || "GTM-M53Q8GGZ";
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "G-KBPQRRFPDC";
 
@@ -61,6 +60,8 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
   category: "news",
+  // Propriété Search Console validée par balise meta (plus par Tag Manager, retiré car vide).
+  verification: { google: "oRtHNMr9Sd1B8Mqjuy7-RabRaMtQGaftMXQP3IqjY_w" },
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: "/", types: rssAlternateTypes() },
   robots: {
@@ -108,12 +109,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const gtmScript = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','${GTM_ID}');`;
-
   return (
     <html
       lang="fr"
@@ -126,22 +121,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       <head>
         {/* Thème clair / sombre appliqué avant l'affichage : pas de flash blanc. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* Consentement refusé par défaut, avant Tag Manager et GA4 (Consent Mode v2). */}
+        {/* Consentement refusé par défaut, avant GA4 (Consent Mode v2). */}
         <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_SCRIPT }} />
-        {/* Google Tag Manager */}
-        <script dangerouslySetInnerHTML={{ __html: gtmScript }} />
       </head>
       <body className="antialiased">
-        {/* Google Tag Manager (noscript) — juste après <body> */}
-        <noscript>
-          <iframe
-            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
-            height="0"
-            width="0"
-            style={{ display: "none", visibility: "hidden" }}
-            title="Google Tag Manager"
-          />
-        </noscript>
         {/* Google Analytics 4 — une seule balise gtag par page */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}

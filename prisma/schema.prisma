@@ -164,6 +164,8 @@ model SpecialDossier {
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  /// Sujets de l'enquête (pages /sujets/[slug]).
+  tags        DossierTag[]
 
   @@index([publishedAt])
 }
@@ -240,6 +242,7 @@ model Tag {
   kind      TagKind
   createdAt DateTime     @default(now())
   articles  ArticleTag[]
+  dossiers  DossierTag[]
 }
 
 model ArticleTag {
@@ -249,5 +252,15 @@ model ArticleTag {
   tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([articleId, tagId])
+  @@index([tagId])
+}
+
+model DossierTag {
+  dossierId String
+  tagId     String
+  dossier   SpecialDossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  tag       Tag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([dossierId, tagId])
   @@index([tagId])
 }
