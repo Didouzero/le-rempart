@@ -20,18 +20,13 @@ export function NativeAdsRail() {
   if (mgidEnabled() && mgidWidget) {
     return (
       <section
-        className="mt-12 border-t border-ink/20 pt-10"
+        className="mt-14 border-t border-rule pt-6"
         aria-label="Contenus sponsorisés"
       >
-        <p className="section-kicker">
-          <span className="live-dot" aria-hidden />
-          Partenaires
-        </p>
-        <h2 className="font-display mt-2 text-2xl tracking-[0.08em] sm:text-3xl">
-          Vous pourriez aussi aimer
+        <h2 className="font-display text-[0.8rem] tracking-[0.14em] text-muted">
+          Contenus sponsorisés
         </h2>
-        <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
-        <div className="mt-8 min-h-[120px]">
+        <div className="mt-4 min-h-[120px]">
           <MgidWidget widgetId={mgidWidget} />
         </div>
         <MgidSiteScript />
@@ -54,18 +49,13 @@ export function NativeAdsRail() {
 
   return (
     <section
-      className="mt-12 border-t border-ink/20 pt-10"
+      className="mt-14 border-t border-rule pt-6"
       aria-label="Contenus sponsorisés"
     >
-      <p className="section-kicker">
-        <span className="live-dot" aria-hidden />
-        Partenaires
-      </p>
-      <h2 className="font-display mt-2 text-2xl tracking-[0.08em] sm:text-3xl">
-        Vous pourriez aussi aimer
+      <h2 className="font-display text-[0.8rem] tracking-[0.14em] text-muted">
+        Contenus sponsorisés
       </h2>
-      <div className="gold-rule animate-line-grow mt-3 max-w-xs" />
-      <div id={containerId} className="mt-8 min-h-[120px]" />
+      <div id={containerId} className="mt-4 min-h-[120px]" />
       <Script id="taboola-page" strategy="afterInteractive">{`
 window._taboola = window._taboola || [];
 _taboola.push({article: 'auto'});

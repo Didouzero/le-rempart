@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { ArticleBody } from "@/components/ArticleBody";
-import { ArticleSideAds } from "@/components/ArticleSideAds";
 import { Caption, captionText } from "@/components/CoverCaption";
 import { CoverImg } from "@/components/CoverImg";
 import { JsonLd } from "@/components/JsonLd";
@@ -302,23 +301,23 @@ export default async function ArticlePage({ params }: Props) {
           </figure>
         ) : null}
 
-        <ArticleSideAds>
-          <div className="article-dropcap">
-            <ArticleBody
-              content={article.content}
-              showNewsletterCta
-              showInArticleAd
-            />
-          </div>
-          <ShareButtons url={url} title={article.title} />
-        </ArticleSideAds>
+        {/* Plus de colonnes de pub autour du texte : la lecture d'abord. */}
+        <div className="article-dropcap">
+          <ArticleBody
+            content={article.content}
+            showNewsletterCta
+            showInArticleAd
+          />
+        </div>
+        <ShareButtons url={url} title={article.title} />
       </div>
+
+      {/* Nos articles d'abord, les contenus sponsorisés ensuite. */}
+      <RelatedArticles articles={related} />
 
       <AdSlot slot="article-bottom" />
 
       <NativeAdsRail />
-
-      <RelatedArticles articles={related} />
     </article>
   );
 }
