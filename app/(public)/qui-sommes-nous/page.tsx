@@ -167,6 +167,14 @@ export default function QuiSommesNousPage() {
           Mentions légales
         </Link>
       </p>
+      <p className="mt-3 text-sm text-muted">
+        Sources, vérification, corrections et droit de réponse : tout est
+        détaillé dans notre{" "}
+        <Link href="/charte-editoriale" className="underline decoration-accent">
+          charte éditoriale
+        </Link>
+        .
+      </p>
     </div>
   );
 }

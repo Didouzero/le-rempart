@@ -54,6 +54,8 @@ export async function generateMetadata({
       ? `Résultats pour « ${q} » sur Le Rempart.`
       : `${SITE_DESCRIPTION} Page ${page}.`,
     path,
+    // Une page de résultats n'a rien à faire dans Google : seule la pagination reste indexée.
+    noIndex: hasSearch,
   });
 }
 

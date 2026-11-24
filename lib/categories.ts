@@ -14,41 +14,77 @@ export type ArticleCategory = (typeof ARTICLE_CATEGORIES)[number];
 
 export const CATEGORY_META: Record<
   ArticleCategory,
-  { slug: string; label: string; short: string; description: string }
+  {
+    slug: string;
+    label: string;
+    short: string;
+    /** Chapô visible sous le titre et meta description. */
+    description: string;
+    /** Balise <title> : le sujet et ce qu'on y trouve, la marque est ajoutée par le gabarit. */
+    seoTitle: string;
+    /** Présentation de la rubrique, en bas de la première page. */
+    intro: string[];
+  }
 > = {
   immigration: {
     slug: "immigration",
     label: "Immigration",
     short: "Immigration",
+    seoTitle: "Immigration : actualité, chiffres et enquêtes",
     description:
-      "L'immigration est l'un des problèmes majeurs en France. Tenez-vous au courant de l'actualité migratoire française.",
+      "L'immigration est l'un des problèmes majeurs en France. Tenez-vous au courant de l'actualité migratoire française : chiffres, OQTF, asile et frontières.",
+    intro: [
+      "La rubrique Immigration du Rempart suit au jour le jour l'actualité migratoire française : chiffres officiels des entrées et des titres de séjour, demandes d'asile, obligations de quitter le territoire (OQTF) jamais exécutées, centres d'hébergement et contrôle des frontières.",
+      "Nous lisons les rapports de la Cour des comptes, du ministère de l'Intérieur et de l'Ofpra, et nous racontons ce que ces décisions changent concrètement pour les communes et les Français qui les vivent.",
+    ],
   },
   justice: {
     slug: "justice",
     label: "Justice",
     short: "Justice",
+    seoTitle: "Justice : décisions, procès et peines prononcées",
     description:
-      "Découvrez les dernières décisions de justice, les peines et les enquêtes judiciaires en cours.",
+      "Découvrez les dernières décisions de justice, les peines prononcées, les procès en cours et les enquêtes judiciaires qui font l'actualité.",
+    intro: [
+      "La rubrique Justice du Rempart couvre les procès, les condamnations et les décisions des tribunaux qui font l'actualité : violences, trafics, refus d'obtempérer, affaires politico-financières.",
+      "Nous donnons les peines réellement prononcées, les antécédents quand ils sont connus et les suites données aux dossiers, pour mesurer l'écart entre la loi votée et la sanction appliquée.",
+    ],
   },
   economie: {
     slug: "economie",
     label: "Économie",
     short: "Économie",
+    seoTitle: "Économie : argent public, impôts et dépenses de l'État",
     description:
-      "Argent public, fraudes, impôts et gabegie administrative : soyez informés en direct sur l'économie française.",
+      "Argent public, fraudes, impôts et gabegie administrative : soyez informés en direct sur l'économie française et l'usage de vos impôts.",
+    intro: [
+      "La rubrique Économie du Rempart suit l'argent des Français : budget de l'État, dette, impôts et taxes, subventions, fraudes sociales et fiscales, gaspillages des administrations et des collectivités.",
+      "Chaque article s'appuie sur les chiffres publics, rapports de la Cour des comptes, lois de finances, données de l'Insee, pour montrer qui paie, qui reçoit et ce que cela coûte.",
+    ],
   },
   politique: {
     slug: "politique",
     label: "Politique",
     short: "Politique",
+    seoTitle: "Politique : actualité, sondages et élections en France",
     description:
-      "Sondages électoraux, petite musique politicienne ou candidatures : découvrez en temps réel l'envers du décor politique.",
+      "Sondages électoraux, petite musique politicienne ou candidatures : découvrez en temps réel l'envers du décor de la vie politique française.",
+    intro: [
+      "La rubrique Politique du Rempart décrypte la vie politique française : gouvernement, Assemblée nationale, partis, sondages, candidatures et campagnes électorales, des municipales à la présidentielle.",
+      "Nous rapportons les déclarations, les votes et les patrimoines des élus tels qu'ils sont, et nous rappelons ce qu'ils disaient hier quand cela éclaire ce qu'ils font aujourd'hui.",
+    ],
   },
   insolite: {
     slug: "insolite",
     label: "Insolite",
     short: "Insolite",
-    description: "Les faits divers et informations insolites politiques se retrouvent ici.",
+    seoTitle: "Insolite : faits divers et coulisses de la politique",
+    description:
+      "Les faits divers, les coulisses et les informations insolites de la politique et des médias se retrouvent ici.",
+    intro: [
+      "La rubrique Insolite du Rempart rassemble les faits divers, les coulisses des plateaux télé et les épisodes de la vie publique qu'on a du mal à croire : déclarations surprenantes, décisions absurdes, polémiques médiatiques.",
+      "Des histoires courtes, vérifiées et racontées avec le sourire, quand l'actualité se charge elle-même de la satire.",
+    ],
   },
 };
 
@@ -57,6 +93,7 @@ export const PREMIUM_CATEGORY = {
   slug: "enquetes",
   label: "Enquête & révélations",
   short: "Enquêtes",
+  seoTitle: "Enquêtes exclusives : subventions, fraudes et révélations",
   description:
     "Enquêtes et révélations documentées, chaque mercredi et samedi. Réservé aux abonnés Rempart+.",
   path: "/rubriques/enquetes",

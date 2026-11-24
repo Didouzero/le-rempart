@@ -11,7 +11,8 @@ import {
   buildPageMetadata,
 } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// En cache CDN, régénérée toutes les 5 minutes (derniers articles).
+export const revalidate = 300;
 
 const DESCRIPTION = `${SITE_AUTHOR.name}, fondateur et rédacteur en chef du Rempart : pourquoi j'ai lancé ce média, comment j'écris, et la ligne que je défends.`;
 

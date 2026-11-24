@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { articlePublicPath, siteUrlBase } from "@/lib/article-url";
-import { ARTICLE_CATEGORIES, CATEGORY_META } from "@/lib/categories";
+import {
+  ARTICLE_CATEGORIES,
+  CATEGORY_META,
+  type ArticleCategory,
+} from "@/lib/categories";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { dossierPath } from "@/lib/seo";
 
@@ -9,91 +13,13 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrlBase();
-  const now = new Date();
 
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: base,
-      lastModified: now,
-      changeFrequency: "hourly",
-      priority: 1,
-    },
-    ...ARTICLE_CATEGORIES.map((key) => ({
-      url: `${base}/rubriques/${CATEGORY_META[key].slug}`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    })),
-    {
-      url: `${base}/rubriques/enquetes`,
-      lastModified: now,
-      changeFrequency: "weekly" as const,
-      priority: 0.65,
-    },
-    {
-      url: `${base}/qui-sommes-nous`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${base}/auteurs/dimitri-scudo`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.6,
-    },
-    {
-      url: `${base}/s-abonner`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${base}/connexion`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${base}/contact`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${base}/mentions-legales`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${base}/confidentialite`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${base}/cgu`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${base}/cgv`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${base}/suppression-donnees`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-  ];
-
-  let articles: Array<{ publicId: number; publishedAt: Date | null; updatedAt: Date }> =
-    [];
+  let articles: Array<{
+    publicId: number;
+    publishedAt: Date | null;
+    updatedAt: Date;
+    category: ArticleCategory;
+  }> = [];
   try {
     articles = await withDbTimeout(
       prisma.article.findMany({
@@ -103,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           publicId: true,
           publishedAt: true,
           updatedAt: true,
+          category: true,
         },
         take: 5000,
       }),
@@ -111,9 +38,47 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("sitemap: failed to load articles", err);
   }
 
+  // Dates réelles uniquement : une date recalculée à chaque passage pousse Google
+  // à ignorer celles de tout le sitemap. Accueil et rubriques prennent celle du
+  // dernier article publié ; les pages fixes n'en portent pas.
+  const latestIn = (category?: ArticleCategory) => {
+    const a = category ? articles.find((x) => x.category === category) : articles[0];
+    return a?.publishedAt ?? undefined;
+  };
+
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: base, lastModified: latestIn(), changeFrequency: "hourly", priority: 1 },
+    ...ARTICLE_CATEGORIES.map((key) => ({
+      url: `${base}/rubriques/${CATEGORY_META[key].slug}`,
+      lastModified: latestIn(key),
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+    {
+      url: `${base}/auteurs/dimitri-scudo`,
+      lastModified: latestIn(),
+      changeFrequency: "daily",
+      priority: 0.6,
+    },
+    ...[
+      ["/qui-sommes-nous", 0.6],
+      ["/charte-editoriale", 0.6],
+      ["/s-abonner", 0.5],
+      ["/contact", 0.3],
+      ["/mentions-legales", 0.2],
+      ["/confidentialite", 0.2],
+      ["/cgu", 0.2],
+      ["/cgv", 0.2],
+    ].map(([path, priority]) => ({
+      url: `${base}${path}`,
+      changeFrequency: "monthly" as const,
+      priority: priority as number,
+    })),
+  ];
+
   const articleEntries: MetadataRoute.Sitemap = articles.map((a) => ({
     url: `${base}${articlePublicPath(a.publicId)}`,
-    lastModified: a.updatedAt || a.publishedAt || now,
+    lastModified: a.updatedAt || a.publishedAt || undefined,
     changeFrequency: "weekly",
     priority: 0.8,
   }));
@@ -134,10 +99,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const dossierEntries: MetadataRoute.Sitemap = dossiers.map((d) => ({
     url: `${base}${dossierPath(d.publicId)}`,
-    lastModified: d.updatedAt || d.publishedAt || now,
+    lastModified: d.updatedAt || d.publishedAt || undefined,
     changeFrequency: "weekly",
     priority: 0.8,
   }));
+
+  staticPages.push({
+    url: `${base}/rubriques/enquetes`,
+    lastModified: dossiers[0]?.publishedAt ?? undefined,
+    changeFrequency: "weekly",
+    priority: 0.65,
+  });
 
   return [...staticPages, ...articleEntries, ...dossierEntries];
 }

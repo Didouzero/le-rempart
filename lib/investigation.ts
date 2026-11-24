@@ -21,6 +21,7 @@ import { runEditorialPipeline } from "@/lib/pipeline/run-editorial-pipeline";
 import { prisma } from "@/lib/prisma";
 import { finishReadyInvestigation, type ReadyArticle } from "@/lib/ready-article";
 import { absoluteUrl, dossierPath } from "@/lib/seo";
+import { notifyIndexNow } from "@/lib/indexnow";
 import { slugify } from "@/lib/slug";
 import { telegramDownloadFile } from "@/lib/telegram";
 import { utf8Text, utf8TextOrNull } from "@/lib/utf8";
@@ -338,6 +339,7 @@ export async function persistNewInvestigationDossier(input: {
     });
   }
 
+  notifyIndexNow([dossierPath(created.publicId), "/rubriques/enquetes"]);
   return {
     id: created.id,
     slug,

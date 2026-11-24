@@ -4,6 +4,7 @@ import { NewsletterUnsubscribeForm } from "@/components/NewsletterUnsubscribeFor
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
+  noIndex: true,
   title: "Se désabonner de la newsletter",
   description: "Désabonnement de la newsletter gratuite Le Rempart.",
   path: "/newsletter/desabonnement",

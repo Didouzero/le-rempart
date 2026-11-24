@@ -5,6 +5,7 @@ import { getPlusEmail, verifyPlusCancelToken } from "@/lib/membership";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
+  noIndex: true,
   title: "Résilier Rempart+",
   description: "Résiliez en ligne votre abonnement Rempart+, à tout moment.",
   path: "/resilier",

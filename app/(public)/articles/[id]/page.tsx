@@ -26,7 +26,7 @@ import {
   breadcrumbJsonLd,
   buildPageMetadata,
   newsArticleJsonLd,
-  SITE_LOGO_SQUARE,
+  SITE_OG_IMAGE,
   SITE_NAME,
 } from "@/lib/seo";
 import { hostedIllustrationSize } from "@/lib/illustration-size";
@@ -93,7 +93,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const path = articlePublicPath(article.publicId);
   const url = articlePublicUrl(article.publicId);
-  const imageUrl = article.coverImageUrl || absoluteUrl(SITE_LOGO_SQUARE);
+  const imageUrl = article.coverImageUrl || absoluteUrl(SITE_OG_IMAGE);
   const section = categoryLabel(article.category);
   const author = articleAuthorName(article.authorName);
   const imageSize = hostedIllustrationSize(article.coverImageUrl, article.id);
@@ -158,14 +158,17 @@ export default async function ArticlePage({ params }: Props) {
     // Un 404 reste en cache plusieurs minutes, et Vercel peut le resservir après la
     // publication : Facebook lit alors une page d'erreur et l'aperçu du lien est
     // générique. Pour un numéro encore libre ou un article pas encore publié, on lève
-    // une erreur, qui n'est jamais mise en cache. Le 404 ne sert qu'aux numéros morts.
+    // une erreur, qui n'est jamais mise en cache. Seuls les quelques numéros qui suivent
+    // le dernier article sont concernés : au-delà, un robot qui tâtonne reçoit un 404
+    // et la Search Console ne compte pas d'erreurs serveur.
     const [row, latest] = await Promise.all([
       withDbTimeout(
         prisma.article.findUnique({ where: { publicId: asNumber }, select: { id: true } }),
       ),
       withDbTimeout(prisma.article.aggregate({ _max: { publicId: true } })),
     ]);
-    if (row || asNumber > (latest._max.publicId ?? 0)) {
+    const max = latest._max.publicId ?? 0;
+    if (row || (asNumber > max && asNumber <= max + 5)) {
       throw new Error(`Article ${asNumber} pas encore publié`);
     }
     notFound();

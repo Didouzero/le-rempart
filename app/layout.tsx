@@ -5,8 +5,9 @@ import {
   SITE_DEFAULT_TITLE,
   SITE_DESCRIPTION,
   SITE_LOGO_SQUARE,
-  SITE_LOGO_WORDMARK,
   SITE_NAME,
+  SITE_OG_IMAGE,
+  SITE_OG_IMAGE_SIZE,
   SITE_URL,
 } from "@/lib/seo";
 import { SITE_AUTHOR } from "@/lib/authors";
@@ -83,26 +84,13 @@ export const metadata: Metadata = {
     title: SITE_DEFAULT_TITLE,
     description: SITE_DESCRIPTION,
     url: SITE_URL,
-    images: [
-      {
-        url: SITE_LOGO_WORDMARK,
-        width: 791,
-        height: 127,
-        alt: SITE_NAME,
-      },
-      {
-        url: SITE_LOGO_SQUARE,
-        width: 512,
-        height: 512,
-        alt: SITE_NAME,
-      },
-    ],
+    images: [{ url: SITE_OG_IMAGE, ...SITE_OG_IMAGE_SIZE, alt: SITE_NAME }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_DEFAULT_TITLE,
     description: SITE_DESCRIPTION,
-    images: [SITE_LOGO_WORDMARK],
+    images: [SITE_OG_IMAGE],
   },
   icons: {
     icon: [{ url: "/favicon.png?v=4", type: "image/png", sizes: "512x512" }],

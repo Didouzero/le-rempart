@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteUrlBase } from "@/lib/article-url";
 import { SITE_AUTHOR } from "@/lib/authors";
 import type { ArticleCategory } from "@/lib/categories";
+import { illustrationCrops } from "@/lib/cover-image";
 import { rssAlternateTypes } from "@/lib/rss-links";
 
 export const SITE_NAME = "Le Rempart";
@@ -9,8 +10,12 @@ export const SITE_TAGLINE = "Le média de droite assumé";
 export const SITE_DOMAIN = "le-rempart.org";
 export const SITE_URL = "https://www.le-rempart.org";
 export const SITE_DESCRIPTION =
-  "Actualité, enquêtes et analyses. Immigration, justice, économie, politique — Le Rempart, média indépendant.";
-export const SITE_DEFAULT_TITLE = "Le Rempart — Actualité & analyses";
+  "Actualité, enquêtes exclusives et analyses sans filtre : immigration, justice, économie, politique. Le Rempart, le média de droite assumé et indépendant.";
+export const SITE_DEFAULT_TITLE =
+  "Le Rempart — Le média de droite assumé : actualité et enquêtes";
+/** Image de partage par défaut (accueil, rubriques, pages sans illustration). */
+export const SITE_OG_IMAGE = "/og-image.png";
+export const SITE_OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 /** Logo carré (favicon) — signal marque / publisher Google. */
 export const SITE_LOGO_SQUARE = "/favicon.png";
 /** Wordmark horizontal — partages / footer. */
@@ -43,7 +48,8 @@ export function buildPageMetadata(input: {
   noIndex?: boolean;
 }): Metadata {
   const url = absoluteUrl(input.path);
-  const image = input.image || absoluteUrl(SITE_LOGO_SQUARE);
+  const image = input.image || absoluteUrl(SITE_OG_IMAGE);
+  const imageSize = input.image ? input.imageSize : SITE_OG_IMAGE_SIZE;
   const title = input.absoluteTitle
     ? { absolute: input.title }
     : input.title;
@@ -57,7 +63,7 @@ export function buildPageMetadata(input: {
     publisher: SITE_NAME,
     alternates: { canonical: url, types: rssAlternateTypes(input.feedCategory) },
     ...(input.noIndex
-      ? { robots: { index: false, follow: false } }
+      ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }
       : {}),
     openGraph: {
       type: input.ogType || "website",
@@ -72,7 +78,7 @@ export function buildPageMetadata(input: {
         {
           url: image,
           alt: input.imageAlt || SITE_NAME,
-          ...(input.imageSize ?? {}),
+          ...(imageSize ?? {}),
         },
       ],
     },
@@ -91,6 +97,7 @@ export function buildPageMetadata(input: {
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 export const AUTHOR_ID = `${SITE_URL}${SITE_AUTHOR.path}#person`;
 export const ABOUT_PATH = "/qui-sommes-nous";
+export const CHARTER_PATH = "/charte-editoriale";
 
 function publisherRef() {
   return {
@@ -145,9 +152,14 @@ export function organizationJsonLd() {
     foundingDate: "2025",
     description: SITE_DESCRIPTION,
     founder: { "@id": AUTHOR_ID },
-    publishingPrinciples: absoluteUrl(ABOUT_PATH),
-    actionableFeedbackPolicy: absoluteUrl(ABOUT_PATH),
-    correctionsPolicy: absoluteUrl(ABOUT_PATH),
+    // Politiques éditoriales lues par Google pour juger un éditeur de presse (Google Actualités).
+    publishingPrinciples: absoluteUrl(CHARTER_PATH),
+    verificationFactCheckingPolicy: absoluteUrl(`${CHARTER_PATH}#verification`),
+    correctionsPolicy: absoluteUrl(`${CHARTER_PATH}#corrections`),
+    actionableFeedbackPolicy: absoluteUrl(`${CHARTER_PATH}#corrections`),
+    ethicsPolicy: absoluteUrl(CHARTER_PATH),
+    ownershipFundingInfo: absoluteUrl(`${CHARTER_PATH}#independance`),
+    masthead: absoluteUrl(ABOUT_PATH),
     email: "contact@le-rempart.org",
     address: {
       "@type": "PostalAddress",
@@ -193,7 +205,7 @@ export function newsArticleJsonLd(input: {
   const published =
     input.publishedAt?.toISOString() || new Date().toISOString();
   const modified = input.updatedAt?.toISOString() || published;
-  const image = input.imageUrl || absoluteUrl(SITE_LOGO_SQUARE);
+  const image = input.imageUrl || absoluteUrl(SITE_OG_IMAGE);
   const author = input.authorName?.trim() || SITE_AUTHOR.name;
 
   return {
@@ -201,10 +213,15 @@ export function newsArticleJsonLd(input: {
     "@type": "NewsArticle",
     headline: input.title,
     description: input.excerpt,
+    // 16:9, 4:3 et 1:1 : Google choisit le format selon l'emplacement (À la une, Discover).
     image: [
       input.imageUrl && input.imageSize
         ? { "@type": "ImageObject", url: image, ...input.imageSize }
         : image,
+      ...(input.imageUrl ? illustrationCrops(input.imageUrl) : []).map((crop) => ({
+        "@type": "ImageObject",
+        ...crop,
+      })),
     ],
     datePublished: published,
     dateModified: modified,

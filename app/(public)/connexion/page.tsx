@@ -7,6 +7,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata({
+  noIndex: true,
   title: "Connexion Rempart+",
   description:
     "Accédez à votre espace Rempart+ avec un lien envoyé sur votre e-mail d’abonnement.",

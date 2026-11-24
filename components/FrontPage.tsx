@@ -312,7 +312,7 @@ export async function FrontPage() {
   return (
     <div>
       <JsonLd data={websiteJsonLd()} />
-      <h1 className="sr-only">Le Rempart : l&apos;actualité à la une</h1>
+      <h1 className="sr-only">Le Rempart, le média de droite assumé : l&apos;actualité à la une</h1>
       <p className="font-display mb-6 flex items-center gap-3 border-b border-rule pb-3 text-[0.9rem] tracking-[0.1em] sm:text-[0.95rem]">
         <time dateTime={new Date().toISOString().slice(0, 10)} className="text-ink">
           {todayLabel()}

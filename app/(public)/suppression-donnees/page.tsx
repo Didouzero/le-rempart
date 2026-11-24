@@ -3,6 +3,7 @@ import Link from "next/link";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
+  noIndex: true,
   title: "Suppression des données",
   description:
     "Comment demander la suppression de vos données : newsletter, abonnement Rempart+ et application Meta / Facebook de Le Rempart.",

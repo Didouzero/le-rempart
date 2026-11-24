@@ -14,6 +14,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Idem pour les rubriques : la première page est en cache, le reste passe par /rubriques-liste.
+  const rubrique = pathname.match(/^\/rubriques\/([a-z-]+)\/?$/);
+  if (rubrique && rubrique[1] !== "enquetes") {
+    if (searchParams.has("page") || searchParams.has("q")) {
+      const target = request.nextUrl.clone();
+      target.pathname = `/rubriques-liste/${rubrique[1]}`;
+      return NextResponse.rewrite(target);
+    }
+    return NextResponse.next();
+  }
+
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
     return NextResponse.next();
   }
@@ -46,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/", "/rubriques/:slug", "/admin/:path*", "/api/admin/:path*"],
 };

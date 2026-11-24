@@ -6,6 +6,7 @@ import { usePlus } from "@/components/PlusProvider";
 
 const links = [
   { href: "/qui-sommes-nous", label: "Qui sommes-nous" },
+  { href: "/charte-editoriale", label: "Charte éditoriale" },
   { href: "/s-abonner", label: "Rempart+", plusHref: "/rubriques/enquetes" },
   { href: "/connexion", label: "Connexion", hideForPlus: true },
   { href: "/contact", label: "Nous contacter" },

@@ -12,7 +12,7 @@ import { buildPageMetadata, collectionPageJsonLd } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: PREMIUM_CATEGORY.label,
+  title: PREMIUM_CATEGORY.seoTitle,
   description: PREMIUM_CATEGORY.description,
   path: PREMIUM_CATEGORY.path,
 });
@@ -150,6 +150,44 @@ export default async function EnquetesPage({
           </div>
         </div>
       )}
+
+      <section
+        aria-labelledby="enquetes-presentation"
+        className="mt-16 max-w-3xl border-t border-ink/10 pt-8 text-sm leading-relaxed text-muted"
+      >
+        <h2
+          id="enquetes-presentation"
+          className="font-display text-[0.8rem] tracking-[0.16em] text-ink"
+        >
+          Les enquêtes du Rempart
+        </h2>
+        <p className="mt-3">
+          Deux fois par semaine, le mercredi et le samedi, Le Rempart publie une
+          enquête exclusive : un dossier construit à partir de documents
+          publics, rapports officiels, budgets, délibérations et décisions de
+          justice, qui suit l&apos;argent et les responsabilités jusqu&apos;au
+          bout.
+        </p>
+        <p className="mt-3">
+          Subventions versées à des associations, dépenses des collectivités,
+          fraudes, coût réel de l&apos;immigration, patrimoine et votes des
+          élus : chaque enquête nomme les décideurs, cite ses sources et
+          renvoie aux documents d&apos;origine pour que chacun puisse vérifier.
+        </p>
+        <p className="mt-3">
+          Les enquêtes sont réservées aux abonnés{" "}
+          <Link href="/s-abonner" className="underline decoration-accent">
+            Rempart+
+          </Link>
+          , qui reçoivent aussi chaque matin le brief de l&apos;actualité. Les
+          articles d&apos;actualité du site restent en accès libre. Notre
+          méthode est détaillée dans la{" "}
+          <Link href="/charte-editoriale" className="underline decoration-accent">
+            charte éditoriale
+          </Link>
+          .
+        </p>
+      </section>
     </div>
   );
 }

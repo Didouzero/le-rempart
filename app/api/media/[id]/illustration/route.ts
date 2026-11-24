@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { ILLUSTRATION_WIDTHS } from "@/lib/cover-image";
+import {
+  ILLUSTRATION_CROPS,
+  ILLUSTRATION_WIDTHS,
+  type IllustrationCrop,
+} from "@/lib/cover-image";
 import { getDossierCover } from "@/lib/investigation-draft";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 
@@ -36,11 +40,17 @@ function sniffMime(buf: Buffer, declared: string | null): string {
 /**
  * Illustration hébergée. Sans paramètre : fichier original (og:image, Google, Facebook).
  * Avec ?w=480|800|1200|1600 : copie WebP redimensionnée pour l'affichage sur le site.
+ * Avec ?ratio=4x3|1x1 : recadrage JPEG centré sur le sujet, déclaré à Google dans le NewsArticle.
  */
 export async function GET(request: Request, { params }: Params) {
   const { id } = await params;
   const width = Number(new URL(request.url).searchParams.get("w"));
   const resize = (ILLUSTRATION_WIDTHS as readonly number[]).includes(width);
+  const ratioParam = new URL(request.url).searchParams.get("ratio");
+  const crop =
+    ratioParam && ratioParam in ILLUSTRATION_CROPS
+      ? ILLUSTRATION_CROPS[ratioParam as IllustrationCrop]
+      : null;
 
   try {
     const article = await withDbTimeout(
@@ -57,6 +67,21 @@ export async function GET(request: Request, { params }: Params) {
     }
 
     const buffer = dossier?.buffer ?? Buffer.from(article!.illustrationData!);
+
+    if (crop) {
+      try {
+        const jpeg = await sharp(buffer, { failOn: "none" })
+          .resize({ ...crop, fit: "cover", position: sharp.strategy.attention })
+          .jpeg({ quality: 82, mozjpeg: true })
+          .toBuffer();
+        return new NextResponse(new Uint8Array(jpeg), {
+          status: 200,
+          headers: { "Content-Type": "image/jpeg", "Cache-Control": CACHE_CONTROL },
+        });
+      } catch (err) {
+        console.error("illustration crop", err);
+      }
+    }
 
     if (resize) {
       try {
