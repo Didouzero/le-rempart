@@ -179,7 +179,7 @@ function DesktopBar({ searchOpen, onToggleSearch }: { searchOpen: boolean; onTog
         aria-label="Le Rempart, accueil"
       >
         <BrandWordmark className="w-[10.25rem]" />
-        <span className="font-tagline mt-1 pl-[0.2em] text-[0.56rem] tracking-[0.2em] text-white/55">
+        <span className="font-tagline mt-1 pl-[0.2em] text-[0.62rem] tracking-[0.2em] text-white/75">
           Le média de droite assumé
         </span>
       </Link>
