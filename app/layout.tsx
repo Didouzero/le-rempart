@@ -93,10 +93,16 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [SITE_OG_IMAGE],
   },
+  // Favicons en multiples de 48 px (exigence Google pour l'icône dans les résultats),
+  // icône iPhone sur fond sombre ; favicon.ico est servi par app/favicon.ico.
   icons: {
-    icon: [{ url: "/favicon.png?v=4", type: "image/png", sizes: "512x512" }],
-    apple: [{ url: "/favicon.png?v=4", sizes: "512x512", type: "image/png" }],
-    shortcut: "/favicon.png?v=4",
+    icon: [
+      { url: "/icons/favicon-48.png", type: "image/png", sizes: "48x48" },
+      { url: "/icons/favicon-96.png", type: "image/png", sizes: "96x96" },
+      { url: "/icons/favicon-144.png", type: "image/png", sizes: "144x144" },
+      { url: "/icons/favicon-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   other: {
     "msapplication-TileColor": "#0c0a09",

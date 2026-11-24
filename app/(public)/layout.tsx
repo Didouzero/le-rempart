@@ -3,6 +3,8 @@ import { BackToTop } from "@/components/BackToTop";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { NavigationProgress } from "@/components/NavigationProgress";
+import { Suspense } from "react";
 import { PlusProvider } from "@/components/PlusProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { organizationJsonLd } from "@/lib/seo";
@@ -19,6 +21,10 @@ export default function PublicLayout({
     <PlusProvider>
       <div className="site-shell flex min-h-screen flex-col">
         <JsonLd data={organizationJsonLd()} />
+        {/* useSearchParams exige une limite Suspense pour ne pas rendre la page dynamique. */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <Header />
         <div
           className={`mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 gap-0 xl:px-4 ${
