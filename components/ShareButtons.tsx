@@ -62,18 +62,20 @@ function LinkIcon() {
 }
 
 const BUTTON =
-  "inline-flex h-10 w-10 items-center justify-center rounded-full border border-accent/50 bg-ink text-accent no-underline shadow-[0_6px_18px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-accent hover:text-ink hover:no-underline";
+  "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-accent/50 bg-ink text-accent no-underline shadow-[0_6px_18px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-accent hover:text-ink hover:no-underline";
 
 type ShareButtonsProps = {
   url: string;
   title: string;
+  /** Rangée d'icônes seule, sans titre, pour la signature en haut d'article. */
+  compact?: boolean;
 };
 
 /**
  * Partage en fin d'article. Instagram n'accepte pas de lien partagé depuis le web :
  * on ouvre la feuille de partage du téléphone (qui propose Instagram), sinon on copie le lien.
  */
-export function ShareButtons({ url, title }: ShareButtonsProps) {
+export function ShareButtons({ url, title, compact = false }: ShareButtonsProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const u = encodeURIComponent(url);
   const t = encodeURIComponent(title);
@@ -129,11 +131,11 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
 
   return (
     <section
-      className="mt-10 border-t border-ink/15 pt-6"
+      className={compact ? "relative" : ""}
       aria-label="Partager l'article"
     >
-      <p className="section-kicker mb-4">Partager cet article</p>
-      <div className="flex flex-wrap items-center gap-2">
+      {compact ? null : <p className="section-kicker mb-3">Partager cet article</p>}
+      <div className={`flex flex-wrap items-center ${compact ? "gap-1.5 [&>*]:h-9 [&>*]:w-9" : "gap-2"}`}>
         {links.map((l) => (
           <a
             key={l.label}
@@ -177,7 +179,11 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
       <p
         role="status"
         aria-live="polite"
-        className="mt-3 min-h-[1.25rem] text-sm text-muted"
+        className={
+          compact
+            ? "absolute right-0 top-full mt-1 whitespace-nowrap text-xs text-muted"
+            : "mt-3 min-h-[1.25rem] text-sm text-muted"
+        }
       >
         {notice}
       </p>

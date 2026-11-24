@@ -239,11 +239,50 @@ function splitTrailingNotes(markdown: string): [string, string] {
   return [markdown.slice(0, m.index), markdown.slice(m.index)];
 }
 
+/** Paragraphe « **À lire aussi :** [titre](/articles/12) · [titre](/articles/34) ». */
+const READ_ALSO_BLOCK = /^\*\*À lire aussi\s*:\*\*(.+)$/;
+
+function ReadAlsoBox({ line }: { line: string }) {
+  const items = [...line.matchAll(/\[([^\]]+)\]\(([^)\s]+)\)/g)].map((m) => ({
+    title: m[1]!,
+    href: m[2]!,
+  }));
+  if (!items.length) return <MarkdownChunk source={line} />;
+  return (
+    <aside className="read-also" aria-label="À lire aussi">
+      <p className="read-also-label">À lire aussi</p>
+      <ul>
+        {items.map((item) => (
+          <li key={item.href}>
+            <a href={item.href}>{item.title}</a>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
 function ProseBlock({ source }: { source: string }) {
   if (!source.trim()) return null;
+  // Le paragraphe « À lire aussi » devient un encadré ; le reste est du Markdown.
+  const blocks = source.split(/\n{2,}/);
+  const parts: Array<{ md?: string; readAlso?: string }> = [];
+  for (const block of blocks) {
+    const m = block.trim().match(READ_ALSO_BLOCK);
+    if (m) parts.push({ readAlso: m[1]! });
+    else if (parts.length && parts[parts.length - 1]!.md !== undefined)
+      parts[parts.length - 1]!.md += `\n\n${block}`;
+    else parts.push({ md: block });
+  }
   return (
     <div className="prose-article">
-      <MarkdownChunk source={source} />
+      {parts.map((part, i) =>
+        part.readAlso !== undefined ? (
+          <ReadAlsoBox key={i} line={part.readAlso} />
+        ) : (
+          <MarkdownChunk key={i} source={part.md!} />
+        ),
+      )}
     </div>
   );
 }
