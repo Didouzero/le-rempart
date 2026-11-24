@@ -48,7 +48,8 @@ const LIVE_COUNT = 6;
 /** Titres ajoutés à « En continu » quand la une a son bloc « Sur le même sujet ». */
 const LIVE_EXTRA_WITH_RELATED = 1;
 const LATEST_COUNT = 1 + SECONDARY_COUNT + LIVE_COUNT + LIVE_EXTRA_WITH_RELATED;
-const PER_CATEGORY = 4;
+// Un article en avant et quatre à côté : la colonne de droite descend aussi bas que la gauche.
+const PER_CATEGORY = 5;
 
 function coverOf(item: Item): string | null {
   return item.coverImageUrl || null;
@@ -277,13 +278,16 @@ function SectionFeature({ items }: { items: Item[] }) {
       </article>
       <ul className="divide-y divide-rule border-t border-rule lg:border-t-0">
         {rest.map((item) => (
-          <li key={item.id} className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-3 py-3 first:lg:pt-0">
-            <Media item={item} sizes="6rem" ratio="aspect-[4/3]" />
-            <h3 className="font-headline text-[1rem] leading-[1.28]">
-              <Link href={articlePublicPath(item.publicId)} className="no-underline hover:text-gold hover:no-underline">
-                {item.title}
-              </Link>
-            </h3>
+          <li key={item.id} className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-3 py-3 first:lg:pt-0 lg:grid-cols-[7rem_minmax(0,1fr)] lg:gap-4">
+            <Media item={item} sizes="8rem" ratio="aspect-[4/3]" />
+            <div className="min-w-0">
+              <h3 className="font-headline text-[1rem] leading-[1.28]">
+                <Link href={articlePublicPath(item.publicId)} className="no-underline hover:text-gold hover:no-underline">
+                  {item.title}
+                </Link>
+              </h3>
+              <p className="mt-1 hidden text-[0.88rem] leading-snug text-muted lg:line-clamp-2">{item.excerpt}</p>
+            </div>
           </li>
         ))}
       </ul>
@@ -432,7 +436,7 @@ export async function FrontPage() {
         .map(({ category, items }) => (
           <section key={category} className="mt-12" aria-label={CATEGORY_META[category].label}>
             <SectionHead title={CATEGORY_META[category].label} href={categoryPath(category)} />
-            {LIST_SECTIONS.has(category) ? <SectionList items={items} /> : <SectionFeature items={items} />}
+            {LIST_SECTIONS.has(category) ? <SectionList items={items.slice(0, 4)} /> : <SectionFeature items={items} />}
           </section>
         ))}
 

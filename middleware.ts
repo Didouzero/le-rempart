@@ -25,6 +25,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Page auteur : la page 1 est en cache, « Ses articles » page 2 et suivantes passent par /auteurs-liste.
+  if (pathname === "/auteurs/dimitri-scudo") {
+    if (searchParams.has("page")) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/auteurs-liste/dimitri-scudo";
+      return NextResponse.rewrite(target);
+    }
+    return NextResponse.next();
+  }
+
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
     return NextResponse.next();
   }
@@ -57,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/rubriques/:slug", "/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/", "/rubriques/:slug", "/auteurs/dimitri-scudo", "/admin/:path*", "/api/admin/:path*"],
 };

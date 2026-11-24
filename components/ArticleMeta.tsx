@@ -132,7 +132,7 @@ export function AuthorBox() {
         <p className="font-headline mt-1 text-xl text-ink">{SITE_AUTHOR.name}</p>
         <p className="mt-2 text-[0.95rem] leading-relaxed text-muted">{SITE_AUTHOR.bio}</p>
         <Link
-          href={SITE_AUTHOR.path}
+          href={`${SITE_AUTHOR.path}#ses-articles`}
           rel="author"
           className="font-display mt-3 inline-flex items-center gap-1.5 text-[0.85rem] tracking-[0.12em] text-gold no-underline hover:underline"
         >
