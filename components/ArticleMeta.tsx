@@ -1,8 +1,25 @@
 import Link from "next/link";
-import { PublishedAt } from "@/components/PublishedAt";
+import {
+  formatPublishedAtDate,
+  formatPublishedAtTime,
+  publishedAtIso,
+} from "@/lib/format-published-at";
 import { ShareButtons } from "@/components/ShareButtons";
 import { SITE_AUTHOR } from "@/lib/authors";
 import { tagPath } from "@/lib/tags";
+
+/** « 23 novembre 2026 à 12h49 », dans une balise time lisible par les moteurs. */
+function DateTime({ value }: { value: Date | null }) {
+  const date = formatPublishedAtDate(value);
+  if (!date) return null;
+  const time = formatPublishedAtTime(value);
+  return (
+    <time dateTime={publishedAtIso(value)}>
+      {date}
+      {time ? ` à ${time}` : ""}
+    </time>
+  );
+}
 
 /** Temps de lecture à 230 mots par minute. */
 export function readingMinutesOf(content: string): number {
@@ -65,16 +82,21 @@ export function Byline({
               <span className="text-muted">, {SITE_AUTHOR.jobTitle.toLowerCase()}</span>
             ) : null}
           </p>
+          {/* Une ligne par information : rien ne se coupe au milieu d'une date. */}
           <p className="mt-0.5 text-[0.8rem] text-muted">
-            Publié le <PublishedAt value={publishedAt} />
-            {updatedAt ? (
-              <>
-                {" · "}Mis à jour le <PublishedAt value={updatedAt} />
-              </>
-            ) : null}
-            {" · "}
-            {readingMinutes} min de lecture
+            <span className="inline-block whitespace-nowrap">
+              Publié le <DateTime value={publishedAt} />
+            </span>
+            <span aria-hidden> · </span>
+            <span className="inline-block whitespace-nowrap">{readingMinutes} min de lecture</span>
           </p>
+          {updatedAt ? (
+            <p className="text-[0.8rem] text-muted">
+              <span className="inline-block whitespace-nowrap">
+                Mis à jour le <DateTime value={updatedAt} />
+              </span>
+            </p>
+          ) : null}
         </div>
       </div>
       <ShareButtons url={shareUrl} title={shareTitle} compact />

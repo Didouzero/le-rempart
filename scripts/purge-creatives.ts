@@ -41,11 +41,11 @@ async function main() {
   }
   console.log(`${ids.length} créatives sauvegardées dans ${dir}`);
 
-  const res = await prisma.article.updateMany({
-    where: { id: { in: ids.map((x) => x.id) } },
-    data: { coverImageData: null, coverImageMime: null },
-  });
-  console.log(`${res.count} créatives supprimées de la base.`);
+  // SQL direct : la purge ne doit pas toucher « updatedAt » (« Mis à jour le… »).
+  const count = await prisma.$executeRaw`
+    UPDATE "Article" SET "coverImageData" = NULL, "coverImageMime" = NULL
+    WHERE id = ANY(${ids.map((x) => x.id)})`;
+  console.log(`${count} créatives supprimées de la base.`);
 
   // Sans compactage, Postgres garde la place réservée et Neon ne voit aucune baisse.
   // VACUUM refuse la connexion « pooler » de Neon : on passe par l'hôte direct.

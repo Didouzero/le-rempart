@@ -80,10 +80,11 @@ export async function setRepostCreative(
   session: RepostSession,
   image: { buffer: Buffer; mime: string },
 ): Promise<void> {
-  await prisma.article.update({
-    where: { publicId: session.publicId },
-    data: { coverImageData: new Uint8Array(image.buffer), coverImageMime: image.mime },
-  });
+  // Créative pour Facebook seulement : l'article ne change pas, sa date de mise à jour non plus.
+  await prisma.$executeRaw`
+    UPDATE "Article"
+    SET "coverImageData" = ${Buffer.from(image.buffer)}, "coverImageMime" = ${image.mime}
+    WHERE "publicId" = ${session.publicId}`;
   await saveRepostSession(chatId, { ...session, step: "flash", at: Date.now() });
 }
 
