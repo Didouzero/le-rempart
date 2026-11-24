@@ -824,3 +824,11 @@ a:hover .media-frame::after {
     border-color: #e8a63f;
   }
 }
+
+/* Défilement horizontal sans barre visible (bande « Les sujets du moment »). */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

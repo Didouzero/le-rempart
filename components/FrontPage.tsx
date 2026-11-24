@@ -18,6 +18,7 @@ import { formatPublishedAtTime } from "@/lib/format-published-at";
 import { mostReadPublicIds } from "@/lib/article-views";
 import { prisma, withDbTimeout } from "@/lib/prisma";
 import { websiteJsonLd } from "@/lib/seo";
+import { relatedByTags, tagPath, trendingTags } from "@/lib/tags";
 
 const select = {
   id: true,
@@ -44,7 +45,9 @@ type Item = {
 // les deux colonnes de l'accueil gardent la même hauteur, sans trou sous la une.
 const SECONDARY_COUNT = 6;
 const LIVE_COUNT = 6;
-const LATEST_COUNT = 1 + SECONDARY_COUNT + LIVE_COUNT;
+/** Titres ajoutés à « En continu » quand la une a son bloc « Sur le même sujet ». */
+const LIVE_EXTRA_WITH_RELATED = 1;
+const LATEST_COUNT = 1 + SECONDARY_COUNT + LIVE_COUNT + LIVE_EXTRA_WITH_RELATED;
 const PER_CATEGORY = 4;
 
 function coverOf(item: Item): string | null {
@@ -102,7 +105,9 @@ function Media({ item, sizes, priority = false, ratio = "aspect-[16/9]" }: { ite
   );
 }
 
-function Lead({ item }: { item: Item }) {
+type Related = { id: string; publicId: number; title: string };
+
+function Lead({ item, related = [] }: { item: Item; related?: Related[] }) {
   return (
     <article className="group">
       <Media item={item} sizes="(min-width: 1024px) 46rem, 100vw" priority />
@@ -119,7 +124,48 @@ function Lead({ item }: { item: Item }) {
         </Link>
       </h2>
       <p className="mt-3 max-w-3xl text-[1.05rem] leading-relaxed text-muted">{item.excerpt}</p>
+      {related.length ? (
+        <div className="mt-5 border-l-[3px] border-accent pl-4">
+          <p className="font-display text-[0.75rem] tracking-[0.16em] text-gold">Sur le même sujet</p>
+          <ul className="mt-1.5 space-y-1.5">
+            {related.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={articlePublicPath(r.publicId)}
+                  className="font-headline text-[1rem] leading-[1.3] text-ink no-underline hover:text-gold hover:underline"
+                >
+                  {r.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </article>
+  );
+}
+
+/** Bande « Les sujets du moment » : les sujets les plus traités de la semaine. */
+function TrendingBar({ tags }: { tags: Array<{ slug: string; name: string }> }) {
+  if (tags.length < 3) return null;
+  return (
+    <nav aria-label="Les sujets du moment" className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <span className="font-display shrink-0 text-[0.8rem] tracking-[0.14em] text-gold">
+        Les sujets du moment
+      </span>
+      <ul className="no-scrollbar flex w-full min-w-0 flex-1 list-none gap-2 overflow-x-auto p-0 [mask-image:linear-gradient(90deg,#000_88%,transparent)]">
+        {tags.map((t) => (
+          <li key={t.slug} className="shrink-0">
+            <Link
+              href={tagPath(t.slug)}
+              className="inline-flex items-center rounded-lg border border-rule bg-card/60 px-3 py-1 text-[0.88rem] text-ink no-underline transition hover:border-accent hover:text-gold hover:no-underline"
+            >
+              {t.name.charAt(0).toUpperCase() + t.name.slice(1)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
@@ -198,8 +244,9 @@ function LiveColumn({ items, mostRead }: { items: Item[]; mostRead: Item[] }) {
 
 function SectionHead({ title, href }: { title: string; href: string }) {
   return (
-    <div className="mb-5 flex items-end justify-between gap-4 border-b border-rule pb-2">
-      <h2 className="font-display text-[1.35rem] tracking-[0.08em]">
+    <div className="mb-6 flex items-end justify-between gap-4 border-t-[3px] border-ink pt-3">
+      <h2 className="font-display flex items-center gap-2.5 text-[1.55rem] leading-none tracking-[0.08em]">
+        <span aria-hidden className="inline-block h-[0.7em] w-[0.7em] rounded-[2px] bg-accent" />
         <Link href={href} className="no-underline hover:text-gold hover:no-underline">
           {title}
         </Link>
@@ -282,6 +329,14 @@ export async function FrontPage() {
   // Les blocs rubriques ne reprennent rien de ce qui est déjà en haut de page.
   const shown = new Set(latest.map((a) => a.id));
 
+  // Sujets du moment et articles liés à la une : une panne n'empêche pas l'accueil.
+  const [trending, leadRelated] = await Promise.all([
+    withDbTimeout(trendingTags(7, 10)).catch(() => []),
+    lead
+      ? withDbTimeout(relatedByTags(lead.id, latest.slice(1).map((a) => a.id), 3)).catch(() => [])
+      : Promise.resolve([]),
+  ]);
+
   // « Les plus lus » : 48 dernières heures. Une panne du compteur ne casse pas l'accueil.
   let mostRead: Item[] = [];
   try {
@@ -325,13 +380,14 @@ export async function FrontPage() {
         <span className="text-gold">Édition du jour</span>
       </p>
       <AdSlot slot="home-below-header" />
+      <TrendingBar tags={trending} />
 
       {!lead ? (
         <p className="py-16 text-center text-muted">Aucun article publié pour le moment.</p>
       ) : (
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-12">
           <div className="min-w-0">
-            <Lead item={lead} />
+            <Lead item={lead} related={leadRelated} />
             {secondary.length ? (
               <div className="mt-8 grid gap-x-6 gap-y-8 border-t border-rule pt-7 sm:grid-cols-3">
                 {secondary.map((item) => (
@@ -340,7 +396,13 @@ export async function FrontPage() {
               </div>
             ) : null}
           </div>
-          <LiveColumn items={latest.slice(1 + SECONDARY_COUNT, 1 + SECONDARY_COUNT + LIVE_COUNT)} mostRead={mostRead} />
+          <LiveColumn
+            items={latest.slice(
+              1 + SECONDARY_COUNT,
+              1 + SECONDARY_COUNT + LIVE_COUNT + (leadRelated.length >= 2 ? LIVE_EXTRA_WITH_RELATED : 0),
+            )}
+            mostRead={mostRead}
+          />
         </div>
       )}
 

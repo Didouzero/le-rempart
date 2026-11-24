@@ -299,3 +299,42 @@ export async function dossierTags(dossierId: string): Promise<TagWithCount[]> {
     count: r.tag._count.articles,
   }));
 }
+
+/** Sujets les plus traités ces derniers jours (bande « Les sujets du moment » de l'accueil). */
+export async function trendingTags(days = 7, limit = 10): Promise<Array<{ slug: string; name: string; count: number }>> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const rows = await prisma.$queryRaw<Array<{ slug: string; name: string; n: bigint }>>`
+    SELECT t."slug", t."name", COUNT(*) AS n
+    FROM "Tag" t
+    JOIN "ArticleTag" at ON at."tagId" = t."id"
+    JOIN "Article" a ON a."id" = at."articleId"
+    WHERE a."status" = 'published' AND a."publishedAt" >= ${since}
+    GROUP BY t."slug", t."name"
+    HAVING COUNT(*) >= 2
+    ORDER BY n DESC, MAX(a."publishedAt") DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((r) => ({ slug: r.slug, name: r.name, count: Number(r.n) }));
+}
+
+/** Articles qui partagent un sujet avec un article donné, les plus récents d'abord. */
+export async function relatedByTags(
+  articleId: string,
+  excludeIds: string[],
+  take = 3,
+): Promise<Array<{ id: string; publicId: number; title: string; publishedAt: Date | null }>> {
+  const tagIds = (
+    await prisma.articleTag.findMany({ where: { articleId }, select: { tagId: true } })
+  ).map((t) => t.tagId);
+  if (tagIds.length === 0) return [];
+  return prisma.article.findMany({
+    where: {
+      status: "published",
+      id: { notIn: [articleId, ...excludeIds] },
+      tags: { some: { tagId: { in: tagIds } } },
+    },
+    orderBy: { publishedAt: "desc" },
+    take,
+    select: { id: true, publicId: true, title: true, publishedAt: true },
+  });
+}
