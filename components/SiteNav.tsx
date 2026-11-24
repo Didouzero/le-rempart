@@ -141,7 +141,7 @@ function SearchPanel({ open, onClose }: { open: boolean; onClose: () => void }) 
               type="submit"
               aria-label="Lancer la recherche"
               title="Rechercher"
-              className="group h-10 w-10 inline-flex shrink-0 items-center justify-center rounded-lg border border-accent/60 bg-ink text-accent transition duration-300 hover:border-accent hover:text-gold"
+              className="group h-10 w-10 inline-flex shrink-0 items-center justify-center rounded-lg border border-accent/60 bg-ink text-accent btn-ink transition duration-300 hover:border-accent hover:text-gold"
             >
               <ArrowRightIcon className="h-[1.1rem] w-[1.1rem] transition-transform duration-300 group-hover:translate-x-0.5" />
             </button>
