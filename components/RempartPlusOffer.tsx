@@ -8,17 +8,17 @@ const PERKS = [
   {
     kicker: "Chaque matin",
     title: "Le Brief approfondi",
-    text: "Chaque matin, les 10 infos essentielles complètes des dernières 24 heures et tout ce que les autres médias glissent sous le tapis. 🗞️",
+    text: "Chaque matin, les 10 infos essentielles complètes des dernières 24 heures et tout ce que les autres médias glissent sous le tapis.",
   },
   {
     kicker: "Exclusif",
     title: "Dossiers & enquêtes",
-    text: "Chaque mercredi et samedi, des enquêtes et révélations privées. Des dossiers exclusifs à garder, à envoyer, à relire. 📒",
+    text: "Chaque mercredi et samedi, des enquêtes et révélations privées. Des dossiers exclusifs à garder, à envoyer, à relire.",
   },
   {
     kicker: "Confort",
     title: "Site sans publicité",
-    text: "Plus aucune publicité sur Le Rempart. L'information, claire, et sur tout le site. ✅",
+    text: "Plus aucune publicité sur Le Rempart. L'information, claire, et sur tout le site.",
   },
 ] as const;
 
@@ -60,7 +60,7 @@ export function RempartPlusOffer({
           <p className="mt-5 max-w-2xl text-base text-white/80 sm:text-lg">
             Pour le prix d’un café, levez le rideau sur nos enquêtes, nos
             dossiers privés et nos révélations documentées, et recevez
-            l&apos;actualité détaillée chaque matin. ✍️
+            l&apos;actualité détaillée chaque matin.
           </p>
           <div className="mt-8 flex flex-wrap items-end gap-4">
             <p className="font-display text-5xl leading-none tracking-[0.04em] text-accent">
@@ -155,7 +155,7 @@ export function RempartPlusOffer({
           <p className="mt-2 text-white/80">
             Entrez l’e-mail qui servira de clé d’accès. Après le paiement, vous
             êtes connecté tout de suite — et vous pourrez revenir quand vous
-            voulez via un lien envoyé dans votre boîte. ✉️
+            voulez via un lien envoyé dans votre boîte.
           </p>
           <RempartPlusCheckout
             configured={isStripeConfigured()}

@@ -121,7 +121,7 @@ export function NewsletterSignup({
             </p>
             <p className="mt-1 text-sm leading-snug text-white/80 sm:text-base">
               Chaque matin, à 7 heures, les 10 infos essentielles de droite des
-              dernières 24 heures. 🗞️
+              dernières 24 heures.
             </p>
           </div>
           <div className="w-full min-w-0 sm:w-[min(100%,28rem)] sm:shrink-0">
@@ -146,7 +146,7 @@ export function NewsletterSignup({
       </p>
       <p className="mt-1.5 text-sm leading-snug text-white/80">
         Chaque matin, à 7 heures, les 10 infos essentielles de droite des
-        dernières 24 heures. 🗞️
+        dernières 24 heures.
       </p>
       <div className="mt-3">{form}</div>
       {statusLine}

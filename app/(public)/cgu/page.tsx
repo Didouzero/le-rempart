@@ -13,7 +13,7 @@ export const metadata: Metadata = buildPageMetadata({
 export default function CguPage() {
   return (
     <article className="prose-article max-w-3xl animate-fade-up">
-      <h1 className="font-display text-3xl sm:text-4xl">
+      <h1 className="font-headline text-3xl sm:text-4xl">
         Conditions générales d&apos;utilisation
       </h1>
       <p className="mt-4 text-sm text-muted">

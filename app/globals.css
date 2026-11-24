@@ -543,16 +543,18 @@ a:hover .media-frame::after {
 }
 
 .animate-fade-up {
-  animation: fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Plus d'animation d'entrée : sur un site d'actu, tout s'affiche tout de suite. */
+  animation: none;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.8s ease-out both;
+  /* Plus d'animation d'entrée : sur un site d'actu, tout s'affiche tout de suite. */
+  animation: none;
 }
 
 .animate-line-grow {
-  transform-origin: left;
-  animation: line-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Plus d'animation d'entrée : sur un site d'actu, tout s'affiche tout de suite. */
+  animation: none;
 }
 
 .delay-1 {

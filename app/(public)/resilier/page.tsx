@@ -25,7 +25,7 @@ export default async function ResilierPage({ searchParams }: Props) {
         <span className="live-dot" aria-hidden />
         Rempart+
       </p>
-      <h1 className="font-display mt-2 text-3xl tracking-[0.08em]">
+      <h1 className="font-headline mt-2 text-3xl">
         Résilier mon abonnement
       </h1>
       <div className="gold-rule animate-line-grow mt-3 max-w-xs" />

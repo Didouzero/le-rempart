@@ -52,7 +52,7 @@ export default function QuiSommesNousPage() {
           <span className="live-dot" aria-hidden />
           Qui sommes-nous
         </p>
-        <h1 className="font-display mt-4 max-w-4xl text-4xl leading-[0.95] tracking-[0.02em] uppercase sm:text-5xl lg:text-6xl">
+        <h1 className="font-headline mt-4 max-w-4xl text-4xl leading-[1.08] sm:text-5xl lg:text-6xl">
           Raconter jusqu&apos;au bout ce que{" "}
           <span className="text-gold">les autres taisent.</span>
         </h1>
@@ -71,7 +71,7 @@ export default function QuiSommesNousPage() {
       <section className="grid divide-y divide-ink/15 border-b border-ink/15 md:grid-cols-3 md:divide-x md:divide-y-0">
         {PILLARS.map(([title, text]) => (
           <div key={title} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
-            <h2 className="font-display text-3xl tracking-[0.06em] uppercase">
+            <h2 className="font-headline text-3xl">
               {title}
               <span className="text-accent">.</span>
             </h2>
@@ -82,7 +82,7 @@ export default function QuiSommesNousPage() {
 
       <section className="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div>
-          <h2 className="font-display text-4xl tracking-[0.05em]">Notre ligne</h2>
+          <h2 className="font-headline text-4xl">Notre ligne</h2>
           <p className="mt-4 text-ink">
             Nous sommes attachés à l&apos;ordre et à l&apos;autorité de
             l&apos;État, à la fermeté face à l&apos;immigration illégale et à la
@@ -115,7 +115,7 @@ export default function QuiSommesNousPage() {
 
         {/* La méthode en étapes, chiffres géants en filigrane. */}
         <div>
-          <h2 className="font-display text-4xl tracking-[0.05em]">Notre méthode</h2>
+          <h2 className="font-headline text-4xl">Notre méthode</h2>
           <ol className="mt-4 list-none space-y-4 p-0">
             {METHOD.map(([title, text], i) => (
               <li

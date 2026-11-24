@@ -81,7 +81,7 @@ export default async function EnquetesPage({
       />
       <div className="mb-8">
         <PremiumBanner label="Enquêtes & révélations" subscribed={isPlus} />
-        <h1 className="font-display mt-2 text-4xl tracking-[0.08em] sm:text-5xl">
+        <h1 className="font-headline mt-2 text-4xl sm:text-5xl">
           {PREMIUM_CATEGORY.label}
         </h1>
         <div className="gold-rule animate-line-grow mt-3 max-w-xs" />

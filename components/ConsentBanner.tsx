@@ -23,7 +23,7 @@ export function useConsentGranted(): boolean {
 }
 
 const BUTTON =
-  "font-display flex-1 rounded-lg px-4 py-2.5 text-sm tracking-[0.12em] transition duration-200";
+  "font-display rounded-md px-4 py-2 text-[0.85rem] tracking-[0.08em] transition duration-200";
 
 /**
  * Petit bandeau de consentement en bas d'écran. « Refuser » et « Accepter »
@@ -52,12 +52,12 @@ export function ConsentBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Cookies"
-      className="animate-fade-up fixed inset-x-3 bottom-3 z-[10050] rounded-lg border border-accent/40 bg-ink p-4 text-paper shadow-[0_12px_40px_rgba(0,0,0,0.45)] sm:inset-x-auto sm:left-4 sm:max-w-[26rem]"
+      className="fixed inset-x-0 bottom-0 z-[10050] border-t border-accent/30 bg-ink px-4 py-3 text-paper shadow-[0_-8px_30px_rgba(0,0,0,0.35)] sm:px-6"
     >
-      <p className="m-0 text-sm leading-snug text-white/85">
-        Nous utilisons des cookies pour mesurer l&apos;audience (Google
-        Analytics). Les publicités (MGID), affichées sauf aux abonnés
-        Rempart+, peuvent déposer leurs propres cookies.{" "}
+      <div className="mx-auto flex max-w-6xl flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-6">
+      <p className="m-0 flex-1 text-[0.8rem] leading-snug text-white/80 sm:text-[0.85rem]">
+        Cookies de mesure d&apos;audience (Google Analytics) et publicitaires
+        (MGID, sauf abonnés Rempart+).{" "}
         <Link
           href="/confidentialite#cookies"
           className="text-accent underline decoration-accent/60 underline-offset-2"
@@ -65,7 +65,7 @@ export function ConsentBanner() {
           En savoir plus
         </Link>
       </p>
-      <div className="mt-3 flex gap-2">
+      <div className="flex shrink-0 gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
         <button
           type="button"
           onClick={() => choose("denied")}
@@ -80,6 +80,7 @@ export function ConsentBanner() {
         >
           Accepter
         </button>
+      </div>
       </div>
     </div>
   );

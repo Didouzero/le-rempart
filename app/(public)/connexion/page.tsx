@@ -27,7 +27,7 @@ export default async function ConnexionPage({ searchParams }: Props) {
         <span className="live-dot" aria-hidden />
         Espace abonné
       </p>
-      <h1 className="font-display mt-2 text-4xl tracking-[0.08em]">
+      <h1 className="font-headline mt-2 text-4xl">
         Connexion Rempart+
       </h1>
       <div className="gold-rule animate-line-grow mt-3 max-w-xs" />

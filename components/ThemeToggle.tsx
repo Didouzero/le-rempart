@@ -129,7 +129,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className={`icon-bare inline-flex items-center justify-center p-2 text-accent transition-colors duration-300 hover:text-white ${className}`}
+      className={`icon-bare inline-flex items-center justify-center p-2 text-white/80 transition-colors duration-300 hover:text-accent ${className}`}
     >
       {/* Avant hydratation, la lune : le bouton garde sa place sans clignoter. */}
       {theme === "dark" ? (

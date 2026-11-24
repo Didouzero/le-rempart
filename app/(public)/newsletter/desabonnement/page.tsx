@@ -16,7 +16,7 @@ export default function NewsletterUnsubscribePage() {
         <span className="live-dot" aria-hidden />
         Newsletter
       </p>
-      <h1 className="font-display mt-2 text-3xl tracking-[0.08em]">
+      <h1 className="font-headline mt-2 text-3xl">
         Se désabonner
       </h1>
       <div className="gold-rule animate-line-grow mt-3 max-w-xs" />

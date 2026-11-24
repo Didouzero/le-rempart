@@ -50,7 +50,7 @@ export function ListPageHeader({
         {kicker}
       </p>
       <div className="mt-2 flex items-center gap-3">
-        <h1 className="font-display min-w-0 text-4xl tracking-[0.08em] sm:text-5xl">
+        <h1 className="font-headline min-w-0 text-4xl sm:text-5xl">
           {hiddenTitlePrefix ? (
             <span className="sr-only">{hiddenTitlePrefix}</span>
           ) : null}

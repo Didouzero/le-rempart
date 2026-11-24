@@ -92,7 +92,7 @@ export default async function AuthorPage() {
             <span className="live-dot" aria-hidden />
             L&apos;auteur
           </p>
-          <h1 className="font-display mt-2 text-5xl leading-[0.9] tracking-[0.04em] sm:text-7xl">
+          <h1 className="font-headline mt-2 text-5xl leading-[1.02] sm:text-7xl">
             {SITE_AUTHOR.name}
           </h1>
           <p className="font-tagline mt-3 text-lg text-muted">
@@ -121,13 +121,13 @@ export default async function AuthorPage() {
                 <p className="font-display text-xs tracking-[0.2em] text-gold uppercase">
                   {step.when}
                 </p>
-                <h2 className="font-display mt-1 text-2xl tracking-[0.05em]">{step.title}</h2>
+                <h2 className="font-headline mt-1 text-2xl">{step.title}</h2>
                 <p className="mt-2 text-ink">{step.text}</p>
               </li>
             ))}
           </ol>
 
-          <h2 className="font-display mt-14 text-3xl tracking-[0.06em]">Comment j&apos;écris</h2>
+          <h2 className="font-headline mt-14 text-3xl">Comment j&apos;écris</h2>
           <div className="mt-4 space-y-4 text-ink">
             <p>
               Je m&apos;aide de l&apos;intelligence artificielle pour chercher,
@@ -149,7 +149,7 @@ export default async function AuthorPage() {
             </p>
           </blockquote>
 
-          <h2 className="font-display text-3xl tracking-[0.06em]">Ce que je défends</h2>
+          <h2 className="font-headline text-3xl">Ce que je défends</h2>
           <ul className="mt-6 list-none space-y-0 p-0">
             {CONVICTIONS.map(([title, text], i) => (
               <li key={title} className="grid grid-cols-[3.5rem_1fr] gap-4 border-t border-ink/15 py-5">
