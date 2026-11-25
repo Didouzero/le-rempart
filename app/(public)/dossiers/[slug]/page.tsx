@@ -138,7 +138,7 @@ export default async function DossierPage({ params }: Props) {
     : { teaser: dossier.content, rest: "" };
 
   return (
-    <article className="animate-fade-up mx-auto max-w-3xl">
+    <article className="dossier-page animate-fade-up mx-auto max-w-3xl">
       <JsonLd
         data={newsArticleJsonLd({
           title: dossier.title,

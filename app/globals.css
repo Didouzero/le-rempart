@@ -226,8 +226,9 @@ body {
   line-height: 1.7;
 }
 
-/* Articles: the text fills the centred reading column. */
-.article-dropcap .prose-article {
+/* Articles and investigations: the text fills the centred reading column. */
+.article-dropcap .prose-article,
+.dossier-page .prose-article {
   max-width: none;
 }
 
